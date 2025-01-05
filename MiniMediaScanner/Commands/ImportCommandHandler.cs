@@ -1,12 +1,15 @@
+using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
 namespace MiniMediaScanner.Commands;
 
 public class ImportCommandHandler
 {
-    private readonly DatabaseService _databaseService;
     private readonly MusicBrainzService _musicBrainzService;
     private readonly FileMetaDataService _fileMetaDataService;
+    private readonly ArtistRepository _artistRepository;
+    private readonly MetadataRepository _metadataRepository;
+    private readonly AlbumRepository _albumRepository;
 
     private static string[] MediaFileExtensions = new string[]
     {
@@ -20,9 +23,11 @@ public class ImportCommandHandler
 
     public ImportCommandHandler(string connectionString)
     {
-        _databaseService = new DatabaseService(connectionString);
         _musicBrainzService = new MusicBrainzService(connectionString);
         _fileMetaDataService = new FileMetaDataService();
+        _artistRepository = new ArtistRepository(connectionString);
+        _metadataRepository =  new MetadataRepository(connectionString);
+        _albumRepository =  new AlbumRepository(connectionString);
     }
     
     public void ProcessDirectory(string directoryPath)
@@ -51,7 +56,7 @@ public class ImportCommandHandler
                     
             FileInfo fileInfo = new(filePath);
 
-            if (!_databaseService.MetadataCanUpdate(fileInfo.FullName, fileInfo.LastWriteTime, fileInfo.CreationTime))
+            if (!_metadataRepository.MetadataCanUpdate(fileInfo.FullName, fileInfo.LastWriteTime, fileInfo.CreationTime))
             {
                 return false;
             }
@@ -90,12 +95,12 @@ public class ImportCommandHandler
     private void ProcessMetadata(MetadataInfo metadata, string filePath)
     {
         // 1. Insert/Find Artist
-        var artistId = _databaseService.InsertOrFindArtist(metadata.Artist);
+        var artistId = _artistRepository.InsertOrFindArtist(metadata.Artist);
 
         // 2. Insert/Find Album
-        var albumId = _databaseService.InsertOrFindAlbum(metadata.Album, artistId);
+        var albumId = _albumRepository.InsertOrFindAlbum(metadata.Album, artistId);
 
         // 3. Insert/Update Metadata
-        _databaseService.InsertOrUpdateMetadata(metadata, filePath, albumId);
+        _metadataRepository.InsertOrUpdateMetadata(metadata, filePath, albumId);
     }
 }

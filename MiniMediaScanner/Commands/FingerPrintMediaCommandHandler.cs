@@ -1,20 +1,21 @@
 using System.Diagnostics;
 using MiniMediaScanner.Models;
+using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
 namespace MiniMediaScanner.Commands;
 
 public class FingerPrintMediaCommandHandler
 {
-    private readonly DatabaseService _databaseService;
     private readonly FingerPrintService _fingerPrintService;
+    private readonly MetadataRepository _metadataRepository;
 
     private Stopwatch sw = Stopwatch.StartNew();
     private int generatedFingers = 0;
     public FingerPrintMediaCommandHandler(string connectionString)
     {
-        _databaseService = new DatabaseService(connectionString);
         _fingerPrintService = new FingerPrintService();
+        _metadataRepository = new MetadataRepository(connectionString);
     }
     
     public void FingerPrintMedia()
@@ -24,7 +25,7 @@ public class FingerPrintMediaCommandHandler
         int offset = 0;
         while (true)
         {
-            var metadata = _databaseService.GetAllMetadataPathsByMissingFingerprint(offset, limit);
+            var metadata = _metadataRepository.GetAllMetadataPathsByMissingFingerprint(offset, limit);
             offset += limit;
 
             if (metadata.Count == 0)
@@ -53,7 +54,7 @@ public class FingerPrintMediaCommandHandler
         if (!string.IsNullOrWhiteSpace(fingerprint?.Fingerprint))
         {
             generatedFingers++;
-            _databaseService.UpdateMetadataFingerprint(metadata.MetadataId, fingerprint.Fingerprint, fingerprint.Duration);
+            _metadataRepository.UpdateMetadataFingerprint(metadata.MetadataId, fingerprint.Fingerprint, fingerprint.Duration);
         }
     }
 }

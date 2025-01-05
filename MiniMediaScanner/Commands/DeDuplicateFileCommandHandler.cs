@@ -1,22 +1,25 @@
 using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
 using MiniMediaScanner.Models;
+using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
 namespace MiniMediaScanner.Commands;
 
 public class DeDuplicateFileCommandHandler
 {
-    private readonly DatabaseService _databaseService;
+    private readonly ArtistRepository _artistRepository;
+    private readonly MetadataRepository _metadataRepository;
 
     public DeDuplicateFileCommandHandler(string connectionString)
     {
-        _databaseService = new DatabaseService(connectionString);
+        _artistRepository = new ArtistRepository(connectionString);
+        _metadataRepository = new MetadataRepository(connectionString);
     }
     
     public void CheckDuplicateFiles(string artistName, bool delete)
     {
-        var artistNames = _databaseService.GetAllArtistNames();
+        var artistNames = _artistRepository.GetAllArtistNames();
 
         if (!string.IsNullOrWhiteSpace(artistName))
         {
@@ -30,12 +33,12 @@ public class DeDuplicateFileCommandHandler
         
         foreach (string artist in artistNames)
         {
-            List<MetadataModel> possibleDuplicateFiles = _databaseService.PossibleDuplicateFiles(artist);
+            List<MetadataModel> possibleDuplicateFiles = _metadataRepository.PossibleDuplicateFiles(artist);
 
             foreach (MetadataModel possibleDuplicateFile in possibleDuplicateFiles)
             {
                 string nonDuplicateFile = Regex.Replace(possibleDuplicateFile.Path, regexFilter, string.Empty);
-                MetadataModel? nonDuplicateRecord = _databaseService
+                MetadataModel? nonDuplicateRecord = _metadataRepository
                     .GetMetadataByPath(nonDuplicateFile)
                     .FirstOrDefault();
                 

@@ -1,16 +1,22 @@
+using MiniMediaScanner.Repositories;
+
 namespace MiniMediaScanner.Services;
 
 public class MusicBrainzService
 {
-    private readonly DatabaseService _databaseService;
     private readonly MusicBrainzAPIService _musicBrainzApiService;
     private readonly List<string> _musicBrainzIds = new List<string>();
     private const int BulkRequestLimit = 100;
+    private readonly MusicBrainzArtistRepository _musicBrainzArtistRepository;
+    private readonly MusicBrainzReleaseRepository _musicBrainzReleaseRepository;
+    private readonly MusicBrainzReleaseTrackRepository _musicBrainzReleaseTrackRepository;
     
     public MusicBrainzService(string connectionString)
     {
-        _databaseService = new DatabaseService(connectionString);
         _musicBrainzApiService = new MusicBrainzAPIService();
+        _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
+        _musicBrainzReleaseRepository = new MusicBrainzReleaseRepository(connectionString);
+        _musicBrainzReleaseTrackRepository = new MusicBrainzReleaseTrackRepository(connectionString);
     }
 
     public void InsertMissingMusicBrainzArtist(MetadataInfo metadataInfo)
@@ -26,7 +32,7 @@ public class MusicBrainzService
         try
         {
             if (_musicBrainzIds.Contains(musicBrainzArtistId) ||
-                (!updateExisting && _databaseService.GetRemoteMusicBrainzArtist(musicBrainzArtistId).HasValue))
+                (!updateExisting && _musicBrainzArtistRepository.GetRemoteMusicBrainzArtist(musicBrainzArtistId).HasValue))
             {
                 return;
             }
@@ -39,7 +45,7 @@ public class MusicBrainzService
                 return;
             }
             
-            Guid? artistDbId = _databaseService.InsertMusicBrainzArtist(musicBrainzArtistId, 
+            Guid? artistDbId = _musicBrainzArtistRepository.InsertMusicBrainzArtist(musicBrainzArtistId, 
                 musicBrainzArtistInfo.Name, 
                 musicBrainzArtistInfo.Type,
                 musicBrainzArtistInfo.Country,
@@ -60,14 +66,14 @@ public class MusicBrainzService
             
                 foreach (var release in releases.Releases)
                 {
-                    _databaseService.InsertMusicBrainzRelease(artistDbId.Value.ToString(), release.Id, release.Title, release.Status, 
+                    _musicBrainzReleaseRepository.InsertMusicBrainzRelease(artistDbId.Value.ToString(), release.Id, release.Title, release.Status, 
                         release.StatusId, release.Date, release.Barcode, release.Country, release.Disambiguation, release.Quality);
 
                     foreach (var media in release.Media)
                     {
                         foreach (var track in media.Tracks)
                         {
-                            _databaseService.InsertMusicBrainzReleaseTrack(track.Id, track.Recording.Id, track.Title, release.Status, release.Id);
+                            _musicBrainzReleaseTrackRepository.InsertMusicBrainzReleaseTrack(track.Id, track.Recording.Id, track.Title, release.Status, release.Id);
                         }
                     }
                 }

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using MiniMediaScanner.Models;
+using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 using Newtonsoft.Json;
 
@@ -7,20 +8,20 @@ namespace MiniMediaScanner.Commands;
 
 public class ConvertMediaCommandHandler
 {
-    private readonly DatabaseService _databaseService;
     private const int FfMpegSuccessCode = 0;
     private TimeSpan ConversionTimeout = TimeSpan.FromMinutes(5);
     private readonly FingerPrintService _fingerPrintService;
+    private readonly MetadataRepository _metadataRepository;
 
     public ConvertMediaCommandHandler(string connectionString)
     {
-        _databaseService = new DatabaseService(connectionString);
         _fingerPrintService = new FingerPrintService();
+        _metadataRepository = new MetadataRepository(connectionString);
     }
 
     public void ConvertAllArtists(string fromExtension, string toExtension, string codec,  string bitrate)
     {
-        var metadataFiles = _databaseService.GetMetadataByFileExtension(fromExtension);
+        var metadataFiles = _metadataRepository.GetMetadataByFileExtension(fromExtension);
         
         metadataFiles  
             .AsParallel()
@@ -30,7 +31,7 @@ public class ConvertMediaCommandHandler
     
     public void ConvertByArtist(string fromExtension, string toExtension, string artist, string codec,  string bitrate)
     {
-        var metadataFiles = _databaseService.GetMetadataByArtist(artist)
+        var metadataFiles = _metadataRepository.GetMetadataByArtist(artist)
             .Where(metadata => metadata.Path.EndsWith(fromExtension))
             .ToList();
 
@@ -56,9 +57,9 @@ public class ConvertMediaCommandHandler
 
         if (outputFile.Exists)
         {
-            var existingMetadata = _databaseService.GetMetadataByPath(outputFile.FullName);
+            var existingMetadata = _metadataRepository.GetMetadataByPath(outputFile.FullName);
 
-            existingMetadata.ForEach(metadata =>  _databaseService.DeleteMetadataRecords(new List<string>() { metadata.MetadataId }));
+            existingMetadata.ForEach(metadata =>  _metadataRepository.DeleteMetadataRecords(new List<string>() { metadata.MetadataId }));
             outputFile.Delete();
             Console.WriteLine($"Deleted target, records deleted '{existingMetadata.Count}', file already exists, '{outputFile.FullName}'");
         }
@@ -67,13 +68,13 @@ public class ConvertMediaCommandHandler
         if(success)
         {
             Console.WriteLine($"Successfully converted '{file.FullName}' to '{outputFile.FullName}'");
-            _databaseService.UpdateMetadataPath(metadata.MetadataId, outputFile.FullName); 
+            _metadataRepository.UpdateMetadataPath(metadata.MetadataId, outputFile.FullName); 
 
             FpcalcOutput? fingerprint = _fingerPrintService.GetFingerprint(outputFile.FullName);
 
             if (fingerprint != null)
             {
-                _databaseService.UpdateMetadataFingerprint(metadata.MetadataId, fingerprint.Fingerprint, fingerprint.Duration);
+                _metadataRepository.UpdateMetadataFingerprint(metadata.MetadataId, fingerprint.Fingerprint, fingerprint.Duration);
             }
             
             file.Delete();

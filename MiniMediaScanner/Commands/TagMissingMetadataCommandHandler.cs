@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using MiniMediaScanner.Models;
+using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
 namespace MiniMediaScanner.Commands;
@@ -8,14 +9,14 @@ public class TagMissingMetadataCommandHandler
 {
     private readonly AcoustIdService _acoustIdService;
     private readonly MusicBrainzAPIService _musicBrainzAPIService;
-    private readonly DatabaseService _databaseService;
     private Stopwatch sw = Stopwatch.StartNew();
+    private readonly MetadataRepository _metadataRepository;
     
     public TagMissingMetadataCommandHandler(string connectionString)
     {
-        _databaseService = new DatabaseService(connectionString);
         _acoustIdService = new AcoustIdService();
         _musicBrainzAPIService = new MusicBrainzAPIService();
+        _metadataRepository = new MetadataRepository(connectionString);
     }
     
     public void FingerPrintMedia(string accoustId, bool writeToFile)
@@ -25,7 +26,7 @@ public class TagMissingMetadataCommandHandler
         
         while (true)
         {
-            var metadata = _databaseService.GetMissingMusicBrainzMetadataRecords(offset, limit);
+            var metadata = _metadataRepository.GetMissingMusicBrainzMetadataRecords(offset, limit);
             offset += limit;
 
             if (metadata.Count == 0)

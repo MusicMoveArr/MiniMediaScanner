@@ -1,14 +1,15 @@
+using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
 namespace MiniMediaScanner.Commands;
 
 public class DeletedMediaCommandHandler
 {
-    private readonly DatabaseService _databaseService;
+    private readonly MetadataRepository _metadataRepository;
 
     public DeletedMediaCommandHandler(string connectionString)
     {
-        _databaseService = new DatabaseService(connectionString);
+        _metadataRepository = new MetadataRepository(connectionString);
     }
     
     public void CheckAllMissingTracks(bool remove)
@@ -18,7 +19,7 @@ public class DeletedMediaCommandHandler
         int offset = 0;
         while (true)
         {
-            var metadata = _databaseService.GetAllMetadata(offset, limit);
+            var metadata = _metadataRepository.GetAllMetadata(offset, limit);
             offset += limit;
 
             if (metadata.Count == 0)
@@ -35,7 +36,7 @@ public class DeletedMediaCommandHandler
 
             if (remove && missing.Count > 0)
             {
-                _databaseService.DeleteMetadataRecords(missing.Select(metadata => metadata.MetadataId).ToList());
+                _metadataRepository.DeleteMetadataRecords(missing.Select(metadata => metadata.MetadataId).ToList());
             }
         }
         Console.WriteLine($"Total missing media files: {missingCount}");

@@ -1,240 +1,14 @@
 using MiniMediaScanner.Models;
 using Npgsql;
-using NpgsqlTypes;
 
-namespace MiniMediaScanner.Services;
+namespace MiniMediaScanner.Repositories;
 
-public class DatabaseService
+public class MetadataRepository
 {
     private readonly string _connectionString;
-    public DatabaseService(string connectionString)
+    public MetadataRepository(string connectionString)
     {
         _connectionString = connectionString;
-    }
-    
-    public Guid InsertMusicBrainzArtist(string remoteMusicBrainzArtistId, 
-        string artistName, 
-        string artistType,
-        string country,
-        string sortName,
-        string disambiguation)
-    {
-        if (string.IsNullOrWhiteSpace(artistType))
-        {
-            artistType = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(country))
-        {
-            country = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(sortName))
-        {
-            sortName = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(disambiguation))
-        {
-            disambiguation = string.Empty;
-        }
-        
-        string query = @"INSERT INTO MusicBrainzArtist (MusicBrainzArtistId, MusicBrainzRemoteId, Name, Type, Country, SortName, Disambiguation)
-                         VALUES (@id, @MusicBrainzRemoteId, @name, @type, @Country, @SortName, @Disambiguation)
-                         ON CONFLICT (MusicBrainzRemoteId) 
-                         DO UPDATE SET 
-                             Name = EXCLUDED.Name, 
-                             Type = EXCLUDED.Type, 
-                             Country = EXCLUDED.Country, 
-                             SortName = EXCLUDED.SortName, 
-                             Disambiguation = EXCLUDED.Disambiguation
-                         RETURNING MusicBrainzArtistId";
-        Guid artistId = Guid.NewGuid();
-
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        
-        cmd.Parameters.AddWithValue("id", artistId);
-        cmd.Parameters.AddWithValue("MusicBrainzRemoteId", remoteMusicBrainzArtistId);
-        cmd.Parameters.AddWithValue("name", artistName);
-        cmd.Parameters.AddWithValue("type", artistType);
-        cmd.Parameters.AddWithValue("Country", country);
-        cmd.Parameters.AddWithValue("SortName", sortName);
-        cmd.Parameters.AddWithValue("Disambiguation", disambiguation);
-
-        var result = cmd.ExecuteScalar();
-        if (result != null)
-        {
-            artistId = (Guid)result;
-        }
-
-        return artistId;
-    }
-    public Guid InsertMusicBrainzReleaseTrack(
-        string musicBrainzRemoteReleaseTrackId, 
-        string musicBrainzRemoteRecordingTrackId, 
-        string title, 
-        string status,
-        string musicBrainzRemoteReleaseId)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            status = string.Empty;
-        }
-        
-        string query = @"INSERT INTO MusicBrainzReleaseTrack (MusicBrainzReleaseTrackId, MusicBrainzRemoteReleaseTrackId, MusicBrainzRemoteRecordingTrackId, Title, Status, StatusId, MusicBrainzRemoteReleaseId)
-                         VALUES (@id, @MusicBrainzRemoteReleaseTrackId, @MusicBrainzRemoteRecordingTrackId, @Title, @Status, @StatusId, @MusicBrainzRemoteReleaseId)
-                         ON CONFLICT (MusicBrainzRemoteReleaseTrackId) 
-                         DO UPDATE SET 
-                             Title = EXCLUDED.Title, 
-                             Status = EXCLUDED.Status, 
-                             StatusId = EXCLUDED.StatusId, 
-                             MusicBrainzRemoteRecordingTrackId = EXCLUDED.MusicBrainzRemoteRecordingTrackId,
-                             MusicBrainzRemoteReleaseId = EXCLUDED.MusicBrainzRemoteReleaseId
-                         RETURNING MusicBrainzReleaseTrackId";
-        
-        Guid releaseId = Guid.NewGuid();
-
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        
-        cmd.Parameters.AddWithValue("id", releaseId);
-        cmd.Parameters.AddWithValue("MusicBrainzRemoteReleaseTrackId", musicBrainzRemoteReleaseTrackId);
-        cmd.Parameters.AddWithValue("MusicBrainzRemoteRecordingTrackId", musicBrainzRemoteRecordingTrackId);
-        cmd.Parameters.AddWithValue("Title", title);
-        cmd.Parameters.AddWithValue("Status", status);
-        cmd.Parameters.AddWithValue("StatusId", string.Empty);
-        cmd.Parameters.AddWithValue("MusicBrainzRemoteReleaseId", musicBrainzRemoteReleaseId);
-
-        var result = cmd.ExecuteScalar();
-        if (result != null)
-        {
-            releaseId = (Guid)result;
-        }
-
-        return releaseId;
-    }
-    public Guid InsertMusicBrainzRelease(string musicBrainzArtistId, 
-        string musicBrainzRemoteReleaseId, 
-        string title, 
-        string status, 
-        string statusId,
-        string date,
-        string barcode,
-        string country,
-        string disambiguation,
-        string quality)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            status = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(statusId))
-        {
-            statusId = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(date))
-        {
-            date = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(barcode))
-        {
-            barcode = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(country))
-        {
-            country = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(disambiguation))
-        {
-            disambiguation = string.Empty;
-        }
-        if (string.IsNullOrWhiteSpace(quality))
-        {
-            quality = string.Empty;
-        }
-        
-        string query = @"INSERT INTO MusicBrainzRelease (MusicBrainzReleaseId, MusicBrainzArtistId, MusicBrainzRemoteReleaseId, 
-                                Title, Status, StatusId,
-                                Date,
-                                Barcode,
-                                Country,
-                                Disambiguation,
-                                Quality)
-
-                         VALUES (@id, @MusicBrainzArtistId, @MusicBrainzRemoteReleaseId, @Title, @Status, @StatusId, @Date, @Barcode, @Country, @Disambiguation, @Quality)
-                         ON CONFLICT (MusicBrainzRemoteReleaseId) 
-                         DO UPDATE SET Title = EXCLUDED.Title, 
-                             Status = EXCLUDED.Status, 
-                             StatusId = EXCLUDED.StatusId, 
-                             Date = EXCLUDED.Date, 
-                             Barcode = EXCLUDED.Barcode, 
-                             Country = EXCLUDED.Country, 
-                             Disambiguation = EXCLUDED.Disambiguation, 
-                             Quality = EXCLUDED.Quality
-                         RETURNING MusicBrainzReleaseId";
-        
-        Guid releaseId = Guid.NewGuid();
-
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        
-        cmd.Parameters.AddWithValue("id", releaseId);
-        cmd.Parameters.AddWithValue("MusicBrainzArtistId", musicBrainzArtistId);
-        cmd.Parameters.AddWithValue("MusicBrainzRemoteReleaseId", musicBrainzRemoteReleaseId);
-        cmd.Parameters.AddWithValue("Title", title);
-        cmd.Parameters.AddWithValue("Status", status);
-        cmd.Parameters.AddWithValue("StatusId", statusId);
-        cmd.Parameters.AddWithValue("Date", date);
-        cmd.Parameters.AddWithValue("Barcode", barcode);
-        cmd.Parameters.AddWithValue("Country", country);
-        cmd.Parameters.AddWithValue("Disambiguation", disambiguation);
-        cmd.Parameters.AddWithValue("Quality", quality);
-
-        var result = cmd.ExecuteScalar();
-        if (result != null)
-        {
-            releaseId = (Guid)result;
-        }
-
-        return releaseId;
-    }
-    
-    public Guid? GetRemoteMusicBrainzArtist(string remoteMusicBrainzArtistId)
-    {
-        string query = @"SELECT MusicBrainzArtistId FROM MusicBrainzArtist WHERE MusicBrainzRemoteId = @id";
-
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        
-        cmd.Parameters.AddWithValue("id", remoteMusicBrainzArtistId);
-
-        var result = cmd.ExecuteScalar();
-        if (!Guid.TryParse(result?.ToString(), out Guid artistId))
-        {
-            return null;
-        }
-        return artistId;
-    }
-    
-    public void UpdateMetadataPath(string metadataId, string path)
-    {
-        string query = @"UPDATE metadata SET Path = @path WHERE MetadataId = cast(@id as uuid)";
-
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        
-        cmd.Parameters.AddWithValue("id", metadataId);
-        cmd.Parameters.AddWithValue("path", path);
-
-        var result = cmd.ExecuteNonQuery();
     }
     
     public void UpdateMetadataFingerprint(string metadataId, string fingerprint, float duration)
@@ -256,129 +30,20 @@ public class DatabaseService
         var result = cmd.ExecuteNonQuery();
     }
     
-    public List<string> GetAllMusicBrainzArtistIds()
+    public void UpdateMetadataPath(string metadataId, string path)
     {
-        string query = @"SELECT MusicBrainzArtistId FROM MusicBrainzArtist";
+        string query = @"UPDATE metadata SET Path = @path WHERE MetadataId = cast(@id as uuid)";
 
         using var conn = new NpgsqlConnection(_connectionString);
         using var cmd = new NpgsqlCommand(query, conn);
         
         conn.Open();
-
-        using var reader = cmd.ExecuteReader();
         
-        var result = new List<string>();
-        while (reader.Read())
-        {
-            string artistId = reader.GetGuid(0).ToString();
-            if (!string.IsNullOrWhiteSpace(artistId))
-            {
-                result.Add(artistId);
-            }
-        }
+        cmd.Parameters.AddWithValue("id", metadataId);
+        cmd.Parameters.AddWithValue("path", path);
 
-        return result;
+        var result = cmd.ExecuteNonQuery();
     }
-    
-    public List<string> GetMusicBrainzArtistIdsByName(List<string> names)
-    {
-        string query = @"SELECT MusicBrainzArtistId FROM MusicBrainzArtist where name = any(@names)";
-
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        cmd.Parameters.AddWithValue("names", NpgsqlDbType.Text | NpgsqlTypes.NpgsqlDbType.Array, names);
-        
-        conn.Open();
-
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<string>();
-        while (reader.Read())
-        {
-            string artistId = reader.GetGuid(0).ToString();
-            if (!string.IsNullOrWhiteSpace(artistId))
-            {
-                result.Add(artistId);
-            }
-        }
-
-        return result;
-    }
-    
-    
-    public List<string> GetAllMusicBrainzArtistRemoteIds()
-    {
-        string query = @"SELECT MusicBrainzRemoteId FROM MusicBrainzArtist order by name asc";
-
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<string>();
-        while (reader.Read())
-        {
-            string artistId = reader.GetString(0);
-            if (!string.IsNullOrWhiteSpace(artistId))
-            {
-                result.Add(artistId);
-            }
-        }
-
-        return result;
-    }
-    
-    public List<string> GetMusicBrainzArtistRemoteIdsByName(List<string> names)
-    {
-        string query = @"SELECT MusicBrainzRemoteId FROM MusicBrainzArtist where name = any(@names)";
-
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        cmd.Parameters.AddWithValue("names", NpgsqlDbType.Text | NpgsqlTypes.NpgsqlDbType.Array, names);
-        
-        conn.Open();
-
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<string>();
-        while (reader.Read())
-        {
-            string artistId = reader.GetString(0);
-            if (!string.IsNullOrWhiteSpace(artistId))
-            {
-                result.Add(artistId);
-            }
-        }
-
-        return result;
-    }
-    
-    public List<string> GetAllArtistNames()
-    {
-        string query = @"SELECT name FROM artists order by name asc";
-
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<string>();
-        while (reader.Read())
-        {
-            string artistName = reader.GetString(0);
-            if (!string.IsNullOrWhiteSpace(artistName))
-            {
-                result.Add(artistName);
-            }
-        }
-
-        return result;
-    }
-    
     
     public List<string> GetMissingTracksByArtist(string artistName)
     {
@@ -437,7 +102,6 @@ public class DatabaseService
 
         return result;
     }
-    
     
     public List<MetadataModel> PossibleDuplicateFiles(string artistName)
     {
@@ -653,7 +317,6 @@ public class DatabaseService
         return result;
     }
     
-    
     public List<MetadataModel> GetMetadataByArtist(string artistName)
     {
         string query = @$"SELECT cast(m.MetadataId as text), 
@@ -728,7 +391,6 @@ public class DatabaseService
         return result;
     }
     
-    
     public List<MetadataModel> GetMetadataByFileExtension(string fileExtension)
     {
         string query = @$"SELECT cast(m.MetadataId as text), 
@@ -785,29 +447,6 @@ public class DatabaseService
     
     
     
-    // Insert artist or find if it already exists
-    public Guid InsertOrFindArtist(string artistName)
-    {
-        string query = @"INSERT INTO Artists (ArtistId, Name) VALUES (@id, @name) 
-                        ON CONFLICT (Name) 
-                        DO UPDATE SET Name=EXCLUDED.Name RETURNING ArtistId";
-        Guid artistId = Guid.NewGuid();
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        cmd.Parameters.AddWithValue("id", artistId);
-        cmd.Parameters.AddWithValue("name", artistName);
-
-        var result = cmd.ExecuteScalar();
-        if (result != null)
-        {
-            artistId = (Guid)result;
-        }
-
-        return artistId;
-    }
-    
     public bool MetadataCanUpdate(string path, DateTime lastWriteTime, DateTime creationTime)
     {
         string query = @"SELECT 1 FROM metadata 
@@ -832,36 +471,7 @@ public class DatabaseService
 
         return canUpdate;
     }
-
-    // Insert album or find if it already exists
-    public Guid InsertOrFindAlbum(string albumName, Guid artistId)
-    {
-        string query = @"
-            INSERT INTO Albums (AlbumId, Title, ArtistId) 
-            VALUES (@id, @title, @artistId) 
-            ON CONFLICT (Title, ArtistId) 
-            DO UPDATE SET Title = EXCLUDED.Title 
-            RETURNING AlbumId";
-        
-        Guid albumId = Guid.NewGuid();
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        cmd.Parameters.AddWithValue("id", albumId);
-        cmd.Parameters.AddWithValue("title", albumName);
-        cmd.Parameters.AddWithValue("artistId", artistId);
-
-        var result = cmd.ExecuteScalar();
-        if (result != null)
-        {
-            albumId = (Guid)result;
-        }
-
-        return albumId;
-    }
-
-    // Insert metadata or update if MusicBrainz ID already exists
+    
     public void InsertOrUpdateMetadata(MetadataInfo metadata, string filePath, Guid albumId)
     {
         string query = @"
@@ -905,7 +515,8 @@ public class DatabaseService
                                   Tag_AcoustIdFingerPrint, 
                                   Tag_AcoustId,
                                   File_LastWriteTime,
-                                  File_CreationTime)
+                                  File_CreationTime,
+                                  Tag_AllJsonTags)
             VALUES (@id, @path, @title, @albumId, 
                     @MusicBrainzArtistId, 
                     @MusicBrainzDiscId, 
@@ -942,7 +553,8 @@ public class DatabaseService
                     @Tag_AcoustIdFingerPrint,
                     @Tag_AcoustId,
                     @File_LastWriteTime,
-                    @File_CreationTime)
+                    @File_CreationTime,
+                    @Tag_AllJsonTags)
             ON CONFLICT (Path)
             DO UPDATE SET
                 Title = EXCLUDED.Title,
@@ -973,7 +585,8 @@ public class DatabaseService
                 Tag_AcoustIdFingerPrint = EXCLUDED.Tag_AcoustIdFingerPrint,
                 Tag_AcoustId = EXCLUDED.Tag_AcoustId,
                 File_LastWriteTime = EXCLUDED.File_LastWriteTime,
-                File_CreationTime = EXCLUDED.File_CreationTime";
+                File_CreationTime = EXCLUDED.File_CreationTime,
+                Tag_AllJsonTags = EXCLUDED.Tag_AllJsonTags";
 
         Guid metadataId = Guid.NewGuid();
         
@@ -1023,6 +636,7 @@ public class DatabaseService
         cmd.Parameters.AddWithValue("Tag_AcoustId", metadata.TagAcoustId);
         cmd.Parameters.AddWithValue("File_LastWriteTime", metadata.FileLastWriteTime);
         cmd.Parameters.AddWithValue("File_CreationTime", metadata.FileCreationTime);
+        cmd.Parameters.AddWithValue("Tag_AllJsonTags", metadata.AllJsonTags);
 
         cmd.ExecuteNonQuery();
     }

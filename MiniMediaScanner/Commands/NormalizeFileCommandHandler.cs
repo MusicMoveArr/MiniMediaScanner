@@ -2,16 +2,17 @@ using System.Globalization;
 using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
 using MiniMediaScanner.Models;
+using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
 namespace MiniMediaScanner.Commands;
 
 public class NormalizeFileCommandHandler
 {
-    private readonly DatabaseService _databaseService;
     private readonly StringNormalizerService _stringNormalizerService;
     private readonly MediaTagWriteService _tagWriteService;
     private readonly ImportCommandHandler _importCommandHandler;
+    private readonly MetadataRepository _metadataRepository;
     
     private int _updateFiles = 0;
     private int _updateAlbumNames = 0;
@@ -21,10 +22,10 @@ public class NormalizeFileCommandHandler
 
     public NormalizeFileCommandHandler(string connectionString)
     {
-        _databaseService = new DatabaseService(connectionString);
         _stringNormalizerService = new StringNormalizerService();
         _tagWriteService = new MediaTagWriteService();
         _importCommandHandler = new ImportCommandHandler(connectionString);
+        _metadataRepository = new MetadataRepository(connectionString);
     }
     
     public void NormalizeFiles(
@@ -43,7 +44,7 @@ public class NormalizeFileCommandHandler
 
         while (true)
         {
-            var metadata = _databaseService.GetAllMetadata(offset, limit);
+            var metadata = _metadataRepository.GetAllMetadata(offset, limit);
             offset += limit;
 
             if (metadata.Count == 0)

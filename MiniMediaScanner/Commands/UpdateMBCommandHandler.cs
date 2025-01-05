@@ -1,27 +1,28 @@
+using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
 namespace MiniMediaScanner.Commands;
 
 public class UpdateMBCommandHandler
 {
-    private readonly DatabaseService _databaseService;
     private readonly MusicBrainzService _musicBrainzService;
+    private readonly MusicBrainzArtistRepository _musicBrainzArtistRepository;
 
     public UpdateMBCommandHandler(string connectionString)
     {
-        _databaseService = new DatabaseService(connectionString);
         _musicBrainzService = new MusicBrainzService(connectionString);
+        _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
     }
     
     public void UpdateMusicBrainzArtistsByName(List<string> names)
     {
-        var artistIds = _databaseService.GetMusicBrainzArtistRemoteIdsByName(names);
+        var artistIds = _musicBrainzArtistRepository.GetMusicBrainzArtistRemoteIdsByName(names);
         artistIds.ForEach(id => UpdateMusicBrainzArtistId(id));
     }
     
     public void UpdateAllMusicBrainzArtists()
     {
-        var artistIds = _databaseService.GetAllMusicBrainzArtistRemoteIds();
+        var artistIds = _musicBrainzArtistRepository.GetAllMusicBrainzArtistRemoteIds();
         artistIds.ForEach(id => UpdateMusicBrainzArtistId(id));
     }
     

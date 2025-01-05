@@ -1,20 +1,22 @@
 using System.Text.RegularExpressions;
+using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
 namespace MiniMediaScanner.Commands;
 
 public class MissingCommandHandler
 {
-    private readonly DatabaseService _databaseService;
+    private readonly ArtistRepository _artistRepository;
+    private readonly MetadataRepository _metadataRepository;
 
     public MissingCommandHandler(string connectionString)
     {
-        _databaseService = new DatabaseService(connectionString);
+        _artistRepository = new ArtistRepository(connectionString);
     }
     
     public void CheckMissingTracksByArtist(string artistName)
     {
-        _databaseService.GetMissingTracksByArtist(artistName)
+        _metadataRepository.GetMissingTracksByArtist(artistName)
             .ToList()
             .ForEach(track =>
             {
@@ -24,11 +26,11 @@ public class MissingCommandHandler
     
     public void CheckAllMissingTracks()
     {
-        var filteredNames = _databaseService.GetAllArtistNames();
+        var filteredNames = _artistRepository.GetAllArtistNames();
 
         foreach (string artistName in filteredNames)
         {
-            var missingTracks = _databaseService.GetMissingTracksByArtist(artistName);
+            var missingTracks = _metadataRepository.GetMissingTracksByArtist(artistName);
 
             missingTracks.ForEach(track =>
             {
