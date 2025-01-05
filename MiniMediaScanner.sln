@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiniMediaScanner", "MiniMediaScanner\MiniMediaScanner.csproj", "{992C9322-8069-4F47-B12B-E17571D55DA4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiniMediaScanner.Tests", "MiniMediaScanner.Tests\MiniMediaScanner.Tests.csproj", "{B591445C-78A9-46A3-BFFF-0387C67A4DDB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{992C9322-8069-4F47-B12B-E17571D55DA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{992C9322-8069-4F47-B12B-E17571D55DA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{992C9322-8069-4F47-B12B-E17571D55DA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{992C9322-8069-4F47-B12B-E17571D55DA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B591445C-78A9-46A3-BFFF-0387C67A4DDB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B591445C-78A9-46A3-BFFF-0387C67A4DDB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B591445C-78A9-46A3-BFFF-0387C67A4DDB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B591445C-78A9-46A3-BFFF-0387C67A4DDB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
