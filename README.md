@@ -23,7 +23,7 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 7. DeDuplicate - DeDuplicate files locally that contain at the end of the filename, (1).mp3, (2).m4a etc
 8. NormalizeFile - Normalize/Standardize all your media file names to a common standard
 
-#Examples
+# Examples
 ```
 dotnet MiniMediaScanner.dll import --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" --path "~/Music" 
 ```
