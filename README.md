@@ -60,3 +60,10 @@ dotnet MiniMediaScanner.dll normalizefile --connection-string "Host=192.168.1.2;
 --directory-format "{artist}/{album}" \
 --directory-seperator "_"
 ```
+
+# Docker
+| Environment Name | Value Example |
+|-----:|---------------|
+|IMPORT_PATH| ~/Music |
+|CRON (Quartz)|0 0 * * * ? *|
+|CONNECTIONSTRING|Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia|
