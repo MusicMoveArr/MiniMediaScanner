@@ -12,6 +12,7 @@ public class MissingCommandHandler
     public MissingCommandHandler(string connectionString)
     {
         _artistRepository = new ArtistRepository(connectionString);
+        _metadataRepository = new MetadataRepository(connectionString);
     }
     
     public void CheckMissingTracksByArtist(string artistName)
