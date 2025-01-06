@@ -48,38 +48,43 @@ public class MetadataRepository
     public List<string> GetMissingTracksByArtist(string artistName)
     {
         string query = @"WITH unique_tracks AS (
-                            SELECT *
-                            FROM (
-	                            SELECT track.*, lower(re.title) as release_title, lower(ar.name) as artist_name, 
-	                                   ROW_NUMBER() OVER (
-	                                       PARTITION BY lower(track.title), lower(re.title), lower(ar.name)
-	                                       --ORDER BY track.musicbrainzremoterecordingtrackid
-	                                   ) AS rn
-	                                   
-	                              FROM minimedia.public.musicbrainzartist ar
-			                        JOIN minimedia.public.musicbrainzrelease re 
-			                            ON re.musicbrainzartistid = CAST(ar.musicbrainzartistid AS TEXT)
-			                            AND lower(re.country) = lower(ar.country)
-			                            and lower(re.status) = 'official'
-			                        JOIN minimedia.public.musicbrainzreleasetrack track 
-			                            ON track.musicbrainzremotereleaseid = re.musicbrainzremotereleaseid
-	                        ) AS subquery
-	                            WHERE rn = 1
-                        )
-
-                        SELECT distinct ut.artist_name || ' - ' || ut.release_title || ' - ' || ut.title
-                        FROM unique_tracks ut
-
-                        left JOIN artists a ON lower(a.""name"") = lower(ut.artist_name)
-                        left JOIN albums a2 ON a2.artistid = a.artistid AND lower(a2.title) = lower(ut.release_title)
-
-                        LEFT JOIN minimedia.public.metadata m 
-                            ON m.musicbrainztrackid = ut.musicbrainzremoterecordingtrackid 
-    	                       or (lower(m.title) = lower(ut.title) AND m.albumid = a2.albumid)
-
-                        WHERE 
-                          ut.artist_name = @artistName
-                           and m.musicbrainztrackid IS NULL";
+                         SELECT *
+                         FROM (
+                             select lower(re.title) as album_title, lower(ar.name) as artist_name, lower(track.title) as track_title, lower(re.status) as status,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY lower(track.title), lower(re.title), lower(ar.name), lower(track.title)
+                                    ) AS rn
+                                    
+                               FROM minimedia.public.musicbrainzartist ar
+                                 JOIN minimedia.public.musicbrainzrelease re 
+                                     ON re.musicbrainzartistid = CAST(ar.musicbrainzartistid AS TEXT)
+                                     --AND lower(re.country) = lower(ar.country)
+                                     --and lower(re.status) = 'official'
+                                 JOIN minimedia.public.musicbrainzreleasetrack track 
+                                     ON track.musicbrainzremotereleaseid = re.musicbrainzremotereleaseid
+                         ) AS subquery
+                             WHERE rn = 1
+                     )
+                     SELECT distinct ut.artist_name || ' - ' || ut.album_title || ' - ' || ut.track_title
+                     FROM unique_tracks ut
+ 
+                     left join artists a on lower(a.name) = ut.artist_name
+                     left join albums album on 
+	                     album.artistid = a.artistid 
+	                     and lower(album.title) = ut.album_title
+ 
+                     left join metadata m on
+	                     (m.albumid = album.albumid --check by albumid
+	                      and lower(m.title) = ut.track_title)
+	                     or (lower(m.path) like '%/' || ut.album_title || '/%' --check album by path
+	                        and lower(m.path) like '%/' || ut.artist_name || '/%' --check album by artist
+	                         and lower(m.title) = ut.track_title)
+	                     or (lower(m.path) like '%/' || ut.artist_name || '/%' --check by just the arist path
+	                         and lower(m.title) = ut.track_title)
+ 
+                     where ut.artist_name = @artistName
+                     and ut.track_title not like '%(%'
+                     and m.metadataid is null";
 
         using var conn = new NpgsqlConnection(_connectionString);
         using var cmd = new NpgsqlCommand(query, conn);
@@ -449,26 +454,30 @@ public class MetadataRepository
     
     public bool MetadataCanUpdate(string path, DateTime lastWriteTime, DateTime creationTime)
     {
-        string query = @"SELECT 1 FROM metadata 
-                         WHERE path = @path and
-                               (File_LastWriteTime != @lastWriteTime or
-                               File_CreationTime != @creationTime)";
+        string query = @"SELECT cast(MetadataId as text), File_LastWriteTime, File_CreationTime 
+                         FROM metadata 
+                         WHERE path = @path
+                         LIMIT 1";
         
         using var conn = new NpgsqlConnection(_connectionString);
         using var cmd = new NpgsqlCommand(query, conn);
         
         conn.Open();
         cmd.Parameters.AddWithValue("path", path);
-        cmd.Parameters.AddWithValue("lastWriteTime", lastWriteTime);
-        cmd.Parameters.AddWithValue("creationTime", creationTime);
-
-        var result = cmd.ExecuteScalar();
+        using var reader = cmd.ExecuteReader();
         bool canUpdate = true;
-        if (result != null)
+        
+        if (reader.Read())
         {
-            canUpdate = (int)result == 1;
-        }
+            string metadataId = reader.GetString(0);
+            DateTime dbLastWriteTime = reader.GetDateTime(1);
+            DateTime dbCreationTime = reader.GetDateTime(2);
 
+            canUpdate = !string.IsNullOrWhiteSpace(metadataId) &&
+                        (dbLastWriteTime.ToString("yyyy-MM-dd HH:mm:ss") != lastWriteTime.ToString("yyyy-MM-dd HH:mm:ss") ||
+                         dbCreationTime.ToString("yyyy-MM-dd HH:mm:ss") != creationTime.ToString("yyyy-MM-dd HH:mm:ss"));
+            
+        }
         return canUpdate;
     }
     
