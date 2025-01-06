@@ -57,8 +57,15 @@ public class DeDuplicateFileCommandHandler
                     continue;
                 }
 
-                Console.WriteLine($"Delete duplicate file, {possibleDuplicateFile.Path}");
-                duplicatefileInfo.Delete();
+                if (delete)
+                {
+                    Console.WriteLine($"Delete duplicate file {possibleDuplicateFile.Path}");
+                    duplicatefileInfo.Delete();
+                }
+                else
+                {
+                    Console.WriteLine($"Duplicate file {possibleDuplicateFile.Path}");
+                }
             }
         }
     }
