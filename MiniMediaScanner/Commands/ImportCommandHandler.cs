@@ -81,7 +81,10 @@ public class ImportCommandHandler
                 !string.IsNullOrWhiteSpace(metadata?.Album) &&
                 !string.IsNullOrWhiteSpace(metadata?.Artist))
             {
-                _musicBrainzService.InsertMissingMusicBrainzArtist(metadata);
+                lock (_musicBrainzService)
+                {
+                    _musicBrainzService.InsertMissingMusicBrainzArtist(metadata);
+                }
             }
         }
         catch (Exception e)
