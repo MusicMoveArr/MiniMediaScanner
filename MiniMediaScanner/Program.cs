@@ -27,6 +27,7 @@ class Program
         AppBuilder.Add("normalizefile", NormalizeFileCommand.NormalizeFile);
         AppBuilder.Add("equalizemediatag", EqualizeMediaTagCommand.EqualizeMediaTag);
         AppBuilder.Add("refreshmetadata", RefreshMetadataCommand.RefreshMetadata);
+        AppBuilder.Add("fixversioning", FixVersioningCommand.FixVersioning);
         
         string? importPath = Environment.GetEnvironmentVariable("IMPORT_PATH");
         string? cronExpression = Environment.GetEnvironmentVariable("CRON");

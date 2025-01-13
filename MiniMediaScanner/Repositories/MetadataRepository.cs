@@ -334,7 +334,11 @@ public class MetadataRepository
                                  m.Title, 
                                  cast(m.AlbumId as text),
                                  tag_alljsontags,
-                                 album.title
+                                 album.title,
+                                 tag_track,
+                                 tag_trackcount,
+                                 tag_disc,
+                                 tag_disccount
                         FROM minimedia.public.metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
@@ -357,6 +361,11 @@ public class MetadataRepository
             string albumId = reader.GetString(3);
             string allJsonTags = reader.IsDBNull(4) ? string.Empty : reader.GetString(4);
             string albumTitle = reader.IsDBNull(5) ? string.Empty : reader.GetString(5);
+            int track = reader.GetInt32(6);
+            int trackCount = reader.GetInt32(7);
+            int disc = reader.GetInt32(8);
+            int discCount = reader.GetInt32(9);
+            
             result.Add(new MetadataModel()
             {
                 MetadataId = metadataId,
@@ -364,7 +373,11 @@ public class MetadataRepository
                 Title = title,
                 AlbumId = albumId,
                 AllJsonTags = allJsonTags,
-                AlbumName = albumTitle
+                AlbumName = albumTitle,
+                Track = track,
+                TrackCount = trackCount,
+                Disc = disc,
+                DiscCount = discCount,
             });
         }
 

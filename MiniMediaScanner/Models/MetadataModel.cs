@@ -10,4 +10,8 @@ public class MetadataModel
     public string? AlbumName { get; set; }
     public int Tag_Track { get; set; }
     public string AllJsonTags { get; set; }
+    public int Track { get; set; }
+    public int TrackCount { get; set; }
+    public int Disc { get; set; }
+    public int DiscCount { get; set; }
 }
