@@ -1,5 +1,7 @@
-using System.Text;
+using System.Diagnostics;
 using FFMpegCore;
+using FFMpegCore.Helpers;
+using Instances;
 
 namespace MiniMediaScanner.Services;
 
@@ -8,7 +10,6 @@ public class FileMetaDataService
     private const string VariousArtistsName = "Various Artists";
     private const string AcoustidFingerprintTag = "acoustid fingerprint";
     private const string AcoustidIdTag = "acoustid id";
-    
     
     public MetadataInfo GetMetadataInfo(FileInfo fileInfo)
     {

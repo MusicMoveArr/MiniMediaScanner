@@ -45,7 +45,7 @@ public class ImportCommandHandler
         }
     }
 
-    public bool ProcessFile(string filePath)
+    public bool ProcessFile(string filePath, bool forceReimport = false)
     {
         try
         {
@@ -56,7 +56,13 @@ public class ImportCommandHandler
                     
             FileInfo fileInfo = new(filePath);
 
-            if (!_metadataRepository.MetadataCanUpdate(fileInfo.FullName, fileInfo.LastWriteTime, fileInfo.CreationTime))
+            if (!fileInfo.Exists)
+            {
+                return false;
+            }
+
+            if (!forceReimport && 
+                !_metadataRepository.MetadataCanUpdate(fileInfo.FullName, fileInfo.LastWriteTime, fileInfo.CreationTime))
             {
                 return false;
             }

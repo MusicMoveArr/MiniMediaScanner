@@ -1,6 +1,7 @@
 ﻿using ConsoleAppFramework;
 using MiniMediaScanner.Commands;
 using MiniMediaScanner.Jobs;
+using Newtonsoft.Json;
 using Quartz;
 using Quartz.Impl;
 
@@ -24,6 +25,8 @@ class Program
         //AppBuilder.Add("tagmissingmetadata", TagMissingMetadataCommand.TagMissingMetadata); //work in progress
         AppBuilder.Add("deduplicate", DeDuplicateFileCommand.DeDuplicate);
         AppBuilder.Add("normalizefile", NormalizeFileCommand.NormalizeFile);
+        AppBuilder.Add("equalizemediatag", EqualizeMediaTagCommand.EqualizeMediaTag);
+        AppBuilder.Add("refreshmetadata", RefreshMetadataCommand.RefreshMetadata);
         
         string? importPath = Environment.GetEnvironmentVariable("IMPORT_PATH");
         string? cronExpression = Environment.GetEnvironmentVariable("CRON");

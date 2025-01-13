@@ -40,4 +40,33 @@ public class MediaTagWriteService
 
         return success;
     }
+    public bool SaveTag(FileInfo targetFile, string tag, string value)
+    {
+        string tempFile = $"{targetFile.FullName}.tmp{targetFile.Extension}";
+        bool success = false;
+        try
+        {
+            success = FFMpegArguments
+                .FromFileInput(targetFile.FullName)
+                .OutputToFile(tempFile, overwrite: true, options => options
+                    .WithCustomArgument($"-metadata {tag}=\"{value}\"")
+                    .WithCustomArgument("-codec copy")) // Prevents re-encoding
+                .ProcessSynchronously();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+
+        if (success && File.Exists(tempFile))
+        {
+            File.Move(tempFile, targetFile.FullName, true);
+        }
+        else if (File.Exists(tempFile))
+        {
+            File.Delete(tempFile);
+        }
+
+        return success;
+    }
 }
