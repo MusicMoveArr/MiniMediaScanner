@@ -9,4 +9,5 @@ public class MetadataModel
     public string? ArtistName { get; set; }
     public string? AlbumName { get; set; }
     public int Tag_Track { get; set; }
+    public string AllJsonTags { get; set; }
 }

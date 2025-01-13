@@ -147,7 +147,12 @@ public class MetadataRepository
     
     public List<MetadataModel> GetAllMetadata(int offset, int limit)
     {
-        string query = @$"select cast(m.MetadataId as text), m.path, m.title, cast(m.albumid as text), artist.""name"", album.title, m.tag_track
+        string query = @$"select cast(m.MetadataId as text), 
+                                 m.path, m.title, 
+                                 cast(m.albumid as text), 
+                                 artist.""name"", 
+                                 album.title, 
+                                 m.tag_track
                           from artists artist
                           join albums album on album.artistid = artist.artistid
                           join metadata m on m.albumid = album.albumid 
@@ -327,11 +332,13 @@ public class MetadataRepository
         string query = @$"SELECT cast(m.MetadataId as text), 
                                  m.Path, 
                                  m.Title, 
-                                 cast(m.AlbumId as text)
+                                 cast(m.AlbumId as text),
+                                 tag_alljsontags,
+                                 album.title
                         FROM minimedia.public.metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
-                        where artist.name = @artistName";
+                        where lower(artist.name) = lower(@artistName)";
 
         using var conn = new NpgsqlConnection(_connectionString);
         using var cmd = new NpgsqlCommand(query, conn);
@@ -348,12 +355,16 @@ public class MetadataRepository
             string path = reader.GetString(1);
             string title = reader.GetString(2);
             string albumId = reader.GetString(3);
+            string allJsonTags = reader.IsDBNull(4) ? string.Empty : reader.GetString(4);
+            string albumTitle = reader.IsDBNull(5) ? string.Empty : reader.GetString(5);
             result.Add(new MetadataModel()
             {
                 MetadataId = metadataId,
                 Path = path,
                 Title = title,
-                AlbumId = albumId
+                AlbumId = albumId,
+                AllJsonTags = allJsonTags,
+                AlbumName = albumTitle
             });
         }
 
