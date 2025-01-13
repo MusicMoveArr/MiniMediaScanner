@@ -12,21 +12,23 @@ public class EqualizeMediaTagCommand
     /// <param name="artist">-a, Artistname.</param>
     /// <param name="album">-b, target Album.</param>
     /// <param name="tag">-t, Tag.</param>
+    /// <param name="confirm">-y, Always confirm automatically.</param>
     [Command("equalizemediatag")]
     public static void EqualizeMediaTag(string connectionString, 
         string tag,
         string artist = "", 
-        string album = "")
+        string album = "", 
+        bool confirm = false)
     {
         var handler = new EqualizeMediaTagCommandHandler(connectionString);
 
         if (string.IsNullOrWhiteSpace(artist))
         {
-            handler.EqualizeTags(album, tag);
+            handler.EqualizeTags(album, tag, confirm);
         }
         else
         {
-            handler.EqualizeTags(artist, album, tag);
+            handler.EqualizeTags(artist, album, tag, confirm);
         }
     }
 }

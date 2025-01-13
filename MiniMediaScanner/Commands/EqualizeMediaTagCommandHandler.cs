@@ -23,13 +23,13 @@ public class EqualizeMediaTagCommandHandler
         _mediaTagWriteService = new MediaTagWriteService();
     }
 
-    public void EqualizeTags(string album, string tag)
+    public void EqualizeTags(string album, string tag, bool autoConfirm)
     {
         _artistRepository.GetAllArtistNames()
-            .ForEach(artist => EqualizeTags(artist, album, tag));
+            .ForEach(artist => EqualizeTags(artist, album, tag, autoConfirm));
     }
     
-    public void EqualizeTags(string artist, string album, string tag)
+    public void EqualizeTags(string artist, string album, string tag, bool autoConfirm)
     {
         var metadata = _metadataRepository.GetMetadataByArtist(artist)
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
@@ -45,13 +45,13 @@ public class EqualizeMediaTagCommandHandler
             switch (tag.ToLower())
             {
                 case "date":
-                    success = ProcessDate(group.ToList(), artist, album);
+                    success = ProcessDate(group.ToList(), artist, album, autoConfirm);
                     break;
             }
         }
     }
 
-    private bool ProcessDate(List<MetadataModel> metadataFiles, string artist, string album)
+    private bool ProcessDate(List<MetadataModel> metadataFiles, string artist, string album, bool autoConfirm)
     {
         const string Tag = "date";
         if (metadataFiles.Any(m => string.IsNullOrWhiteSpace(m.AllJsonTags)))
@@ -108,7 +108,7 @@ public class EqualizeMediaTagCommandHandler
         }
         
         Console.WriteLine("Confirm changes? (Y/y or N/n)");
-        bool confirm = Console.ReadLine()?.ToLower() == "y";
+        bool confirm = autoConfirm || Console.ReadLine()?.ToLower() == "y";
 
         if (!confirm)
         {
