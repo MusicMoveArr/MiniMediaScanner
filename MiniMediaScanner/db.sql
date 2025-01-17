@@ -1,126 +1,117 @@
-CREATE TABLE Artists (
-    ArtistId UUID PRIMARY KEY,
-    Name TEXT UNIQUE
+CREATE TABLE public.artists (
+    artistid uuid NOT NULL,
+    "name" text NULL,
+    CONSTRAINT artists_name_key UNIQUE (name),
+    CONSTRAINT artists_pkey PRIMARY KEY (artistid)
 );
+CREATE INDEX idx_artists_lower_name ON public.artists USING btree (lower(name));
 
-ALTER TABLE public.artists ADD artistid uuid NOT NULL;
-ALTER TABLE public.artists ADD "name" text NULL;
-
-CREATE TABLE Albums (
-    AlbumId UUID PRIMARY KEY,
-    Title TEXT,
-    ArtistId UUID
-    UNIQUE (Title, ArtistId)
+CREATE TABLE public.albums (
+    albumid uuid NOT NULL,
+    title text NULL,
+    artistid uuid NULL,
+    CONSTRAINT albums_pkey PRIMARY KEY (albumid),
+    CONSTRAINT albums_unique UNIQUE (title, artistid)
 );
-
 CREATE INDEX albums_artistid_idx ON public.albums USING btree (artistid, title);
-CREATE UNIQUE INDEX albums_pkey ON public.albums USING btree (albumid);
-CREATE UNIQUE INDEX albums_unique ON public.albums USING btree (title, artistid);
 CREATE INDEX idx_albums_artistid_title ON public.albums USING btree (artistid, lower(title));
 
-CREATE TABLE Metadata (
-    MetadataId UUID PRIMARY KEY,
-    Path TEXT,
-    Title TEXT,
-    AlbumId UUID,
-    MusicBrainzArtistId TEXT,
-    MusicBrainzDiscId TEXT,
-    MusicBrainzReleaseCountry TEXT,
-    MusicBrainzReleaseId TEXT,
-    MusicBrainzTrackId TEXT,
-    MusicBrainzReleaseStatus TEXT,
-    MusicBrainzReleaseType TEXT,
-    MusicBrainzReleaseArtistId TEXT,
-    MusicBrainzReleaseGroupId TEXT,
-    Tag_Subtitle TEXT,
-    Tag_AlbumSort TEXT,
-    Tag_Comment TEXT,
-    Tag_Year INT default 0,
-    Tag_Track INT default 0,
-    Tag_TrackCount INT default 0,
-    Tag_Disc INT default 0,
-    Tag_DiscCount INT default 0,
-    Tag_Lyrics TEXT default null,
-    Tag_Grouping TEXT default null,
-    Tag_BeatsPerMinute INT default 0,
-    Tag_Conductor TEXT default null,
-    Tag_Copyright TEXT default null,
-    Tag_DateTagged TIMESTAMP default null,
-    Tag_AmazonId TEXT default null,
-    Tag_ReplayGainTrackGain DOUBLE default 0,
-    Tag_ReplayGainTrackPeak DOUBLE default 0,
-    Tag_ReplayGainAlbumGain DOUBLE default 0,
-    Tag_ReplayGainAlbumPeak DOUBLE default 0,
-    Tag_InitialKey TEXT default null,
-    Tag_RemixedBy TEXT default null,
-    Tag_Publisher TEXT default null,
-    Tag_ISRC TEXT default null,
-    Tag_Length TEXT default null,
-    Tag_AcoustIdFingerPrint TEXT default null,
-    Tag_AcoustId TEXT default null,
-    File_LastWriteTime timestamp default '1999-01-08',
-    File_CreationTime timestamp default '1999-01-08',
-    Tag_AcoustIdFingerPrintDuration float default 0
-    Tag_AllJsonTags TEXT default null,
-    UNIQUE (Path)
+CREATE TABLE public.metadata (
+    metadataid uuid NOT NULL,
+    "path" text NULL,
+    title text NULL,
+    albumid uuid NULL,
+    musicbrainzartistid text NULL,
+    musicbrainzdiscid text NULL,
+    musicbrainzreleasecountry text NULL,
+    musicbrainzreleaseid text NULL,
+    musicbrainztrackid text NULL,
+    musicbrainzreleasestatus text NULL,
+    musicbrainzreleasetype text NULL,
+    musicbrainzreleaseartistid text NULL,
+    musicbrainzreleasegroupid text NULL,
+    tag_subtitle text NULL,
+    tag_albumsort text NULL,
+    tag_comment text NULL,
+    tag_year int4 DEFAULT 0 NULL,
+    tag_track int4 DEFAULT 0 NULL,
+    tag_trackcount int4 DEFAULT 0 NULL,
+    tag_disc int4 DEFAULT 0 NULL,
+    tag_disccount int4 DEFAULT 0 NULL,
+    tag_lyrics text NULL,
+    tag_grouping text NULL,
+    tag_beatsperminute int4 DEFAULT 0 NULL,
+    tag_conductor text NULL,
+    tag_copyright text NULL,
+    tag_datetagged timestamp NULL,
+    tag_amazonid text NULL,
+    tag_replaygaintrackgain float8 DEFAULT 0 NULL,
+    tag_replaygaintrackpeak float8 DEFAULT 0 NULL,
+    tag_replaygainalbumgain float8 DEFAULT 0 NULL,
+    tag_replaygainalbumpeak float8 DEFAULT 0 NULL,
+    tag_initialkey text NULL,
+    tag_remixedby text NULL,
+    tag_publisher text NULL,
+    tag_isrc text NULL,
+    tag_length text NULL,
+    tag_acoustidfingerprint text NULL,
+    tag_acoustid text NULL,
+    file_lastwritetime timestamp DEFAULT '1999-01-08 00:00:00'::timestamp without time zone NULL,
+    file_creationtime timestamp DEFAULT '1999-01-08 00:00:00'::timestamp without time zone NULL,
+    tag_acoustidfingerprint_duration float8 DEFAULT 0 NULL,
+    tag_alljsontags text NULL,
+    CONSTRAINT metadata_path_key UNIQUE (path),
+    CONSTRAINT metadata_pkey PRIMARY KEY (metadataid)
 );
-
 CREATE INDEX idx_metadata_trackid_title_albumid ON public.metadata USING btree (musicbrainztrackid, lower(title), albumid);
 CREATE INDEX metadata_musicbrainztrackid_idx ON public.metadata USING btree (musicbrainztrackid, albumid, title);
-CREATE UNIQUE INDEX metadata_path_key ON public.metadata USING btree (path);
-CREATE UNIQUE INDEX metadata_pkey ON public.metadata USING btree (metadataid);
 CREATE INDEX metadata_title_idx ON public.metadata USING btree (title, albumid);
 
 
-CREATE TABLE MusicBrainzArtist (
-    MusicBrainzArtistId UUID PRIMARY KEY,
-    MusicBrainzRemoteId TEXT,
-    ReleaseCount INT,
-    Name TEXT,
-    Type TEXT,
-    Country TEXT,
-    SortName TEXT,
-    Disambiguation TEXT,
-    UNIQUE (MusicBrainzRemoteId)
+CREATE TABLE public.musicbrainzartist (
+    musicbrainzartistid uuid NOT NULL,
+    musicbrainzremoteid text NULL,
+    releasecount int4 NULL,
+    "name" text NULL,
+    "type" text NULL,
+    country text NULL,
+    sortname text NULL,
+    disambiguation text NULL,
+    CONSTRAINT musicbrainzartist_musicbrainzremoteid_key UNIQUE (musicbrainzremoteid),
+    CONSTRAINT musicbrainzartist_pkey PRIMARY KEY (musicbrainzartistid)
 );
-
 CREATE INDEX idx_musicbrainzartist_id ON public.musicbrainzartist USING btree (musicbrainzartistid);
-CREATE UNIQUE INDEX musicbrainzartist_musicbrainzremoteid_key ON public.musicbrainzartist USING btree (musicbrainzremoteid);
 CREATE INDEX musicbrainzartist_name_idx ON public.musicbrainzartist USING btree (name);
-CREATE UNIQUE INDEX musicbrainzartist_pkey ON public.musicbrainzartist USING btree (musicbrainzartistid);
 
-CREATE TABLE MusicBrainzReleaseTrack (
-    MusicBrainzReleaseTrackId UUID PRIMARY KEY,
-    MusicBrainzRemoteReleaseTrackId TEXT,
-    MusicBrainzRemoteRecordingTrackId TEXT,
-    Title TEXT,
-    Status TEXT,
-    StatusId TEXT,
-    MusicBrainzReleaseRemoteId TEXT default null,
-    UNIQUE (MusicBrainzRemoteReleaseId)
+CREATE TABLE public.musicbrainzrelease (
+    musicbrainzreleaseid uuid NOT NULL,
+    musicbrainzartistid text NULL,
+    musicbrainzremotereleaseid text NULL,
+    title text NULL,
+    status text NULL,
+    statusid text NULL,
+    "date" text NULL,
+    barcode text NULL,
+    country text NULL,
+    disambiguation text NULL,
+    quality text NULL,
+    CONSTRAINT musicbrainzrelease_musicbrainzremotereleaseid_key1 UNIQUE (musicbrainzremotereleaseid),
+    CONSTRAINT musicbrainzrelease_pkey1 PRIMARY KEY (musicbrainzreleaseid)
 );
-
-CREATE INDEX idx_musicbrainzreleasetrack_remotereleaseid ON public.musicbrainzreleasetrack USING btree (musicbrainzremotereleaseid);
-CREATE UNIQUE INDEX musicbrainzrelease_musicbrainzremotereleaseid_key ON public.musicbrainzreleasetrack USING btree (musicbrainzremotereleasetrackid);
-CREATE UNIQUE INDEX musicbrainzrelease_pkey ON public.musicbrainzreleasetrack USING btree (musicbrainzreleasetrackid);
-CREATE INDEX musicbrainzreleasetrack_musicbrainzremotereleaseid_idx ON public.musicbrainzreleasetrack USING btree (musicbrainzremotereleaseid);
-
-CREATE TABLE MusicBrainzRelease (
-    MusicBrainzReleaseId UUID PRIMARY KEY,
-    MusicBrainzArtistId TEXT,
-    MusicBrainzRemoteReleaseId TEXT,
-    Title TEXT,
-    Status TEXT,
-    StatusId TEXT,
-    Date TEXT,
-    Barcode TEXT,
-    Country TEXT,
-    Disambiguation TEXT,
-    Quality TEXT,
-    UNIQUE (MusicBrainzRemoteReleaseId)
-);
-
 CREATE INDEX idx_musicbrainzrelease_artist_country_status ON public.musicbrainzrelease USING btree (musicbrainzartistid, lower(country), lower(status));
-CREATE UNIQUE INDEX musicbrainzrelease_musicbrainzremotereleaseid_key1 ON public.musicbrainzrelease USING btree (musicbrainzremotereleaseid);
-CREATE UNIQUE INDEX musicbrainzrelease_pkey1 ON public.musicbrainzrelease USING btree (musicbrainzreleaseid);
 CREATE INDEX musicbrainzrelease_title_idx ON public.musicbrainzrelease USING btree (title);
+
+
+CREATE TABLE public.musicbrainzreleasetrack (
+    musicbrainzreleasetrackid uuid NOT NULL,
+    musicbrainzremotereleasetrackid text NULL,
+    musicbrainzremoterecordingtrackid text NULL,
+    title text NULL,
+    status text NULL,
+    statusid text NULL,
+    musicbrainzremotereleaseid text NULL,
+    CONSTRAINT musicbrainzrelease_musicbrainzremotereleaseid_key UNIQUE (musicbrainzremotereleasetrackid),
+    CONSTRAINT musicbrainzrelease_pkey PRIMARY KEY (musicbrainzreleasetrackid)
+);
+CREATE INDEX idx_musicbrainzreleasetrack_remotereleaseid ON public.musicbrainzreleasetrack USING btree (musicbrainzremotereleaseid);
+CREATE INDEX musicbrainzreleasetrack_musicbrainzremotereleaseid_idx ON public.musicbrainzreleasetrack USING btree (musicbrainzremotereleaseid);

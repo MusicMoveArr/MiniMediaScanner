@@ -55,12 +55,12 @@ public class MetadataRepository
                                         PARTITION BY lower(track.title), lower(re.title), lower(ar.name), lower(track.title)
                                     ) AS rn
                                     
-                               FROM minimedia.public.musicbrainzartist ar
-                                 JOIN minimedia.public.musicbrainzrelease re 
+                               FROM musicbrainzartist ar
+                                 JOIN musicbrainzrelease re 
                                      ON re.musicbrainzartistid = CAST(ar.musicbrainzartistid AS TEXT)
                                      --AND lower(re.country) = lower(ar.country)
                                      --and lower(re.status) = 'official'
-                                 JOIN minimedia.public.musicbrainzreleasetrack track 
+                                 JOIN musicbrainzreleasetrack track 
                                      ON track.musicbrainzremotereleaseid = re.musicbrainzremotereleaseid
                          ) AS subquery
                              WHERE rn = 1
@@ -227,7 +227,7 @@ public class MetadataRepository
                                   Tag_AcoustIdFingerPrint, 
                                   Tag_AcoustId,
                                   Tag_AcoustIdFingerPrint_Duration
-                        FROM minimedia.public.metadata m
+                        FROM metadata m
                         WHERE (length(MusicBrainzArtistId) = 0 or 
                               length(MusicBrainzTrackId) = 0 or
                               length(MusicBrainzReleaseArtistId) = 0)
@@ -297,7 +297,7 @@ public class MetadataRepository
     public List<MetadataModel> GetAllMetadataPathsByMissingFingerprint(int offset, int limit)
     {
         string query = @$"SELECT cast(m.MetadataId as text), m.Path
-                        FROM minimedia.public.metadata m
+                        FROM metadata m
                         where (length( m.tag_acoustidfingerprint) = 0 
                            or m.tag_acoustidfingerprint_duration = 0)
                            and length(m.musicbrainztrackid) = 0
@@ -339,7 +339,7 @@ public class MetadataRepository
                                  tag_trackcount,
                                  tag_disc,
                                  tag_disccount
-                        FROM minimedia.public.metadata m
+                        FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
                         where lower(artist.name) = lower(@artistName)";
@@ -390,7 +390,7 @@ public class MetadataRepository
                                  m.Path, 
                                  m.Title, 
                                  cast(m.AlbumId as text)
-                        FROM minimedia.public.metadata m
+                        FROM metadata m
                         where m.path = @path";
 
         using var conn = new NpgsqlConnection(_connectionString);
@@ -426,7 +426,7 @@ public class MetadataRepository
                                  m.Path, 
                                  m.Title, 
                                  cast(m.AlbumId as text)
-                        FROM minimedia.public.metadata m
+                        FROM metadata m
                         where m.path like '%.' || @fileExtension";
 
         using var conn = new NpgsqlConnection(_connectionString);
