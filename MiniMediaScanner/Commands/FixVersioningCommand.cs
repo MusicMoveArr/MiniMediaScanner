@@ -14,12 +14,14 @@ public class FixVersioningCommand
     /// <param name="album">-b, target Album.</param>
     /// <param name="discincrement">-d, Disc increment for remixes (+1000 recommended).</param>
     /// <param name="trackFilters">-f, Filter names to apply to tracks, .e.g. (remixed by ...).</param>
+    /// <param name="confirm">-y, Always confirm automatically.</param>
     [Command("equalizemediatag")]
     public static void FixVersioning(string connectionString, 
         string artist = "", 
         string album = "", 
         int discincrement = 1000,
-        List<string> trackFilters = null)
+        List<string> trackFilters = null, 
+        bool confirm = false)
     {
         if (trackFilters == null)
         {
@@ -30,11 +32,11 @@ public class FixVersioningCommand
 
         if (string.IsNullOrWhiteSpace(artist))
         {
-            handler.FixDiscVersioning(album, discincrement, trackFilters);
+            handler.FixDiscVersioning(album, discincrement, trackFilters, confirm);
         }
         else
         {
-            handler.FixDiscVersioning(artist, album, discincrement, trackFilters);
+            handler.FixDiscVersioning(artist, album, discincrement, trackFilters, confirm);
         }
     }
 }

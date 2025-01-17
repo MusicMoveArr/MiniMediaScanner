@@ -23,13 +23,13 @@ public class FixVersioningCommandHandler
         _mediaTagWriteService = new MediaTagWriteService();
     }
 
-    public void FixDiscVersioning(string album, int discIncrement, List<string> trackFilters)
+    public void FixDiscVersioning(string album, int discIncrement, List<string> trackFilters, bool autoConfirm)
     {
         _artistRepository.GetAllArtistNames()
-            .ForEach(artist => FixDiscVersioning(artist, album, discIncrement, trackFilters));
+            .ForEach(artist => FixDiscVersioning(artist, album, discIncrement, trackFilters, autoConfirm));
     }
     
-    public void FixDiscVersioning(string artist, string album, int discIncrement, List<string> trackFilters)
+    public void FixDiscVersioning(string artist, string album, int discIncrement, List<string> trackFilters, bool autoConfirm)
     {
         var metadata = _metadataRepository.GetMetadataByArtist(artist)
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
@@ -81,7 +81,7 @@ public class FixVersioningCommandHandler
             .ForEach(track => Console.WriteLine($"Album: {track.AlbumName}, Track: {track.Track}, Disc: {track.Disc} => {track.Disc + discIncrement}, Title: {track.Title}, File: {track.Path}"));
         
         Console.WriteLine("Confirm changes? (Y/y or N/n)");
-        bool confirm = Console.ReadLine()?.ToLower() == "y";
+        bool confirm = autoConfirm || Console.ReadLine()?.ToLower() == "y";
 
         if (confirm)
         {
