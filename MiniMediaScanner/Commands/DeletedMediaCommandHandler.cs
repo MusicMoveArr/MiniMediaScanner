@@ -24,7 +24,6 @@ public class DeletedMediaCommandHandler
     {
         var metadata = _metadataRepository.GetMetadataByArtist(artist)
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
-            .Where(metadata => File.Exists(metadata.Path))
             .ToList();
         
         int missingCount = 0;
