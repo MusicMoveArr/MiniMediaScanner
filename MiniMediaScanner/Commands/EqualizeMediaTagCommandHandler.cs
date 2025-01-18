@@ -1,9 +1,8 @@
-using System.Diagnostics;
+using ATL;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 using Newtonsoft.Json;
-using TagLib.Flac;
 using File = System.IO.File;
 
 namespace MiniMediaScanner.Commands;
@@ -23,13 +22,13 @@ public class EqualizeMediaTagCommandHandler
         _mediaTagWriteService = new MediaTagWriteService();
     }
 
-    public void EqualizeTags(string album, string tag, bool autoConfirm)
+    public void EqualizeTags(string album, string tag, string writetag, bool autoConfirm)
     {
         _artistRepository.GetAllArtistNames()
-            .ForEach(artist => EqualizeTags(artist, album, tag, autoConfirm));
+            .ForEach(artist => EqualizeTags(artist, album, tag, writetag, autoConfirm));
     }
     
-    public void EqualizeTags(string artist, string album, string tag, bool autoConfirm)
+    public void EqualizeTags(string artist, string album, string tag, string writetag, bool autoConfirm)
     {
         var metadata = _metadataRepository.GetMetadataByArtist(artist)
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
@@ -45,15 +44,22 @@ public class EqualizeMediaTagCommandHandler
             switch (tag.ToLower())
             {
                 case "date":
-                    success = ProcessDate(group.ToList(), artist, album, autoConfirm);
+                case "originaldate":
+                case "originalyear":
+                case "year":
+                case "disc":
+                case "asin":
+                case "catalognumber":
+                    success = ProcessGenericTag(group.ToList(), artist, album, autoConfirm, tag, writetag);
                     break;
             }
         }
     }
 
-    private bool ProcessDate(List<MetadataModel> metadataFiles, string artist, string album, bool autoConfirm)
+    private bool ProcessGenericTag(List<MetadataModel> metadataFiles, string artist, string album, bool autoConfirm, string tagName, string writeTagName)
     {
-        const string Tag = "date";
+        Track track = new Track("/home/dergan/Music/Pendulum/Hold Your Colour/Pendulum - Hold Your Colour - 02 - Slam.m4a");
+        
         if (metadataFiles.Any(m => string.IsNullOrWhiteSpace(m.AllJsonTags)))
         {
             Console.WriteLine($"Unable to process '{album}' of '{artist}', missing serialized json tags in database.");
@@ -68,9 +74,9 @@ public class EqualizeMediaTagCommandHandler
             })
             .ToList();
 
-        var valueDates = metadataTags
-            .Where(m => m.Tags.ContainsKey(Tag))
-            .GroupBy(m => m.Tags[Tag])
+        var tagValues = metadataTags
+            .Where(m => m.Tags.ContainsKey(tagName))
+            .GroupBy(m => m.Tags[tagName])
             .Select(m => new
             {
                 Count = m.Count(),
@@ -79,22 +85,22 @@ public class EqualizeMediaTagCommandHandler
             .OrderByDescending(m => m.Count)
             .ThenByDescending(m => m.Date.Length);
         
-        var valueDate = valueDates.FirstOrDefault();
+        var tagValue = tagValues.FirstOrDefault();
 
-        if (string.IsNullOrWhiteSpace(valueDate?.Date))
+        if (string.IsNullOrWhiteSpace(tagValue?.Date))
         {
-            Console.WriteLine($"Unable to process '{album}' of '{artist}', no date found in tags.");
+            Console.WriteLine($"Unable to process '{album}' of '{artist}', no {tagName} found in tags.");
             return false;
         }
 
         Console.WriteLine("Values found to write:");
-        foreach (var groupedDate in valueDates)
+        foreach (var groupedDate in tagValues)
         {
-            Console.WriteLine($"Count: {groupedDate.Count}, Date: {groupedDate.Date}");
+            Console.WriteLine($"Count: {groupedDate.Count}, {tagName}: {groupedDate.Date}");
         }
         
         var fileDifferences = metadataTags
-            .Where(m => !m.Tags.ContainsKey(Tag) || m.Tags[Tag] != valueDate.Date);
+            .Where(m => !m.Tags.ContainsKey(tagName) || m.Tags[tagName] != tagValue.Date);
         
         if(fileDifferences.Count() == 0)
         {
@@ -104,7 +110,8 @@ public class EqualizeMediaTagCommandHandler
         
         foreach (var metadata in fileDifferences)
         {
-            Console.WriteLine($"File {metadata.Metadata.Path}, Date '{metadata.Tags[Tag]}' => '{valueDate.Date}'");
+            string dateValue = metadata.Tags.ContainsKey(tagName) ? metadata.Tags[tagName] : "";
+            Console.WriteLine($"File {metadata.Metadata.Path}, {tagName} '{dateValue}' => '{tagValue.Date}'");
         }
         
         Console.WriteLine("Confirm changes? (Y/y or N/n)");
@@ -117,10 +124,10 @@ public class EqualizeMediaTagCommandHandler
         
         foreach (var metadata in fileDifferences)
         {
-            if (_mediaTagWriteService.SaveTag(new FileInfo(metadata.Metadata.Path), Tag, valueDate.Date))
+            if (_mediaTagWriteService.SaveTag(new FileInfo(metadata.Metadata.Path), writeTagName, tagValue.Date))
             {
                 _importCommandHandler.ProcessFile(metadata.Metadata.Path);
-                Console.WriteLine($"Written {Tag} '{valueDate.Date}' to '{metadata.Metadata.Path}'");
+                Console.WriteLine($"Written {writeTagName} '{tagValue.Date}' to '{metadata.Metadata.Path}'");
             }
             else
             {
