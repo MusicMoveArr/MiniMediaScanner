@@ -101,7 +101,7 @@ public class MusicBrainzAPIService
         }
     }
     
-    public MusicBrainzRecordingModel GetRecordingById(string recordingId)
+    public MusicBrainzArtistModel GetRecordingById(string recordingId)
     {
         DelayAPICall();
         
@@ -113,7 +113,7 @@ public class MusicBrainzAPIService
 
             using RestClient client = new RestClient(url);
             RestRequest request = new RestRequest();
-            var response = client.Get<MusicBrainzRecordingModel>(request);
+            var response = client.Get<MusicBrainzArtistModel>(request);
 
             _stopwatch.Restart();
             return response;

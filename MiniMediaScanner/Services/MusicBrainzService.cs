@@ -31,6 +31,28 @@ public class MusicBrainzService
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(musicBrainzArtistId))
+            {
+                return;
+            }
+            
+            string[] musicBrainzArtistIds = musicBrainzArtistId.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string artistId in musicBrainzArtistIds)
+            {
+                ProcessMusicBrainzArtist(artistId, updateExisting);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{ex.Message}");
+        }
+    }
+
+    private void ProcessMusicBrainzArtist(string musicBrainzArtistId, bool updateExisting = false)
+    {
+        try
+        {
             if (_musicBrainzIds.Contains(musicBrainzArtistId) ||
                 (!updateExisting && _musicBrainzArtistRepository.GetRemoteMusicBrainzArtist(musicBrainzArtistId).HasValue))
             {
@@ -85,9 +107,9 @@ public class MusicBrainzService
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            Console.WriteLine($"{ex.Message}");
+            Console.WriteLine(e.Message);
         }
     }
 }

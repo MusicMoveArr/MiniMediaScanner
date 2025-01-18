@@ -17,6 +17,13 @@ public class RefreshMetadataCommand
     {
         var handler = new RefreshMetadataCommandHandler(connectionString);
 
-        handler.RefreshMetadata(artist, album);
+        if (string.IsNullOrWhiteSpace(artist))
+        {
+            handler.RefreshMetadata(album);
+        }
+        else
+        {
+            handler.RefreshMetadata(artist, album);
+        }
     }
 }

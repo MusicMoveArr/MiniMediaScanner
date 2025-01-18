@@ -185,59 +185,61 @@ public class MetadataRepository
         return result;
     }
     
-    public List<MetadataInfo> GetMissingMusicBrainzMetadataRecords(int offset, int limit)
+    public List<MetadataInfo> GetMissingMusicBrainzMetadataRecords(string artistName)
     {
-        string query = @$"SELECT cast(MetadataId as text), 
-                                  Path, 
-                                  Title, 
-                                  cast(AlbumId as text), 
-                                  MusicBrainzArtistId, 
-                                  MusicBrainzDiscId, 
-                                  MusicBrainzReleaseCountry, 
-                                  MusicBrainzReleaseId, 
-                                  MusicBrainzTrackId, 
-                                  MusicBrainzReleaseStatus, 
-                                  MusicBrainzReleaseType,
-                                  MusicBrainzReleaseArtistId,
-                                  MusicBrainzReleaseGroupId,
-                                  Tag_Subtitle, 
-                                  Tag_AlbumSort, 
-                                  Tag_Comment, 
-                                  Tag_Year, 
-                                  Tag_Track, 
-                                  Tag_TrackCount, 
-                                  Tag_Disc, 
-                                  Tag_DiscCount, 
-                                  Tag_Lyrics, 
-                                  Tag_Grouping, 
-                                  Tag_BeatsPerMinute, 
-                                  Tag_Conductor, 
-                                  Tag_Copyright, 
-                                  Tag_DateTagged, 
-                                  Tag_AmazonId,
-                                  Tag_ReplayGainTrackGain, 
-                                  Tag_ReplayGainTrackPeak, 
-                                  Tag_ReplayGainAlbumGain, 
-                                  Tag_ReplayGainAlbumPeak, 
-                                  Tag_InitialKey, 
-                                  Tag_RemixedBy, 
-                                  Tag_Publisher, 
-                                  Tag_ISRC, 
-                                  Tag_Length, 
-                                  Tag_AcoustIdFingerPrint, 
-                                  Tag_AcoustId,
-                                  Tag_AcoustIdFingerPrint_Duration
+        string query = @$"SELECT cast(m.MetadataId as text), 
+                                  m.Path, 
+                                  m.Title, 
+                                  cast(m.AlbumId as text), 
+                                  m.MusicBrainzArtistId, 
+                                  m.MusicBrainzDiscId, 
+                                  m.MusicBrainzReleaseCountry, 
+                                  m.MusicBrainzReleaseId, 
+                                  m.MusicBrainzTrackId, 
+                                  m.MusicBrainzReleaseStatus, 
+                                  m.MusicBrainzReleaseType,
+                                  m.MusicBrainzReleaseArtistId,
+                                  m.MusicBrainzReleaseGroupId,
+                                  m.Tag_Subtitle, 
+                                  m.Tag_AlbumSort, 
+                                  m.Tag_Comment, 
+                                  m.Tag_Year, 
+                                  m.Tag_Track, 
+                                  m.Tag_TrackCount, 
+                                  m.Tag_Disc, 
+                                  m.Tag_DiscCount, 
+                                  m.Tag_Lyrics, 
+                                  m.Tag_Grouping, 
+                                  m.Tag_BeatsPerMinute, 
+                                  m.Tag_Conductor, 
+                                  m.Tag_Copyright, 
+                                  m.Tag_DateTagged, 
+                                  m.Tag_AmazonId,
+                                  m.Tag_ReplayGainTrackGain, 
+                                  m.Tag_ReplayGainTrackPeak, 
+                                  m.Tag_ReplayGainAlbumGain, 
+                                  m.Tag_ReplayGainAlbumPeak, 
+                                  m.Tag_InitialKey, 
+                                  m.Tag_RemixedBy, 
+                                  m.Tag_Publisher, 
+                                  m.Tag_ISRC, 
+                                  m.Tag_Length, 
+                                  m.Tag_AcoustIdFingerPrint, 
+                                  m.Tag_AcoustId,
+                                  m.Tag_AcoustIdFingerPrint_Duration,
+                                  album.title
                         FROM metadata m
-                        WHERE (length(MusicBrainzArtistId) = 0 or 
+                        JOIN albums album ON album.albumid = m.albumid
+                        JOIN artists artist ON artist.artistid = album.artistid
+                        where lower(artist.name) = lower(@artistName)
+                        and (length(MusicBrainzArtistId) = 0 or 
                               length(MusicBrainzTrackId) = 0 or
                               length(MusicBrainzReleaseArtistId) = 0)
-                              and length(tag_acoustidfingerprint) > 0
-                        order by m.""path"" asc 
-                        OFFSET {offset}
-                        LIMIT {limit}";
+                              and length(tag_acoustidfingerprint) > 0";
 
         using var conn = new NpgsqlConnection(_connectionString);
         using var cmd = new NpgsqlCommand(query, conn);
+        cmd.Parameters.AddWithValue("artistName", artistName);
         
         conn.Open();
 
@@ -288,25 +290,26 @@ public class MetadataRepository
                 TagAcoustIdFingerPrint = reader.GetString(37),
                 TagAcoustId = reader.GetString(38),
                 TagAcoustIdFingerPrintDuration = reader.GetFloat(39),
+                Album = reader.GetString(40),
             });
         }
 
         return result;
     }
     
-    public List<MetadataModel> GetAllMetadataPathsByMissingFingerprint(int offset, int limit)
+    public List<MetadataModel> GetAllMetadataPathsByMissingFingerprint(string artistName)
     {
         string query = @$"SELECT cast(m.MetadataId as text), m.Path
                         FROM metadata m
-                        where (length( m.tag_acoustidfingerprint) = 0 
-                           or m.tag_acoustidfingerprint_duration = 0)
-                           and length(m.musicbrainztrackid) = 0
-                        order by m.""path"" asc 
-                        OFFSET {offset}
-                        LIMIT {limit}";
+                        JOIN albums album ON album.albumid = m.albumid
+                        JOIN artists artist ON artist.artistid = album.artistid
+                        where lower(artist.name) = lower(@artistName)
+                        and (length( m.tag_acoustidfingerprint) = 0 
+                            or m.tag_acoustidfingerprint_duration = 0)";
 
         using var conn = new NpgsqlConnection(_connectionString);
         using var cmd = new NpgsqlCommand(query, conn);
+        cmd.Parameters.AddWithValue("artistName", artistName);
         
         conn.Open();
 

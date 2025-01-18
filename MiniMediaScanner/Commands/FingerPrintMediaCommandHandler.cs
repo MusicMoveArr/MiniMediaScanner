@@ -9,6 +9,7 @@ public class FingerPrintMediaCommandHandler
 {
     private readonly FingerPrintService _fingerPrintService;
     private readonly MetadataRepository _metadataRepository;
+    private readonly ArtistRepository _artistRepository;
 
     private Stopwatch sw = Stopwatch.StartNew();
     private int generatedFingers = 0;
@@ -16,29 +17,26 @@ public class FingerPrintMediaCommandHandler
     {
         _fingerPrintService = new FingerPrintService();
         _metadataRepository = new MetadataRepository(connectionString);
+        _artistRepository = new ArtistRepository(connectionString);
     }
     
-    public void FingerPrintMedia()
-    {
-        int missingCount = 0;
-        const int limit = 1000;
-        int offset = 0;
-        while (true)
-        {
-            var metadata = _metadataRepository.GetAllMetadataPathsByMissingFingerprint(offset, limit);
-            offset += limit;
 
-            if (metadata.Count == 0)
-            {
-                break;
-            }
-            
-            metadata
-                .AsParallel()
-                .WithDegreeOfParallelism(4)
-                .ForAll(metadata => FingerPrintFile(metadata));
-        }
-        Console.WriteLine($"Total missing media files: {missingCount}");
+    public void FingerPrintMedia(string album)
+    {
+        _artistRepository.GetAllArtistNames()
+            .ForEach(artist => FingerPrintMedia(artist, album));
+    }
+    
+    public void FingerPrintMedia(string artist, string album)
+    {
+        var metadata = _metadataRepository.GetAllMetadataPathsByMissingFingerprint(artist)
+            .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        
+        metadata
+            .AsParallel()
+            .WithDegreeOfParallelism(4)
+            .ForAll(metadata => FingerPrintFile(metadata));
     }
 
     private void FingerPrintFile(MetadataModel metadata)

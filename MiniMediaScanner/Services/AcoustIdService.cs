@@ -32,7 +32,6 @@ public class AcoustIdService
             {
                 JObject jsonResponse = JObject.Parse(content);
                 var recordingId = jsonResponse["results"]?[0]?["recordings"]?[0]?["id"]?.ToString();
-
                 return recordingId;
             }
         }
