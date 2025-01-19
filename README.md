@@ -22,7 +22,7 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 6. Fingerprint - Fingerprint all the media by generating AcoustID / AcoustID Fingerprint
 7. DeDuplicate - DeDuplicate files locally that contain at the end of the filename, (1).mp3, (2).m4a etc
 8. NormalizeFile - Normalize/Standardize all your media file names to a common standard
-9. 
+   
    Every word gets capatalized (rest of the letters lowercase) except roman letters, all uppercase
    
    Small words are lowercase: of, the, and, in, on, at, for, to, a
