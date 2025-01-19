@@ -58,8 +58,6 @@ public class EqualizeMediaTagCommandHandler
 
     private bool ProcessGenericTag(List<MetadataModel> metadataFiles, string artist, string album, bool autoConfirm, string tagName, string writeTagName)
     {
-        Track track = new Track("/home/dergan/Music/Pendulum/Hold Your Colour/Pendulum - Hold Your Colour - 02 - Slam.m4a");
-        
         if (metadataFiles.Any(m => string.IsNullOrWhiteSpace(m.AllJsonTags)))
         {
             Console.WriteLine($"Unable to process '{album}' of '{artist}', missing serialized json tags in database.");

@@ -6,7 +6,7 @@ public class EqualizeMediaTagCommand
 {
     /// <summary>
     /// Equalize MediaTags of albums from artists to fix issues with albums showing weird/duplicated in Plex/Navidrome etc
-    /// Tags available: date
+    /// Tags available: date, originaldate, originalyear, year, disc, asin, catalognumber
     /// </summary>
     /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
     /// <param name="artist">-a, Artistname.</param>
