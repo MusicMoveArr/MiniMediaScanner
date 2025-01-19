@@ -5,7 +5,11 @@ namespace MiniMediaScanner.Commands;
 public class NormalizeFileCommand
 {
     /// <summary>
-    /// Check for duplicated music and delete optionally
+    /// Normalize/Standardize all your media file names to a common standard
+    /// Every word gets capatalized (rest of the letters lowercase) except roman letters, all uppercase
+    /// Small words are lowercase: of, the, and, in, on, at, for, to, a
+    /// Special characters are replaced: – to -, — to -, … to ...
+    /// Seperators between words are kept: : - _ / , 
     /// </summary>
     /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
     /// <param name="normalizeArtistName">-a, normalize Artistname.</param>
