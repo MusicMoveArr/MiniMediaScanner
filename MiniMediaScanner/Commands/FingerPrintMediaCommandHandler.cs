@@ -29,6 +29,7 @@ public class FingerPrintMediaCommandHandler
     
     public void FingerPrintMedia(string artist, string album)
     {
+        Console.WriteLine($"Processing artist '{artist}'");
         var metadata = _metadataRepository.GetAllMetadataPathsByMissingFingerprint(artist)
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
             .ToList();
