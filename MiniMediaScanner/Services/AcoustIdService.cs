@@ -2,13 +2,14 @@ using AcoustID;
 using AcoustID.Web;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Quartz.Logging;
 using RestSharp;
 
 namespace MiniMediaScanner.Services;
 
 public class AcoustIdService
 {
-    public string? GetMusicBrainzRecordingId(string acoustIdApiKey, string fingerprint, int duration)
+    public JObject? LookupAcoustId(string acoustIdApiKey, string fingerprint, int duration)
     {
         if (string.IsNullOrWhiteSpace(acoustIdApiKey))
         {
@@ -31,8 +32,8 @@ public class AcoustIdService
             if (!string.IsNullOrWhiteSpace(content))
             {
                 JObject jsonResponse = JObject.Parse(content);
-                var recordingId = jsonResponse["results"]?[0]?["recordings"]?[0]?["id"]?.ToString();
-                return recordingId;
+                
+                return jsonResponse;
             }
         }
         else

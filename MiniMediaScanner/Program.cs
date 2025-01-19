@@ -22,7 +22,7 @@ class Program
         AppBuilder.Add("deletedmedia", DeletedMediaCommand.DeletedMedia);
         AppBuilder.Add("convert", ConvertMediaCommand.ConvertMedia);
         AppBuilder.Add("fingerprint", FingerPrintMediaCommand.FingerPrintMedia);
-        //AppBuilder.Add("tagmissingmetadata", TagMissingMetadataCommand.TagMissingMetadata); //work in progress
+        AppBuilder.Add("tagmissingmetadata", TagMissingMetadataCommand.TagMissingMetadata);
         AppBuilder.Add("deduplicate", DeDuplicateFileCommand.DeDuplicate);
         AppBuilder.Add("normalizefile", NormalizeFileCommand.NormalizeFile);
         AppBuilder.Add("equalizemediatag", EqualizeMediaTagCommand.EqualizeMediaTag);
@@ -37,7 +37,6 @@ class Program
         {
             ConsoleArguments = [ "import", "--connection-string", connectionString, "-p", importPath ];
         }
-        
         if (!string.IsNullOrWhiteSpace(cronExpression))
         {
             await CreateSchedulerAsync(cronExpression);
@@ -50,7 +49,6 @@ class Program
             }
             catch (Exception e)
             {
-                
             }
         }
     }
