@@ -147,6 +147,9 @@ public class MediaTagWriteService
             case "acoustid id":
                 track.AdditionalFields[GetFieldName(track, "Acoustid Id")] = value;
                 return true;
+            case "acoustid fingerprint":
+                track.AdditionalFields[GetFieldName(track, "Acoustid Fingerprint")] = value;
+                return true;
         }
 
         return false;

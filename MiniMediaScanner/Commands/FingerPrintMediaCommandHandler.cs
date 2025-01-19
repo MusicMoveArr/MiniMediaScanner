@@ -10,6 +10,7 @@ public class FingerPrintMediaCommandHandler
     private readonly FingerPrintService _fingerPrintService;
     private readonly MetadataRepository _metadataRepository;
     private readonly ArtistRepository _artistRepository;
+    private readonly MediaTagWriteService _mediaTagWriteService;
 
     private Stopwatch sw = Stopwatch.StartNew();
     private int generatedFingers = 0;
@@ -18,6 +19,7 @@ public class FingerPrintMediaCommandHandler
         _fingerPrintService = new FingerPrintService();
         _metadataRepository = new MetadataRepository(connectionString);
         _artistRepository = new ArtistRepository(connectionString);
+        _mediaTagWriteService = new MediaTagWriteService();
     }
     
 
@@ -54,6 +56,7 @@ public class FingerPrintMediaCommandHandler
         {
             generatedFingers++;
             _metadataRepository.UpdateMetadataFingerprint(metadata.MetadataId, fingerprint.Fingerprint, fingerprint.Duration);
+            _mediaTagWriteService.SaveTag(new FileInfo(metadata.Path), "acoustid fingerprint", fingerprint.Fingerprint);
         }
     }
 }

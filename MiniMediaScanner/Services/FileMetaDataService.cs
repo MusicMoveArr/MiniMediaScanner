@@ -18,7 +18,7 @@ public class FileMetaDataService
             .ToDictionary(StringComparer.OrdinalIgnoreCase);
         
         mediaTags["album"] = trackInfo.Album;
-        mediaTags["albumartist"] = trackInfo.AlbumArtist;
+        mediaTags["album_artist"] = trackInfo.AlbumArtist;
         mediaTags["albumartistsortorder"] = trackInfo.SortAlbumArtist;
         
         mediaTags["artist"] = trackInfo.Artist;
@@ -70,17 +70,17 @@ public class FileMetaDataService
         mediaTags = mediaTags
             .Where(pair => !string.IsNullOrEmpty(pair.Value))
             .ToDictionary(StringComparer.OrdinalIgnoreCase);
-        
+
         string jsonTags = Newtonsoft.Json.JsonConvert.SerializeObject(mediaTags);
         
-        var album = mediaTags.FirstOrDefault(tag => tag.Key == "album").Value;
-        var artist = mediaTags.FirstOrDefault(tag => tag.Key == "album_artist").Value;
-        var tempArtistName = mediaTags.FirstOrDefault(tag => tag.Key == "artist").Value;
-        string sortArtist = mediaTags.FirstOrDefault(tag => tag.Key == "artistsort").Value;
+        var album = GetValue(mediaTags, "album");
+        var artist = GetValue(mediaTags, "album_artist");
+        var tempArtistName = GetValue(mediaTags, "artist");
+        string sortArtist = GetValue(mediaTags, "artistsort");
 
         if (string.IsNullOrWhiteSpace(sortArtist))
         {
-            sortArtist = mediaTags.FirstOrDefault(tag => tag.Key == "sort_artist").Value;
+            sortArtist = GetValue(mediaTags, "sort_artist");
         }
         
         if (string.IsNullOrWhiteSpace(artist) ||
@@ -106,21 +106,21 @@ public class FileMetaDataService
             album = "[Unknown]";
         }
         
-        string trackTag = mediaTags.FirstOrDefault(tag => tag.Key == "track").Value;
-        string discTag = mediaTags.FirstOrDefault(tag => tag.Key == "disc").Value;
+        string trackTag = GetValue(mediaTags, "track");
+        string discTag = GetValue(mediaTags, "disc");
         int track = 0;
         int trackCount = 0;
         int disc = 0;
         int discCount = 0;
         
-        int.TryParse(mediaTags.FirstOrDefault(tag => tag.Key == "originalyear").Value, out int originalyear);
-        int.TryParse(mediaTags.FirstOrDefault(tag => tag.Key == "tbpm").Value, out int beatsPerMinute);
+        int.TryParse(GetValue(mediaTags, "originalyear"), out int originalyear);
+        int.TryParse(GetValue(mediaTags, "tbpm"), out int beatsPerMinute);
         
-        double.TryParse(mediaTags.FirstOrDefault(tag => tag.Key == "replaygain_album_peak").Value, out double replayGainAlbumPeak);
-        double.TryParse(mediaTags.FirstOrDefault(tag => tag.Key == "replaygain_track_peak").Value, out double replayGainTrackPeak);
-        double.TryParse(mediaTags.FirstOrDefault(tag => tag.Key == "replaygain_album_gain").Value, out double replayGainAlbumGain);
-        double.TryParse(mediaTags.FirstOrDefault(tag => tag.Key == "replaygain_track_gain").Value, out double replayGainTrackGain);
-        DateTime.TryParse(mediaTags.FirstOrDefault(tag => tag.Key == "date tagged").Value, out DateTime dateTagged);
+        double.TryParse(GetValue(mediaTags, "replaygain_album_peak"), out double replayGainAlbumPeak);
+        double.TryParse(GetValue(mediaTags, "replaygain_track_peak"), out double replayGainTrackPeak);
+        double.TryParse(GetValue(mediaTags, "replaygain_album_gain"), out double replayGainAlbumGain);
+        double.TryParse(GetValue(mediaTags, "replaygain_track_gain"), out double replayGainTrackGain);
+        DateTime.TryParse(GetValue(mediaTags, "date tagged"), out DateTime dateTagged);
         
         if (trackTag?.Contains('/') == true)
         {
@@ -129,8 +129,8 @@ public class FileMetaDataService
         }
         else
         {
-            int.TryParse(mediaTags.FirstOrDefault(tag => tag.Key == "tracktotal").Value, out int trackTotal);
-            int.TryParse(mediaTags.FirstOrDefault(tag => tag.Key == "track").Value, out int trackValue);
+            int.TryParse(GetValue(mediaTags, "tracktotal"), out int trackTotal);
+            int.TryParse(GetValue(mediaTags, "track"), out int trackValue);
             
             track = trackValue;
             trackCount = trackTotal;
@@ -143,7 +143,7 @@ public class FileMetaDataService
         }
         else
         {
-            int.TryParse(mediaTags.FirstOrDefault(tag => tag.Key == "disc").Value, out int discValue);
+            int.TryParse(GetValue(mediaTags, "disc"), out int discValue);
             
             disc = discValue;
             if (disc > 0)
@@ -159,47 +159,57 @@ public class FileMetaDataService
             Path = fileInfo.FullName,
             Album = album,
             Artist = artist,
-            Title = mediaTags.FirstOrDefault(tag => tag.Key == "title").Value,
-            MusicBrainzArtistId = mediaTags.FirstOrDefault(tag => tag.Key == "musicbrainz artist id").Value,
-            MusicBrainzDiscId = mediaTags.FirstOrDefault(tag => tag.Key == "musicbrainz disc id").Value,
-            MusicBrainzReleaseCountry = mediaTags.FirstOrDefault(tag => tag.Key == "musicbrainz album release country").Value,
-            MusicBrainzReleaseId = mediaTags.FirstOrDefault(tag => tag.Key == "musicbrainz album id").Value,
-            MusicBrainzTrackId = mediaTags.FirstOrDefault(tag => tag.Key == "musicbrainz release track id").Value,
-            MusicBrainzReleaseStatus = mediaTags.FirstOrDefault(tag => tag.Key == "musicbrainz album status").Value,
-            MusicBrainzReleaseType = mediaTags.FirstOrDefault(tag => tag.Key == "musicbrainz album type").Value,
-            MusicBrainzReleaseArtistId = mediaTags.FirstOrDefault(tag => tag.Key == "musicbrainz album artist id").Value,
-            MusicBrainzReleaseGroupId = mediaTags.FirstOrDefault(tag => tag.Key == "musicbrainz release group id").Value,
+            Title = GetValue(mediaTags, "title"),
+            MusicBrainzArtistId = GetValue(mediaTags, "musicbrainz artist id"),
+            MusicBrainzDiscId = GetValue(mediaTags, "musicbrainz disc id"),
+            MusicBrainzReleaseCountry = GetValue(mediaTags, "musicbrainz album release country"),
+            MusicBrainzReleaseId = GetValue(mediaTags, "musicbrainz album id"),
+            MusicBrainzTrackId = GetValue(mediaTags, "musicbrainz release track id"),
+            MusicBrainzReleaseStatus = GetValue(mediaTags, "musicbrainz album status"),
+            MusicBrainzReleaseType = GetValue(mediaTags, "musicbrainz album type"),
+            MusicBrainzReleaseArtistId = GetValue(mediaTags, "musicbrainz album artist id"),
+            MusicBrainzReleaseGroupId = GetValue(mediaTags, "musicbrainz release group id"),
             
-            TagSubtitle = mediaTags.FirstOrDefault(tag => tag.Key == "subtitle").Value,
-            TagAlbumSort = mediaTags.FirstOrDefault(tag => tag.Key == "tso2").Value,
-            TagComment = mediaTags.FirstOrDefault(tag => tag.Key == "comment").Value,
+            TagSubtitle = GetValue(mediaTags, "subtitle"),
+            TagAlbumSort = GetValue(mediaTags, "tso2"),
+            TagComment = GetValue(mediaTags, "comment"),
             TagYear = originalyear,
             TagTrack = track,
             TagTrackCount = trackCount,
             TagDisc = disc,
             TagDiscCount = discCount,
-            TagLyrics = mediaTags.FirstOrDefault(tag => tag.Key == "lyrics").Value,
-            TagGrouping = mediaTags.FirstOrDefault(tag => tag.Key == "grouping").Value,
+            TagLyrics = GetValue(mediaTags, "lyrics"),
+            TagGrouping = GetValue(mediaTags, "grouping"),
             TagBeatsPerMinute = beatsPerMinute,
-            TagConductor = mediaTags.FirstOrDefault(tag => tag.Key == "conductor").Value,
-            TagCopyright = mediaTags.FirstOrDefault(tag => tag.Key == "copyright").Value,
+            TagConductor = GetValue(mediaTags, "conductor"),
+            TagCopyright = GetValue(mediaTags, "copyright"),
             TagDateTagged = dateTagged,
-            TagAmazonId = mediaTags.FirstOrDefault(tag => tag.Key == "amazon id").Value,
+            TagAmazonId = GetValue(mediaTags, "amazon id"),
             TagReplayGainTrackGain = replayGainTrackGain,
             TagReplayGainTrackPeak = replayGainTrackPeak,
             TagReplayGainAlbumGain = replayGainAlbumGain,
             TagReplayGainAlbumPeak = replayGainAlbumPeak,
-            TagInitialKey = mediaTags.FirstOrDefault(tag => tag.Key == "initial key").Value,
-            TagRemixedBy = mediaTags.FirstOrDefault(tag => tag.Key == "remixed by").Value,
-            TagPublisher = mediaTags.FirstOrDefault(tag => tag.Key == "publisher").Value,
-            TagISRC = mediaTags.FirstOrDefault(tag => tag.Key == "isrc").Value,
+            TagInitialKey = GetValue(mediaTags, "initial key"),
+            TagRemixedBy = GetValue(mediaTags, "remixed by"),
+            TagPublisher = GetValue(mediaTags, "publisher"),
+            TagISRC = GetValue(mediaTags, "isrc"),
             TagLength = durationSpan.TotalHours >= 1 ? durationSpan.ToString(@"hh\:mm\:ss") : durationSpan.ToString(@"mm\:ss"),
-            TagAcoustIdFingerPrint = mediaTags.FirstOrDefault(tag => tag.Key == AcoustidFingerprintTag).Value,
-            TagAcoustId = mediaTags.FirstOrDefault(tag => tag.Key == AcoustidIdTag).Value,
+            TagAcoustIdFingerPrint = GetValue(mediaTags, AcoustidFingerprintTag),
+            TagAcoustId = GetValue(mediaTags, AcoustidIdTag),
             FileLastWriteTime = fileInfo.LastWriteTime,
             FileCreationTime = fileInfo.CreationTime,
             AllJsonTags = jsonTags
         };
+    }
+
+    private string GetValue(Dictionary<string, string> dictionary, string tagName)
+    {
+        string key = dictionary.Keys.FirstOrDefault(key => string.Equals(key, tagName, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return string.Empty;
+        }
+        return dictionary[key];
     }
 
     private string GetWithoutFeat(string artist)
