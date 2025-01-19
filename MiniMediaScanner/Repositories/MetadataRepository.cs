@@ -232,10 +232,11 @@ public class MetadataRepository
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
                         where lower(artist.name) = lower(@artistName)
-                        and (length(MusicBrainzArtistId) = 0 or 
-                              length(MusicBrainzTrackId) = 0 or
-                              length(MusicBrainzReleaseArtistId) = 0)
-                              and length(tag_acoustidfingerprint) > 0";
+                        and (length(m.MusicBrainzArtistId) = 0 or 
+                              length(m.MusicBrainzTrackId) = 0 or
+                              length(m.MusicBrainzReleaseArtistId) = 0)
+                              and length(m.tag_acoustidfingerprint) > 0
+                              and m.Tag_AcoustIdFingerPrint_Duration > 0";
 
         using var conn = new NpgsqlConnection(_connectionString);
         using var cmd = new NpgsqlCommand(query, conn);
@@ -622,7 +623,16 @@ public class MetadataRepository
                 Tag_AcoustId = EXCLUDED.Tag_AcoustId,
                 File_LastWriteTime = EXCLUDED.File_LastWriteTime,
                 File_CreationTime = EXCLUDED.File_CreationTime,
-                Tag_AllJsonTags = EXCLUDED.Tag_AllJsonTags";
+                Tag_AllJsonTags = EXCLUDED.Tag_AllJsonTags,
+                MusicBrainzArtistId = EXCLUDED.MusicBrainzArtistId, 
+                MusicBrainzDiscId = EXCLUDED.MusicBrainzDiscId, 
+                MusicBrainzReleaseCountry = EXCLUDED.MusicBrainzReleaseCountry, 
+                MusicBrainzReleaseId = EXCLUDED.MusicBrainzReleaseId, 
+                MusicBrainzTrackId = EXCLUDED.MusicBrainzTrackId, 
+                MusicBrainzReleaseStatus = EXCLUDED.MusicBrainzReleaseStatus, 
+                MusicBrainzReleaseType = EXCLUDED.MusicBrainzReleaseType,
+                MusicBrainzReleaseArtistId = EXCLUDED.MusicBrainzReleaseArtistId,
+                MusicBrainzReleaseGroupId = EXCLUDED.MusicBrainzReleaseGroupId";
 
         Guid metadataId = Guid.NewGuid();
         
