@@ -23,9 +23,12 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 7. DeDuplicate - DeDuplicate files locally that contain at the end of the filename, (1).mp3, (2).m4a etc
 8. NormalizeFile - Normalize/Standardize all your media file names to a common standard
    Every word gets capatalized (rest of the letters lowercase) except roman letters, all uppercase
+   
    Small words are lowercase: of, the, and, in, on, at, for, to, a
+   
    Special characters are replaced: – to -, — to -, … to ...
-   Seperators between words are kept: : - _ / , 
+   
+   Seperators between words are kept: : - _ / ,
 10. TagMissingMetadata - Add missing tags to your media files from AcoustId/MusicBrainz from fingerprints
 11. EqualizeMetadata - Equalize (set the same) tag value for the entire album of an artist (mostly to fix issues with albums showing weird/duplicated in Plex/Navidrome etc)
 12. FixVersioning - Find media that are using the same track/disc numbering, usually normal version and (AlbumVersion), (Live) etc
