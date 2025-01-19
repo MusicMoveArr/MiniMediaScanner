@@ -88,7 +88,7 @@ public class FixVersioningCommandHandler
             foreach (var track in updateMetadata)
             {
                 int newDisc = track.Disc + discIncrement;
-                if (_mediaTagWriteService.SaveTag(new FileInfo(track.Path), "disc", $"{newDisc}/{newDisc}"))
+                if (_mediaTagWriteService.SaveTag(new FileInfo(track.Path), "disc", $"{newDisc}"))
                 {
                     _importCommandHandler.ProcessFile(track.Path);
                 }

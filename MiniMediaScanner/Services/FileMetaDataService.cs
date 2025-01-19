@@ -1,7 +1,5 @@
-using System.Diagnostics;
+using ATL;
 using FFMpegCore;
-using FFMpegCore.Helpers;
-using Instances;
 
 namespace MiniMediaScanner.Services;
 
@@ -13,16 +11,65 @@ public class FileMetaDataService
     
     public MetadataInfo GetMetadataInfo(FileInfo fileInfo)
     {
-        var mediaInfo = FFProbe.Analyse(fileInfo.FullName);
-        var mediaTags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var audioStreamTags = mediaInfo.AudioStreams.FirstOrDefault().Tags.ToDictionary(StringComparer.OrdinalIgnoreCase);
-        var formatTags = mediaInfo.Format.Tags.ToDictionary(StringComparer.OrdinalIgnoreCase);
+        Track trackInfo = new Track(fileInfo.FullName);
+        var mediaTags = trackInfo.AdditionalFields
+            .GroupBy(pair => pair.Key.ToLower())
+            .Select(pair => pair.First())
+            .ToDictionary(StringComparer.OrdinalIgnoreCase);
         
-        foreach (var pair in audioStreamTags)
-            mediaTags[pair.Key.ToLower()] = pair.Value;
-
-        foreach (var pair in formatTags)
-            mediaTags[pair.Key.ToLower()] = pair.Value;
+        mediaTags["album"] = trackInfo.Album;
+        mediaTags["albumartist"] = trackInfo.AlbumArtist;
+        mediaTags["albumartistsortorder"] = trackInfo.SortAlbumArtist;
+        
+        mediaTags["artist"] = trackInfo.Artist;
+        mediaTags["artistsort"] = trackInfo.SortArtist;
+        mediaTags["sort_artist"] = trackInfo.SortArtist;
+        
+        mediaTags["disc"] = trackInfo.DiscNumber?.ToString();
+        
+        if (trackInfo.OriginalReleaseYear.HasValue)
+        {
+            mediaTags["originalyear"] = trackInfo.OriginalReleaseYear.ToString();
+        }
+        
+        mediaTags["track"] = trackInfo.TrackNumber?.ToString();
+        mediaTags["totaltracks"] = trackInfo.TrackTotal?.ToString();
+        mediaTags["title"] = trackInfo.Title;
+        
+        mediaTags["comment"] = trackInfo.Comment;
+        mediaTags["lyrics"] = trackInfo.Lyrics?.ToString();
+        mediaTags["conductor"] = trackInfo.Conductor;
+        mediaTags["copyright"] = trackInfo.Copyright;
+        mediaTags["publisher"] = trackInfo.Publisher;
+        mediaTags["ISRC"] = trackInfo.ISRC;
+        mediaTags["duration"] = trackInfo.Duration.ToString();
+        mediaTags["group"] = trackInfo.Group;
+        
+        if (trackInfo.BPM.HasValue)
+        {
+            mediaTags["TBPM"] = trackInfo.BPM.ToString();
+        }
+        
+        //add all non-AdditionalFields
+        trackInfo
+            .GetType()
+            .GetProperties()
+            .ToList()
+            .ForEach(prop =>
+            {
+                object? value = prop.GetValue(trackInfo);
+                
+                if (value is not null &&
+                    (value is string || value is int) &&
+                    !mediaTags.ContainsKey(prop.Name))
+                {
+                    mediaTags[prop.Name] = value.ToString();
+                }
+            });
+        
+        mediaTags = mediaTags
+            .Where(pair => !string.IsNullOrEmpty(pair.Value))
+            .ToDictionary(StringComparer.OrdinalIgnoreCase);
         
         string jsonTags = Newtonsoft.Json.JsonConvert.SerializeObject(mediaTags);
         
@@ -104,6 +151,8 @@ public class FileMetaDataService
                 discCount = disc;
             }
         }
+
+        var durationSpan = TimeSpan.FromSeconds(trackInfo.Duration);
         
         return new MetadataInfo
         {
@@ -144,7 +193,7 @@ public class FileMetaDataService
             TagRemixedBy = mediaTags.FirstOrDefault(tag => tag.Key == "remixed by").Value,
             TagPublisher = mediaTags.FirstOrDefault(tag => tag.Key == "publisher").Value,
             TagISRC = mediaTags.FirstOrDefault(tag => tag.Key == "isrc").Value,
-            TagLength =  mediaInfo.Duration.TotalHours >= 1 ? mediaInfo.Duration.ToString(@"hh\:mm\:ss") : mediaInfo.Duration.ToString(@"mm\:ss"),
+            TagLength = durationSpan.TotalHours >= 1 ? durationSpan.ToString(@"hh\:mm\:ss") : durationSpan.ToString(@"mm\:ss"),
             TagAcoustIdFingerPrint = mediaTags.FirstOrDefault(tag => tag.Key == AcoustidFingerprintTag).Value,
             TagAcoustId = mediaTags.FirstOrDefault(tag => tag.Key == AcoustidIdTag).Value,
             FileLastWriteTime = fileInfo.LastWriteTime,

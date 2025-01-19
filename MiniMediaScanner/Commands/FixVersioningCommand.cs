@@ -5,9 +5,9 @@ namespace MiniMediaScanner.Commands;
 public class FixVersioningCommand
 {
     /// <summary>
-    /// Make it so the normal version and remix(etc) that are using the same track/disc numbering get a different disc number
-    /// This will it so the normal version of the album stays at disc 1 but remix(etc) gets disc number 10
-    /// Tags available: date
+    /// Find media that are using the same track/disc numbering, usually normal version and (AlbumVersion), (Live) etc
+    /// The media with the longest file name and contains TrackFilters will get incremented disc number
+    /// This will make it so the normal version of the album stays at disc 1 but remix(etc) gets disc number 1001+
     /// </summary>
     /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
     /// <param name="artist">-a, Artistname.</param>

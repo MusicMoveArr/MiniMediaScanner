@@ -47,8 +47,19 @@ public class MediaTagWriteService
         switch (tag.ToLower())
         {
             case "date":
-                track.AdditionalFields[GetFieldName(track,"date")] = value;
-                return true;
+                if (DateTime.TryParse(value, out var result))
+                {
+                    track.AdditionalFields[GetFieldName(track,"date")] = value;
+                    //track.Date = result;
+                    return true;
+                }
+                else if (int.TryParse(value, out var result2))
+                {
+                    track.AdditionalFields[GetFieldName(track,"date")] = value;
+                    //track.Date = new DateTime(result2, 1, 1);
+                    return true;
+                }
+                return false;
             case "catalognumber":
                 track.CatalogNumber = value;
                 return true;

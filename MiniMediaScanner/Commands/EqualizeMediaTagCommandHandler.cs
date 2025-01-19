@@ -41,6 +41,7 @@ public class EqualizeMediaTagCommandHandler
 
         foreach (var group in groupedByAlbumId)
         {
+            string albumName = group.First().AlbumName;
             switch (tag.ToLower())
             {
                 case "date":
@@ -50,7 +51,7 @@ public class EqualizeMediaTagCommandHandler
                 case "disc":
                 case "asin":
                 case "catalognumber":
-                    success = ProcessGenericTag(group.ToList(), artist, album, autoConfirm, tag, writetag);
+                    success = ProcessGenericTag(group.ToList(), artist, albumName, autoConfirm, tag, writetag);
                     break;
             }
         }
@@ -69,6 +70,7 @@ public class EqualizeMediaTagCommandHandler
             {
                 Metadata = m,
                 Tags = JsonConvert.DeserializeObject<Dictionary<string, string>>(m.AllJsonTags)
+                    !.ToDictionary(StringComparer.OrdinalIgnoreCase)
             })
             .ToList();
 
