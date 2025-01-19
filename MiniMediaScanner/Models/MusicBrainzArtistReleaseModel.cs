@@ -18,4 +18,10 @@ public class MusicBrainzArtistReleaseModel
     public string? Quality { get; set; }
     
     public List<MusicBrainzReleaseMediaModel>? Media { get; set; }
+    
+    [JsonPropertyName("release-group")]
+    public MusicBrainzReleaseGroupModel ReleaseGroup { get; set; }
+    
+    [JsonPropertyName("text-representation")]
+    public MusicBrainzTextRepresentationModel TextRepresentation { get; set; }
 }
