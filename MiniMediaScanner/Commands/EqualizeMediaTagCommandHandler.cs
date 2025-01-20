@@ -76,6 +76,7 @@ public class EqualizeMediaTagCommandHandler
 
         var tagValues = metadataTags
             .Where(m => m.Tags.ContainsKey(tagName))
+            .Where(m => (int.TryParse(m.Tags[tagName], out int tagValue) && tagValue > 0) || !int.TryParse(m.Tags[tagName], out int _))
             .GroupBy(m => m.Tags[tagName])
             .Select(m => new
             {

@@ -27,27 +27,60 @@ public class FileMetaDataService
         
         mediaTags["disc"] = trackInfo.DiscNumber?.ToString();
         
-        if (trackInfo.OriginalReleaseYear.HasValue)
+        if (trackInfo.OriginalReleaseYear > 0)
         {
             mediaTags["originalyear"] = trackInfo.OriginalReleaseYear.ToString();
         }
         
-        mediaTags["track"] = trackInfo.TrackNumber?.ToString();
-        mediaTags["totaltracks"] = trackInfo.TrackTotal?.ToString();
-        mediaTags["title"] = trackInfo.Title;
+        if (trackInfo.TrackNumber > 0)
+        {
+            mediaTags["track"] = trackInfo.TrackNumber?.ToString();
+        }
         
-        mediaTags["comment"] = trackInfo.Comment;
+        if (trackInfo.TrackTotal > 0)
+        {
+            mediaTags["totaltracks"] = trackInfo.TrackTotal?.ToString();
+        }
+        
+        if (!string.IsNullOrWhiteSpace(trackInfo.Title))
+        {
+            mediaTags["title"] = trackInfo.Title;
+        }
+        if (!string.IsNullOrWhiteSpace(trackInfo.Comment))
+        {
+            mediaTags["comment"] = trackInfo.Comment;
+        }
+        if (!string.IsNullOrWhiteSpace(trackInfo.Conductor))
+        {
+            mediaTags["conductor"] = trackInfo.Conductor;
+        }
+        if (!string.IsNullOrWhiteSpace(trackInfo.Copyright))
+        {
+            mediaTags["copyright"] = trackInfo.Copyright;
+        }
+        if (!string.IsNullOrWhiteSpace(trackInfo.Publisher))
+        {
+            mediaTags["publisher"] = trackInfo.Publisher;
+        }
+        if (!string.IsNullOrWhiteSpace(trackInfo.ISRC))
+        {
+            mediaTags["ISRC"] = trackInfo.ISRC;
+        }
+        if (trackInfo.Duration > 0)
+        {
+            mediaTags["duration"] = trackInfo.Duration.ToString();
+        }
+        if (!string.IsNullOrWhiteSpace(trackInfo.Group))
+        {
+            mediaTags["group"] = trackInfo.Group;
+        }
+        
         mediaTags["lyrics"] = trackInfo.Lyrics?.ToString();
-        mediaTags["conductor"] = trackInfo.Conductor;
-        mediaTags["copyright"] = trackInfo.Copyright;
-        mediaTags["publisher"] = trackInfo.Publisher;
-        mediaTags["ISRC"] = trackInfo.ISRC;
-        mediaTags["duration"] = trackInfo.Duration.ToString();
-        mediaTags["group"] = trackInfo.Group;
         
-        if (trackInfo.BPM.HasValue)
+        if (trackInfo.BPM > 0)
         {
             mediaTags["TBPM"] = trackInfo.BPM.ToString();
+            mediaTags["BPM"] = trackInfo.BPM.ToString();
         }
         
         //add all non-AdditionalFields
@@ -60,7 +93,7 @@ public class FileMetaDataService
                 object? value = prop.GetValue(trackInfo);
                 
                 if (value is not null &&
-                    (value is string || value is int) &&
+                    (value is string || (value is int val && val > 0)) &&
                     !mediaTags.ContainsKey(prop.Name))
                 {
                     mediaTags[prop.Name] = value.ToString();
