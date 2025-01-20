@@ -41,6 +41,28 @@ public class DeDuplicateFileCommandHandler
                 MetadataModel? nonDuplicateRecord = _metadataRepository
                     .GetMetadataByPath(nonDuplicateFile)
                     .FirstOrDefault();
+
+                //try to find another non-duplicate version, different media extension
+                if (nonDuplicateRecord == null)
+                {
+                    string extension = Path.GetExtension(nonDuplicateFile).ToLower().Replace(".", "");
+                    string fileWithoutExtension = Path.ChangeExtension(nonDuplicateFile, "");
+                    
+                    nonDuplicateRecord = ImportCommandHandler.MediaFileExtensions
+                        .Where(ext => ext != extension)
+                        .Select(ext => fileWithoutExtension + ext)
+                        .Select(path => _metadataRepository
+                            .GetMetadataByPath(path)
+                            .FirstOrDefault())
+                        .FirstOrDefault(nonRecord => nonRecord != null);
+
+                    if (nonDuplicateRecord != null)
+                    {
+                        nonDuplicateFile = nonDuplicateRecord.Path;
+                    }
+                }
+                
+                    
                 
                 FileInfo nonDuplicatefileInfo = new FileInfo(nonDuplicateFile);
                 FileInfo duplicatefileInfo = new FileInfo(possibleDuplicateFile.Path);

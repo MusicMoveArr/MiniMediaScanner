@@ -11,14 +11,14 @@ public class ImportCommandHandler
     private readonly MetadataRepository _metadataRepository;
     private readonly AlbumRepository _albumRepository;
 
-    private static string[] MediaFileExtensions = new string[]
+    public static string[] MediaFileExtensions = new string[]
     {
         "flac",
-        "mp3",
         "m4a",
         "wav",
         "aaif",
-        "opus"
+        "opus",
+        "mp3",
     };
 
     public ImportCommandHandler(string connectionString)
