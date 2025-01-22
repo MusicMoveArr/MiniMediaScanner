@@ -104,10 +104,28 @@ public class TagMissingMetadataCommandHandler
 
         UpdateTag(track, "barcode", release.Barcode, ref trackInfoUpdated, overwriteTagValue);
 
+        
         string? musicBrainzTrackId = release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Id;
         string? musicBrainzArtistId = data?.ArtistCredit?.FirstOrDefault()?.Artist?.Id;
         string? musicBrainzAlbumId = release.Id;
         string? musicBrainzReleaseGroupId = release.ReleaseGroup.Id;
+
+        if (string.IsNullOrWhiteSpace(track.Title))
+        {
+            UpdateTag(track, "Title", release.Media?.FirstOrDefault()?.Title, ref trackInfoUpdated, overwriteTagValue);
+        }
+        if (string.IsNullOrWhiteSpace(track.Album))
+        {
+            UpdateTag(track, "Album", release.Title, ref trackInfoUpdated, overwriteTagValue);
+        }
+        if (string.IsNullOrWhiteSpace(track.AlbumArtist))
+        {
+            UpdateTag(track, "AlbumArtist", data.ArtistCredit.FirstOrDefault()?.Name, ref trackInfoUpdated, overwriteTagValue);
+        }
+        if (string.IsNullOrWhiteSpace(track.Artist))
+        {
+            UpdateTag(track, "Artist", data.ArtistCredit.FirstOrDefault()?.Name, ref trackInfoUpdated, overwriteTagValue);
+        }
 
         UpdateTag(track, "SCRIPT", release?.TextRepresentation?.Script, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "barcode", release.Barcode, ref trackInfoUpdated, overwriteTagValue);
@@ -148,25 +166,27 @@ public class TagMissingMetadataCommandHandler
 
     private void UpdateTag(Track track, string tagName, string? value, ref bool trackInfoUpdated, bool overwriteTagValue)
     {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+        
         tagName = _mediaTagWriteService.GetFieldName(track, tagName);
         
-        if (!string.IsNullOrWhiteSpace(value))
+        if (!overwriteTagValue &&
+            (track.AdditionalFields.ContainsKey(tagName) ||
+             !string.IsNullOrWhiteSpace(track.AdditionalFields[tagName])))
         {
-            if (!overwriteTagValue &&
-                (track.AdditionalFields.ContainsKey(tagName) ||
-                 !string.IsNullOrWhiteSpace(track.AdditionalFields[tagName])))
-            {
-                return;
-            }
-            
-            bool tempIsUpdated = false;
-            _mediaTagWriteService.UpdateTrackTag(track, tagName, value, ref tempIsUpdated);
+            return;
+        }
+        
+        bool tempIsUpdated = false;
+        _mediaTagWriteService.UpdateTrackTag(track, tagName, value, ref tempIsUpdated);
 
-            if (tempIsUpdated)
-            {
-                Console.WriteLine($"Updating tag '{tagName}' => '{value}'");
-                trackInfoUpdated = true;
-            }
+        if (tempIsUpdated)
+        {
+            Console.WriteLine($"Updating tag '{tagName}' => '{value}'");
+            trackInfoUpdated = true;
         }
     }
 }

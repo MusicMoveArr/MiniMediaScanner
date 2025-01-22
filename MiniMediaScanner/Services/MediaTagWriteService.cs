@@ -47,6 +47,22 @@ public class MediaTagWriteService
         var oldValues = track.AdditionalFields.ToDictionary(StringComparer.OrdinalIgnoreCase);
         switch (tag.ToLower())
         {
+            case "title":
+                updated = !string.Equals(track.Title, value);
+                track.Title = value;
+                return true;
+            case "album":
+                updated = !string.Equals(track.Album, value);
+                track.Album = value;
+                return true;
+            case "albumartist":
+                updated = !string.Equals(track.AlbumArtist, value);
+                track.AlbumArtist = value;
+                return true;
+            case "artist":
+                updated = !string.Equals(track.Artist, value);
+                track.Artist = value;
+                return true;
             case "date":
                 if (DateTime.TryParse(value, out var result))
                 {
@@ -62,6 +78,7 @@ public class MediaTagWriteService
                 }
                 return false;
             case "catalognumber":
+                updated = !string.Equals(track.CatalogNumber, value);
                 track.CatalogNumber = value;
                 return true;
             case "asin":
