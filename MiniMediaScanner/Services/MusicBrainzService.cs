@@ -95,7 +95,24 @@ public class MusicBrainzService
                     {
                         foreach (var track in media.Tracks)
                         {
-                            _musicBrainzReleaseTrackRepository.InsertMusicBrainzReleaseTrack(track.Id, track.Recording.Id, track.Title, release.Status, release.Id);
+                            
+                            _musicBrainzReleaseTrackRepository.InsertMusicBrainzReleaseTrack(track.Id, 
+                                                                                             track.Recording.Id ?? string.Empty, 
+                                                                                             track.Title ?? string.Empty, 
+                                                                                             release.Status, 
+                                                                                             release.Id,
+                                                                                             track.Length ?? 0,
+                                                                                             int.TryParse(track.Number, out var result) ? result : 0,
+                                                                                             track.Position ?? 0,
+                                                                                             track.Recording.Id ?? string.Empty,
+                                                                                             track.Recording.Length ?? 0,
+                                                                                             track.Recording.Title ?? string.Empty,
+                                                                                             track.Recording.Video,
+                                                                                             media.TrackCount ?? 0,
+                                                                                             media.Format ?? string.Empty,
+                                                                                             media.Title ?? string.Empty,
+                                                                                             media.Position ?? 0,
+                                                                                             media.TrackOffset ?? 0);
                         }
                     }
                 }

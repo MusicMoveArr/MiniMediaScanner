@@ -113,5 +113,19 @@ CREATE TABLE public.musicbrainzreleasetrack (
     CONSTRAINT musicbrainzrelease_musicbrainzremotereleaseid_key UNIQUE (musicbrainzremotereleasetrackid),
     CONSTRAINT musicbrainzrelease_pkey PRIMARY KEY (musicbrainzreleasetrackid)
 );
+
 CREATE INDEX idx_musicbrainzreleasetrack_remotereleaseid ON public.musicbrainzreleasetrack USING btree (musicbrainzremotereleaseid);
 CREATE INDEX musicbrainzreleasetrack_musicbrainzremotereleaseid_idx ON public.musicbrainzreleasetrack USING btree (musicbrainzremotereleaseid);
+
+alter table musicbrainzreleasetrack add column length int default 0;
+alter table musicbrainzreleasetrack add column number int default 0;
+alter table musicbrainzreleasetrack add column position int default 0;
+alter table musicbrainzreleasetrack add column recordingid text null;
+alter table musicbrainzreleasetrack add column recordinglength int default 0;
+alter table musicbrainzreleasetrack add column recordingtitle text null;
+alter table musicbrainzreleasetrack add column recordingvideo bool default false;
+alter table musicbrainzreleasetrack add column mediatrackcount int default 0;
+alter table musicbrainzreleasetrack add column mediaformat text null;
+alter table musicbrainzreleasetrack add column mediatitle text null;
+alter table musicbrainzreleasetrack add column mediaposition int default 0;
+alter table musicbrainzreleasetrack add column mediatrackoffset int default 0;
