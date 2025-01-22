@@ -37,7 +37,7 @@ public class ConvertMediaCommandHandler
 
         metadataFiles  
             .AsParallel()
-            .WithDegreeOfParallelism(30)
+            .WithDegreeOfParallelism(4)
             .ForAll(metadata => ProcessFile(metadata, toExtension, codec, bitrate));
         
     }

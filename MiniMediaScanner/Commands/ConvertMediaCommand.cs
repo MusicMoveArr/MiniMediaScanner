@@ -29,7 +29,7 @@ public class ConvertMediaCommand
         }
         else
         {
-            handler.ConvertByArtist(fromExtension, toExtension, codec, bitrate, artist);
+            handler.ConvertByArtist(fromExtension, toExtension, artist, codec, bitrate);
         }
     }
 }
