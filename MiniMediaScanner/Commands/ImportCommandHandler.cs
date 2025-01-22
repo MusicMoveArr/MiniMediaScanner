@@ -83,7 +83,7 @@ public class ImportCommandHandler
                         
             ProcessMetadata(metadata, filePath);
                 
-            if (!string.IsNullOrWhiteSpace(metadata?.MusicBrainzTrackId) &&
+            if (!string.IsNullOrWhiteSpace(metadata?.MusicBrainzArtistId) &&
                 !string.IsNullOrWhiteSpace(metadata?.Album) &&
                 !string.IsNullOrWhiteSpace(metadata?.Artist))
             {
