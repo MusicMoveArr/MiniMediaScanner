@@ -12,22 +12,24 @@ public class TagMissingMetadataCommand
     /// <param name="write">-w, Write missing metadata to media on disk.</param>
     /// <param name="artist">-a, Artistname.</param>
     /// <param name="album">-b, target Album.</param>
+    /// <param name="overwritetag">-ow, Overwrite existing tag values.</param>
     [Command("tagmissingmetadata")]
     public static void TagMissingMetadata(string connectionString, 
         string accoustid, 
         bool write = false,
         string artist = "", 
-        string album = "")
+        string album = "", 
+        bool overwritetag = true)
     {
         var handler = new TagMissingMetadataCommandHandler(connectionString);
 
         if (string.IsNullOrWhiteSpace(artist))
         {
-            handler.FingerPrintMedia(accoustid, write, album);
+            handler.FingerPrintMedia(accoustid, write, album, overwritetag);
         }
         else
         {
-            handler.FingerPrintMedia(accoustid, write, artist, album);
+            handler.FingerPrintMedia(accoustid, write, artist, album, overwritetag);
         }
     }
 }

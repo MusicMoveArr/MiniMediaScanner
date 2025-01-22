@@ -42,21 +42,22 @@ public class MediaTagWriteService
         return success;
     }
 
-    public bool UpdateTrackTag(Track track, string tag, string value)
+    public bool UpdateTrackTag(Track track, string tag, string value, ref bool updated)
     {
+        var oldValues = track.AdditionalFields.ToDictionary(StringComparer.OrdinalIgnoreCase);
         switch (tag.ToLower())
         {
             case "date":
                 if (DateTime.TryParse(value, out var result))
                 {
                     track.AdditionalFields[GetFieldName(track,"date")] = value;
-                    //track.Date = result;
+                    updated = IsDictionaryUpdated(track, oldValues, "date");
                     return true;
                 }
                 else if (int.TryParse(value, out var result2))
                 {
                     track.AdditionalFields[GetFieldName(track,"date")] = value;
-                    //track.Date = new DateTime(result2, 1, 1);
+                    updated = IsDictionaryUpdated(track, oldValues, "date");
                     return true;
                 }
                 return false;
@@ -65,12 +66,15 @@ public class MediaTagWriteService
                 return true;
             case "asin":
                 track.AdditionalFields[GetFieldName(track,"asin")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "asin");
                 return true;
             case "year":
                 if (!int.TryParse(value, out int year))
                 {
                     return false;
                 }
+
+                updated = track.Year != year;
                 track.Year = year;
                 return true;
             case "originalyear":
@@ -79,9 +83,11 @@ public class MediaTagWriteService
                     return false;
                 }
                 track.AdditionalFields[GetFieldName(track,"originalyear")] = originalyear.ToString();
+                updated = IsDictionaryUpdated(track, oldValues, "originalyear");
                 return true;
             case "originaldate":
                 track.AdditionalFields[GetFieldName(track,"originaldate")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "originaldate");
                 return true;
             case "disc":
             case "disc number":
@@ -89,6 +95,7 @@ public class MediaTagWriteService
                 {
                     return false;
                 }
+                updated = track.DiscNumber != disc;
                 track.DiscNumber = disc;
                 return true;
             case "track number":
@@ -96,6 +103,7 @@ public class MediaTagWriteService
                 {
                     return false;
                 }
+                updated = track.TrackNumber != trackNumber;
                 track.TrackNumber = trackNumber;
                 return true;
             case "total tracks":
@@ -103,56 +111,92 @@ public class MediaTagWriteService
                 {
                     return false;
                 }
+
+                updated = track.TrackTotal != totalTracks;
                 track.TrackTotal = totalTracks;
                 return true;
             case "musicbrainz artist id":
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Artist Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Artist Id");
                 return true;
             case "musicbrainz release group id":
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Release Group Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Release Group Id");
                 return true;
             case "musicbrainz release artist id":
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Release Artist Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Release Artist Id");
                 return true;
             case "musicbrainz release id":
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Release Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Release Id");
+                return true;
+            case "musicbrainz release track id":
+                track.AdditionalFields[GetFieldName(track,"MusicBrainz Release Track Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Release Track Id");
                 return true;
             case "musicbrainz track id":
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Track Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Track Id");
                 return true;
             case "musicbrainz album artist id":
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Album Artist Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Album Artist Id");
                 return true;
             case "musicbrainz album id":
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Album Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Album Id");
                 return true;
             case "musicbrainz album type":
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Album Type")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Album Type");
                 return true;
             case "musicbrainz album release country":
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Album Release Country")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Album Release Country");
                 return true;
             case "musicbrainz album status":
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Album Status")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Album Status");
                 return true;
             case "script":
                 track.AdditionalFields[GetFieldName(track,"SCRIPT")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "SCRIPT");
                 return true;
             case "barcode":
                 track.AdditionalFields[GetFieldName(track, "BARCODE")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "BARCODE");
                 return true;
             case "media":
                 track.AdditionalFields[GetFieldName(track, "MEDIA")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "MEDIA");
                 return true;
             case "acoustid id":
                 track.AdditionalFields[GetFieldName(track, "Acoustid Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Acoustid Id");
                 return true;
             case "acoustid fingerprint":
                 track.AdditionalFields[GetFieldName(track, "Acoustid Fingerprint")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Acoustid Fingerprint");
                 return true;
         }
 
         return false;
+    }
+
+    private bool IsDictionaryUpdated(Track track, 
+        Dictionary<string, string> oldValues,
+        string tagName)
+    {
+        string fieldName = GetFieldName(track, tagName);
+
+        if (track.AdditionalFields.ContainsKey(fieldName) &&
+            !oldValues.ContainsKey(fieldName))
+        {
+            return true;
+        }
+        
+        return string.Equals(track.AdditionalFields[GetFieldName(track, fieldName)], oldValues[GetFieldName(track, fieldName)]);
     }
     
     public string GetFieldName(Track track, string field)
@@ -167,8 +211,9 @@ public class MediaTagWriteService
     
     public bool SaveTag(FileInfo targetFile, string tag, string value)
     {
+        bool isUpdated = false;
         Track track = new Track(targetFile.FullName);
-        UpdateTrackTag(track, tag, value);
+        UpdateTrackTag(track, tag, value, ref isUpdated);
 
         return SafeSave(track);
     }
