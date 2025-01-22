@@ -16,6 +16,8 @@ public class UpdateMBCommandHandler
     
     public void UpdateMusicBrainzArtistsByName(List<string> names)
     {
+        string aritsts = string.Join(", ", names);
+        Console.WriteLine($"Updating artist(s), {aritsts}");
         var artistIds = _musicBrainzArtistRepository.GetMusicBrainzArtistRemoteIdsByName(names);
         artistIds.ForEach(id => UpdateMusicBrainzArtistId(id));
     }

@@ -15,6 +15,8 @@ public class TagMissingMetadataCommandHandler
     private readonly ArtistRepository _artistRepository;
     private readonly MediaTagWriteService _mediaTagWriteService;
     private readonly ImportCommandHandler _importCommandHandler;
+    private readonly StringNormalizerService _normalizerService;
+    private readonly MusicBrainzArtistRepository _musicBrainzArtistRepository;
 
     public TagMissingMetadataCommandHandler(string connectionString)
     {
@@ -24,6 +26,8 @@ public class TagMissingMetadataCommandHandler
         _artistRepository = new ArtistRepository(connectionString);
         _mediaTagWriteService = new MediaTagWriteService();
         _importCommandHandler = new ImportCommandHandler(connectionString);
+        _normalizerService = new StringNormalizerService();
+        _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
     }
 
     public void FingerPrintMedia(string accoustId, bool write, string album, bool overwriteTagValue)
@@ -69,9 +73,13 @@ public class TagMissingMetadataCommandHandler
             return;
         }
 
+        
         var data = _musicBrainzAPIService.GetRecordingById(recordingId);
         MusicBrainzArtistReleaseModel? release = data?.Releases?.FirstOrDefault();
+        
 
+        //var recordingRecord = _musicBrainzArtistRepository.GetMusicBrainzArtistByRecordingId(recordingId);
+        
         if (release == null)
         {
             return;
@@ -157,7 +165,7 @@ public class TagMissingMetadataCommandHandler
         UpdateTag(track, "Track Number", release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Position?.ToString(), ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "Total Tracks", release.Media?.FirstOrDefault()?.TrackCount.ToString(), ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MEDIA", release.Media?.FirstOrDefault()?.Format, ref trackInfoUpdated, overwriteTagValue);
-
+        
         if (trackInfoUpdated && _mediaTagWriteService.SafeSave(track))
         {
             _importCommandHandler.ProcessFile(metadata.Path);
@@ -172,6 +180,7 @@ public class TagMissingMetadataCommandHandler
         }
         
         tagName = _mediaTagWriteService.GetFieldName(track, tagName);
+        value = _normalizerService.ReplaceInvalidCharacters(value);
         
         if (!overwriteTagValue &&
             (track.AdditionalFields.ContainsKey(tagName) ||

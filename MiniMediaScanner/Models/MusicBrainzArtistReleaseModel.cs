@@ -16,8 +16,8 @@ public class MusicBrainzArtistReleaseModel
     public string? Country { get; set; }
     public string? Disambiguation { get; set; }
     public string? Quality { get; set; }
-    
-    public List<MusicBrainzReleaseMediaModel>? Media { get; set; }
+
+    public List<MusicBrainzReleaseMediaModel>? Media { get; set; } = new List<MusicBrainzReleaseMediaModel>();
     
     [JsonPropertyName("release-group")]
     public MusicBrainzReleaseGroupModel ReleaseGroup { get; set; }

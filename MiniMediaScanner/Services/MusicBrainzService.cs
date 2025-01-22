@@ -102,7 +102,7 @@ public class MusicBrainzService
                                                                                              release.Status, 
                                                                                              release.Id,
                                                                                              track.Length ?? 0,
-                                                                                             int.TryParse(track.Number, out var result) ? result : 0,
+                                                                                             track.Number ?? 0,
                                                                                              track.Position ?? 0,
                                                                                              track.Recording.Id ?? string.Empty,
                                                                                              track.Recording.Length ?? 0,

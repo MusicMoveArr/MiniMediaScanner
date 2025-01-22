@@ -11,17 +11,17 @@ public class StringNormalizerService
         input = input.Replace('–', '-'); //en dash -> hypen
         input = input.Replace('—', '-'); //em dash -> hypen
         input = input.Replace("…", "..."); //horizontal ellipsis -> 3 dots
-        
+            
         // Words to exclude from capitalization (except if they're the first word)
         HashSet<string> smallWords = new HashSet<string> { "of", "the", "and", "in", "on", "at", "for", "to", "a" };
 
         // Create a TextInfo object for title casing
-        TextInfo textInfo = CultureInfo.InvariantCulture.TextInfo;
+        TextInfo textInfo = CultureInfo.GetCultureInfo("en-US").TextInfo;
 
         // Split the string into words and delimiters
         var words = new List<string>();
         var delimiters = new List<char>();
-        char[] separatorCharacters = { ':', '-', '_', ' ', '/' , ',' }; // Add more as needed
+        char[] separatorCharacters = { ':', '-', '_', ' ', '/', ',' }; // Add more as needed
 
         int start = 0;
         for (int i = 0; i < input.Length; i++)
@@ -84,5 +84,15 @@ public class StringNormalizerService
         }
 
         return result;
+    }
+    
+    
+    public string ReplaceInvalidCharacters(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+        return value.Replace("\0", string.Empty);
     }
 }

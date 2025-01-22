@@ -74,6 +74,7 @@ public class ImportCommandHandler
             try
             {
                 metadata = _fileMetaDataService.GetMetadataInfo(fileInfo);
+                metadata.NonNullableValues();
             }
             catch (Exception e)
             {

@@ -14,5 +14,5 @@ public class MusicBrainzReleaseMediaModel
     [JsonProperty(PropertyName = "track-offset")]
     public int? TrackOffset { get; set; }
     
-    public List<MusicBrainzReleaseMediaTrackModel>? Tracks { get; set; }
+    public List<MusicBrainzReleaseMediaTrackModel>? Tracks { get; set; } = new List<MusicBrainzReleaseMediaTrackModel>();
 }

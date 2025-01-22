@@ -1,3 +1,5 @@
+using MiniMediaScanner.Services;
+
 namespace MiniMediaScanner;
 
 public class MetadataInfo
@@ -183,5 +185,36 @@ public class MetadataInfo
         {
             TagAcoustId = string.Empty;
         }
+
+        var stringNormalizer = new StringNormalizerService();
+
+        Album = stringNormalizer.ReplaceInvalidCharacters(Album);
+        Artist = stringNormalizer.ReplaceInvalidCharacters(Artist);
+        Title = stringNormalizer.ReplaceInvalidCharacters(Title);
+        MusicBrainzArtistId = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzArtistId);
+        MusicBrainzDiscId = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzDiscId);
+        MusicBrainzReleaseCountry = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzReleaseCountry);
+        MusicBrainzReleaseId = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzReleaseId);
+        MusicBrainzTrackId = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzTrackId);
+        MusicBrainzReleaseStatus = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzReleaseStatus);
+        MusicBrainzReleaseType = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzReleaseType);
+        MusicBrainzReleaseArtistId = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzReleaseArtistId);
+        MusicBrainzReleaseGroupId = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzReleaseGroupId);
+        TagSubtitle = stringNormalizer.ReplaceInvalidCharacters(TagSubtitle);
+        TagAlbumSort = stringNormalizer.ReplaceInvalidCharacters(TagAlbumSort);
+        TagComment = stringNormalizer.ReplaceInvalidCharacters(TagComment);
+        TagLyrics = stringNormalizer.ReplaceInvalidCharacters(TagLyrics);
+        TagGrouping = stringNormalizer.ReplaceInvalidCharacters(TagGrouping);
+        TagConductor = stringNormalizer.ReplaceInvalidCharacters(TagConductor);
+        TagCopyright = stringNormalizer.ReplaceInvalidCharacters(TagCopyright);
+        TagAmazonId = stringNormalizer.ReplaceInvalidCharacters(TagAmazonId);
+        TagInitialKey = stringNormalizer.ReplaceInvalidCharacters(TagInitialKey);
+        TagRemixedBy = stringNormalizer.ReplaceInvalidCharacters(TagRemixedBy);
+        TagPublisher = stringNormalizer.ReplaceInvalidCharacters(TagPublisher);
+        TagISRC = stringNormalizer.ReplaceInvalidCharacters(TagISRC);
+        TagLength = stringNormalizer.ReplaceInvalidCharacters(TagLength);
+        TagAcoustIdFingerPrint = stringNormalizer.ReplaceInvalidCharacters(TagAcoustIdFingerPrint);
+        TagAcoustId = stringNormalizer.ReplaceInvalidCharacters(TagAcoustId);
+        AllJsonTags = stringNormalizer.ReplaceInvalidCharacters(AllJsonTags);
     }
 }

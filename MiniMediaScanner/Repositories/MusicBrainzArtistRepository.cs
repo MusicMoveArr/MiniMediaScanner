@@ -1,3 +1,5 @@
+using MiniMediaScanner.Models;
+using MiniMediaScanner.Models.MusicBrainzRecordings;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -184,5 +186,117 @@ public class MusicBrainzArtistRepository
             return null;
         }
         return artistId;
+    }
+
+    public MusicBrainzArtistModel? GetMusicBrainzArtistByRecordingId(string recordingId)
+    {
+        
+        string query = @"select a.releasecount,
+                         a.disambiguation,
+                         a.name,
+                         cast(a.musicbrainzremoteid as text),
+                         a.sortname,
+                         a.type,
+                         a.name,
+                         r.musicbrainzremotereleaseid,
+                         r.title,
+                         r.status,
+                         r.statusid,
+                         r.date,
+                         r.barcode,
+                         r.country,
+                         r.disambiguation,
+                         r.quality,
+                         rt.mediatrackcount,
+                         rt.mediaformat,
+                         rt.title,
+                         rt.position,
+                         rt.mediatrackoffset,
+                         rt.musicbrainzremotereleasetrackid,
+                         rt.title,
+                         rt.length,
+                         rt.number,
+                         rt.position,
+                         rt.title,
+                         rt.length,
+                         rt.recordingvideo,
+                         rt.recordingid
+ 
+                         from musicbrainzreleasetrack rt
+                         join musicbrainzrelease r on r.musicbrainzremotereleaseid = rt.musicbrainzremotereleaseid
+                         join musicbrainzartist a on cast(a.musicbrainzartistid as text) = r.musicbrainzartistid 
+                         where rt.recordingid =  @recordingId";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+        using var cmd = new NpgsqlCommand(query, conn);
+        
+        conn.Open();
+
+        cmd.Parameters.AddWithValue("recordingId", recordingId);
+        using var reader = cmd.ExecuteReader();
+        
+        var result = new List<string>();
+        if (reader.Read())
+        {
+            MusicBrainzArtistModel artist = new MusicBrainzArtistModel();
+            artist.ReleaseCount = reader.GetInt32(0);
+            
+            artist.ArtistCredit.Add(new MusicBrainzArtistCreditModel
+            {
+                Artist = new MusicBrainzArtistCreditEntityModel
+                {
+                    Disambiguation = reader.GetString(1),
+                    Name = reader.GetString(2),
+                    Id = reader.GetString(3),
+                    SortName = reader.GetString(4),
+                    Type = reader.GetString(5),
+                }, Name = reader.GetString(6)
+            });
+
+            MusicBrainzArtistReleaseModel artistRelease = new MusicBrainzArtistReleaseModel
+            {
+                Id = reader.GetString(7),
+                Title = reader.GetString(8),
+                Status = reader.GetString(9),
+                StatusId = reader.GetString(10),
+                Date = reader.GetString(11),
+                Barcode = reader.GetString(12),
+                Country = reader.GetString(13),
+                Disambiguation = reader.GetString(14),
+                Quality = reader.GetString(15),
+            };
+
+            MusicBrainzReleaseMediaModel releaseMediaModel = new MusicBrainzReleaseMediaModel
+            {
+                TrackCount = reader.GetInt32(16),
+                Format = reader.GetString(17),
+                Title = reader.GetString(18),
+                Position = reader.GetInt32(19),
+                TrackOffset = reader.GetInt32(20),
+            };
+            releaseMediaModel.Tracks.Add(new MusicBrainzReleaseMediaTrackModel
+            {
+                Id = reader.GetString(21),
+                Title = reader.GetString(22),
+                Length = reader.GetInt32(23),
+                Number = reader.GetInt32(24),
+                Position = reader.GetInt32(25),
+                Recording = new MusicBrainzReleaseMediaTrackRecordingModel
+                {
+                    Title = reader.GetString(26),
+                    Length = reader.GetInt32(27),
+                    Video = reader.GetBoolean(28),
+                    Id = reader.GetString(29)
+                }
+            });
+            
+            artistRelease.Media.Add(releaseMediaModel);
+            
+            artist.Releases.Add(artistRelease);
+
+            return artist;
+        }
+
+        return null;
     }
 }
