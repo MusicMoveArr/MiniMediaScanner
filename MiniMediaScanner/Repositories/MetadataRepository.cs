@@ -342,7 +342,8 @@ public class MetadataRepository
                                  tag_track,
                                  tag_trackcount,
                                  tag_disc,
-                                 tag_disccount
+                                 tag_disccount,
+                                 artist.name
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
@@ -369,6 +370,7 @@ public class MetadataRepository
             int trackCount = reader.GetInt32(7);
             int disc = reader.GetInt32(8);
             int discCount = reader.GetInt32(9);
+            string dbArtistName = reader.GetString(10);
             
             result.Add(new MetadataModel()
             {
@@ -382,6 +384,8 @@ public class MetadataRepository
                 TrackCount = trackCount,
                 Disc = disc,
                 DiscCount = discCount,
+                ArtistName = dbArtistName,
+                Tag_Track = track
             });
         }
 

@@ -7,6 +7,11 @@ public class StringNormalizerService
 {
     public string NormalizeText(string input)
     {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return string.Empty;
+        }
+        
         //replace special characters
         input = input.Replace('–', '-'); //en dash -> hypen
         input = input.Replace('—', '-'); //em dash -> hypen
@@ -21,7 +26,7 @@ public class StringNormalizerService
         // Split the string into words and delimiters
         var words = new List<string>();
         var delimiters = new List<char>();
-        char[] separatorCharacters = { ':', '-', '_', ' ', '/', ',' }; // Add more as needed
+        char[] separatorCharacters = { ':', '-', '_', ' ', '/', ',', '(', ')', '[', ']' }; // Add more as needed
 
         int start = 0;
         for (int i = 0; i < input.Length; i++)
@@ -58,7 +63,7 @@ public class StringNormalizerService
             word = words[i].ToLower();
             if (i == 0 || !smallWords.Contains(word)) // Capitalize if first word or not a small word
             {
-                words[i] = textInfo.ToTitleCase(word);
+                words[i] = CapitalizeFirstChar(word);
             }
             else if (smallWords.Contains(word))
             {
@@ -86,6 +91,16 @@ public class StringNormalizerService
         return result;
     }
     
+    public string CapitalizeFirstChar(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return input;
+        
+        char firstChar = char.ToUpper(input[0]);
+        string restOfString = input.Length > 1 ? input.Substring(1) : string.Empty;
+
+        return firstChar + restOfString;
+    }
     
     public string ReplaceInvalidCharacters(string value)
     {

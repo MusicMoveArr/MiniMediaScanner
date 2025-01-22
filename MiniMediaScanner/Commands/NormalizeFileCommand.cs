@@ -12,9 +12,11 @@ public class NormalizeFileCommand
     /// Seperators between words are kept: : - _ / , 
     /// </summary>
     /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="normalizeArtistName">-a, normalize Artistname.</param>
-    /// <param name="normalizeAlbumName">-b, normalize Albumname.</param>
-    /// <param name="normalizeTitleName">-t, normalize music Title.</param>
+    /// <param name="artist">-a, Artistname.</param>
+    /// <param name="album">-b, target Album.</param>
+    /// <param name="normalizeArtistName">-na, normalize Artistname.</param>
+    /// <param name="normalizeAlbumName">-nb, normalize Albumname.</param>
+    /// <param name="normalizeTitleName">-nt, normalize music Title.</param>
     /// <param name="rename">-r, rename file.</param>
     /// <param name="overwrite">-w, overwrite existing files.</param>
     /// <param name="subDirectoryDepth">-s, sub-directory depth to root-folder.</param>
@@ -32,7 +34,9 @@ public class NormalizeFileCommand
         bool rename = false, 
         string fileFormat = "", 
         string directoryFormat = "", 
-        string directorySeperator = "_")
+        string directorySeperator = "_",
+        string artist = "", 
+        string album = "")
     {
         var handler = new NormalizeFileCommandHandler(connectionString);
 
@@ -52,6 +56,7 @@ public class NormalizeFileCommand
             "artistName", 
             "albumName", 
             5,
+            1,
             "someTitle",
             directorySeperator);
         
@@ -66,6 +71,7 @@ public class NormalizeFileCommand
             "artistName", 
             "albumName", 
             5,
+            1,
             "someTitle",
             directorySeperator);
         
@@ -75,6 +81,33 @@ public class NormalizeFileCommand
             return;
         }
 
-        handler.NormalizeFiles(normalizeArtistName, normalizeAlbumName, normalizeTitleName, overwrite, subDirectoryDepth, rename, fileFormat, directoryFormat, directorySeperator);
+        if (string.IsNullOrWhiteSpace(artist))
+        {
+            handler.NormalizeFiles(album,
+                normalizeArtistName, 
+                normalizeAlbumName, 
+                normalizeTitleName, 
+                overwrite, 
+                subDirectoryDepth, 
+                rename, 
+                fileFormat, 
+                directoryFormat, 
+                directorySeperator);
+        }
+        else
+        {
+            handler.NormalizeFiles(artist, 
+                album, 
+                normalizeArtistName, 
+                normalizeAlbumName, 
+                normalizeTitleName, 
+                overwrite, 
+                subDirectoryDepth, 
+                rename, 
+                fileFormat, 
+                directoryFormat, 
+                directorySeperator);
+        }
+        
     }
 }

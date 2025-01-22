@@ -13,6 +13,7 @@ public class NormalizeFileCommandHandler
     private readonly MediaTagWriteService _tagWriteService;
     private readonly ImportCommandHandler _importCommandHandler;
     private readonly MetadataRepository _metadataRepository;
+    private readonly ArtistRepository _artistRepository;
     
     private int _updateFiles = 0;
     private int _updateAlbumNames = 0;
@@ -26,9 +27,12 @@ public class NormalizeFileCommandHandler
         _tagWriteService = new MediaTagWriteService();
         _importCommandHandler = new ImportCommandHandler(connectionString);
         _metadataRepository = new MetadataRepository(connectionString);
+        _artistRepository = new ArtistRepository(connectionString);
     }
     
-    public void NormalizeFiles(
+    
+
+    public void NormalizeFiles(string album,
         bool normalizeArtistName,
         bool normalizeAlbumName,
         bool normalizeTitleName,
@@ -39,45 +43,59 @@ public class NormalizeFileCommandHandler
         string directoryFormat = "",
         string directorySeperator = "_")
     {
-        const int limit = 1000;
-        int offset = 0;
+        _artistRepository.GetAllArtistNames()
+            .ForEach(artist => NormalizeFiles(artist, album,
+                normalizeArtistName, 
+                normalizeAlbumName, 
+                normalizeTitleName, 
+                overwrite,
+                subDirectoryDepth, 
+                rename, 
+                fileFormat, 
+                directoryFormat, 
+                directorySeperator));
+    }
+    
+    public void NormalizeFiles(
+        string artist,
+        string album,
+        bool normalizeArtistName,
+        bool normalizeAlbumName,
+        bool normalizeTitleName,
+        bool overwrite,
+        int subDirectoryDepth = 0,
+        bool rename = false, 
+        string fileFormat = "",
+        string directoryFormat = "",
+        string directorySeperator = "_")
+    {
+        var metadata = _metadataRepository.GetMetadataByArtist(artist)
+            .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
-        while (true)
-        {
-            var metadata = _metadataRepository.GetAllMetadata(offset, limit);
-            offset += limit;
-
-            if (metadata.Count == 0)
+        //due to I/O limitations max 4 threads is probably the best for now
+        //making more threads won't make anything faster but rather make it slooow
+        metadata
+            .AsParallel()
+            .WithDegreeOfParallelism(4)
+            .ForAll(file =>
             {
-                break;
-            }
-            
-            //due to I/O limitations max 4 threads is probably the best for now
-            //making more threads won't make anything faster but rather make it slooow
-            metadata
-                .AsParallel()
-                .WithDegreeOfParallelism(4)
-                .ForAll(file =>
+                try
                 {
-                    try
-                    {
-                        bool success = ProcessFile(file, normalizeArtistName, normalizeAlbumName, normalizeTitleName, overwrite,
-                            subDirectoryDepth, rename, fileFormat, directoryFormat, directorySeperator);
+                    bool success = ProcessFile(file, normalizeArtistName, normalizeAlbumName, normalizeTitleName, overwrite,
+                        subDirectoryDepth, rename, fileFormat, directoryFormat, directorySeperator);
 
-                        if (success)
-                        {
-                            _updateFiles++;
-                        }
-                    }
-                    catch (Exception e)
+                    if (success)
                     {
-                        Console.WriteLine(e.Message);
+                        _updateFiles++;
                     }
-                    
-                });
-            
-            Console.WriteLine($"Updated files: {_updateFiles}, artist names {_updateArtistNames}, album names {_updateAlbumNames}, title names {_updateTitleNames}");
-        }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+                
+            });
         Console.WriteLine($"Can update files: {_updateFiles}, artist names {_updateArtistNames}, album names {_updateAlbumNames}, title names {_updateTitleNames}");
     }
 
@@ -95,11 +113,19 @@ public class NormalizeFileCommandHandler
         string artistNormalized = normalizeArtistName ? _stringNormalizerService.NormalizeText(file.ArtistName) : file.ArtistName;
         string albumNormalized = normalizeAlbumName ? _stringNormalizerService.NormalizeText(file.AlbumName) : file.AlbumName;
         string titleNormalized = normalizeTitleName ? _stringNormalizerService.NormalizeText(file.Title) : file.Title;
+
+        if (string.IsNullOrWhiteSpace(artistNormalized) ||
+            string.IsNullOrWhiteSpace(albumNormalized) ||
+            string.IsNullOrWhiteSpace(titleNormalized))
+        {
+            Console.WriteLine($"Skipped file due either missing tags Artist, Album, Title for '{file.Path}'");
+            return false;
+        }
         
         bool updatedArtistName = !string.Equals(artistNormalized, file.ArtistName);
         bool updatedalbumName = !string.Equals(albumNormalized, file.AlbumName);
         bool updatedTitleName = !string.Equals(titleNormalized, file.Title);
-
+        
         string oldPath = file.Path;
         FileInfo fileInfo = new FileInfo(file.Path);
 
@@ -119,8 +145,8 @@ public class NormalizeFileCommandHandler
             }
         }
         
-        string newFileName = $"{GetFormatName(fileFormat, artistNormalized, albumNormalized, file.Tag_Track, titleNormalized, directorySeperator)}{fileInfo.Extension}";
-        string newDirectoryName = $"{GetFormatName(directoryFormat, artistNormalized, albumNormalized, file.Tag_Track, titleNormalized, directorySeperator)}";
+        string newFileName = $"{GetFormatName(fileFormat, artistNormalized, albumNormalized, file.Tag_Track, file.Disc, titleNormalized, directorySeperator)}{fileInfo.Extension}";
+        string newDirectoryName = $"{GetFormatName(directoryFormat, artistNormalized, albumNormalized, file.Tag_Track, file.Disc, titleNormalized, directorySeperator)}";
         string partialNewPath = Path.Combine(newDirectoryName, newFileName);
         string newFullPath = Path.Combine(subDirectory.FullName, partialNewPath).Trim();
         
@@ -212,13 +238,24 @@ public class NormalizeFileCommandHandler
     public string GetFormatName(string format, 
         string artist, 
         string album, 
-        int track, 
+        int track,
+        int disc,
         string title, 
         string seperator)
     {
         format = format.Replace("{artist}", ReplaceDirectorySeparators(artist, seperator));
         format = format.Replace("{album}", ReplaceDirectorySeparators(album, seperator));
-        format = format.Replace("{track}", track.ToString("D2"));
+
+        if (disc > 1)
+        {
+            format = format.Replace("{track}", $"{disc.ToString("D2")}-{track.ToString("D2")}" );
+        }
+        else
+        {
+            format = format.Replace("{track}", track.ToString("D2"));
+        }
+        
+        
         format = format.Replace("{title}", ReplaceDirectorySeparators(title, seperator));
         format = format.Trim();
         return format;

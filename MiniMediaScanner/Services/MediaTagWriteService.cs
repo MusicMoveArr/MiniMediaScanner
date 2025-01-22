@@ -7,39 +7,13 @@ public class MediaTagWriteService
 {
     public bool Save(FileInfo targetFile, string artistName, string albumName, string title)
     {
-        if (title.Contains("\""))
-        {
-            title = title.Replace("\"", "\"\"");
-        }        
-        string tempFile = $"{targetFile.FullName}.tmp{targetFile.Extension}";
-        bool success = false;
-        try
-        {
-            success = FFMpegArguments
-                .FromFileInput(targetFile.FullName)
-                .OutputToFile(tempFile, overwrite: true, options => options
-                    .WithCustomArgument($"-metadata album_artist=\"{artistName}\"")
-                    .WithCustomArgument($"-metadata artist=\"{artistName}\"")
-                    .WithCustomArgument($"-metadata album=\"{albumName}\"")
-                    .WithCustomArgument($"-metadata title=\"{title}\"")
-                    .WithCustomArgument("-codec copy")) // Prevents re-encoding
-                .ProcessSynchronously();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
+        bool isUpdated = false;
+        Track track = new Track(targetFile.FullName);
+        UpdateTrackTag(track, "artist", artistName, ref isUpdated);
+        UpdateTrackTag(track, "album", albumName, ref isUpdated);
+        UpdateTrackTag(track, "title", title, ref isUpdated);
 
-        if (success && File.Exists(tempFile))
-        {
-            File.Move(tempFile, targetFile.FullName, true);
-        }
-        else if (File.Exists(tempFile))
-        {
-            File.Delete(tempFile);
-        }
-
-        return success;
+        return SafeSave(track);
     }
 
     public bool UpdateTrackTag(Track track, string tag, string value, ref bool updated)

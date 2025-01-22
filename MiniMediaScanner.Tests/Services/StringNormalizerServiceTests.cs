@@ -63,7 +63,7 @@ public class StringNormalizerServiceTests
     [Fact]
     public void TestSongNames_3()
     {
-        string songName = "Some & Love";
+        string songName = "Some & lOve";
         string songNameShouldBe = "Some & Love";
         string normalized = _stringNormalizerService.NormalizeText(songName);
         normalized.Should().Be(songNameShouldBe);
@@ -126,6 +126,26 @@ public class StringNormalizerServiceTests
         //small changes in uppercase
         string songName = "Can'T allOw WeIrD SPeLLinG";
         string songNameShouldBe = "Can't Allow Weird Spelling";
+        string normalized = _stringNormalizerService.NormalizeText(songName);
+        normalized.Should().Be(songNameShouldBe);
+    }
+    
+    [Fact]
+    public void TestSongNames_10()
+    {
+        //small changes in uppercase
+        string songName = "Can’T allOw WeIrD SPeLLinG";
+        string songNameShouldBe = "Can’t Allow Weird Spelling";
+        string normalized = _stringNormalizerService.NormalizeText(songName);
+        normalized.Should().Be(songNameShouldBe);
+    }
+    
+    [Fact]
+    public void TestSongNames_11()
+    {
+        //small changes in uppercase
+        string songName = "Some long TitlE [With brack’S] and (Test title's)";
+        string songNameShouldBe = "Some Long Title [With Brack’s] and (Test Title's)";
         string normalized = _stringNormalizerService.NormalizeText(songName);
         normalized.Should().Be(songNameShouldBe);
     }
