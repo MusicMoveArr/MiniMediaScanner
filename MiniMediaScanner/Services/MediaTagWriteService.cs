@@ -33,6 +33,15 @@ public class MediaTagWriteService
                 updated = !string.Equals(track.AlbumArtist, value);
                 track.AlbumArtist = value;
                 return true;
+            case "albumartistsortorder":
+                updated = !string.Equals(track.SortAlbumArtist, value);
+                track.SortAlbumArtist = value;
+                return true;
+            case "sort_artist":
+            case "artistsortorder":
+                updated = !string.Equals(track.SortArtist, value);
+                track.SortArtist = value;
+                return true;
             case "artist":
                 updated = !string.Equals(track.Artist, value);
                 track.Artist = value;
@@ -105,6 +114,17 @@ public class MediaTagWriteService
 
                 updated = track.TrackTotal != totalTracks;
                 track.TrackTotal = totalTracks;
+                return true;
+            case "totaldiscs":
+            case "total discs":
+            case "disctotal":
+                if (!int.TryParse(value, out int totalDiscs))
+                {
+                    return false;
+                }
+
+                updated = track.DiscTotal != totalDiscs;
+                track.DiscTotal = totalDiscs;
                 return true;
             case "musicbrainz artist id":
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Artist Id")] = value;

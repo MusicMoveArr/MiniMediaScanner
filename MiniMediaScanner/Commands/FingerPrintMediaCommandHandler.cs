@@ -39,7 +39,17 @@ public class FingerPrintMediaCommandHandler
         metadata
             .AsParallel()
             .WithDegreeOfParallelism(4)
-            .ForAll(metadata => FingerPrintFile(metadata));
+            .ForAll(metadata =>
+            {
+                try
+                {
+                    FingerPrintFile(metadata);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            });
     }
 
     private void FingerPrintFile(MetadataModel metadata)

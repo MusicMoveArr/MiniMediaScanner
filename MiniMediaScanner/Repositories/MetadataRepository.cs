@@ -305,8 +305,8 @@ public class MetadataRepository
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
                         where lower(artist.name) = lower(@artistName)
-                        and (length( m.tag_acoustidfingerprint) = 0 
-                            or m.tag_acoustidfingerprint_duration = 0)";
+                        and (length( m.tag_acoustidfingerprint) = 0 )
+                           -- or m.tag_acoustidfingerprint_duration = 0)";
 
         using var conn = new NpgsqlConnection(_connectionString);
         using var cmd = new NpgsqlCommand(query, conn);

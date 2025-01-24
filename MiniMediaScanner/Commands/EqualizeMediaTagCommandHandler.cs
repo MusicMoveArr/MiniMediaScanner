@@ -51,6 +51,12 @@ public class EqualizeMediaTagCommandHandler
                 case "disc":
                 case "asin":
                 case "catalognumber":
+                case "artistsortorder":
+                case "sort_artist":
+                case "totaldiscs":
+                case "total discs":
+                case "disctotal":
+                case "albumartistsortorder":
                     success = ProcessGenericTag(group.ToList(), artist, albumName, autoConfirm, tag, writetag);
                     break;
             }
