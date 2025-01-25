@@ -1,4 +1,5 @@
 using Npgsql;
+using Dapper;
 
 namespace MiniMediaScanner.Repositories;
 
@@ -21,19 +22,12 @@ public class AlbumRepository
         
         Guid albumId = Guid.NewGuid();
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        cmd.Parameters.AddWithValue("id", albumId);
-        cmd.Parameters.AddWithValue("title", albumName);
-        cmd.Parameters.AddWithValue("artistId", artistId);
 
-        var result = cmd.ExecuteScalar();
-        if (result != null)
+        return conn.ExecuteScalar<Guid>(query, new
         {
-            albumId = (Guid)result;
-        }
-
-        return albumId;
+            id = albumId,
+            title = albumName,
+            artistId = artistId
+        });
     }
 }

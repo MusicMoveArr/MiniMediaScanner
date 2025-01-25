@@ -65,7 +65,7 @@ public class EqualizeMediaTagCommandHandler
 
     private bool ProcessGenericTag(List<MetadataModel> metadataFiles, string artist, string album, bool autoConfirm, string tagName, string writeTagName)
     {
-        if (metadataFiles.Any(m => string.IsNullOrWhiteSpace(m.AllJsonTags)))
+        if (metadataFiles.Any(m => string.IsNullOrWhiteSpace(m.Tag_AllJsonTags)))
         {
             Console.WriteLine($"Unable to process '{album}' of '{artist}', missing serialized json tags in database.");
             return false;
@@ -75,7 +75,7 @@ public class EqualizeMediaTagCommandHandler
             .Select(m => new
             {
                 Metadata = m,
-                Tags = JsonConvert.DeserializeObject<Dictionary<string, string>>(m.AllJsonTags)
+                Tags = JsonConvert.DeserializeObject<Dictionary<string, string>>(m.Tag_AllJsonTags)
                     !.ToDictionary(StringComparer.OrdinalIgnoreCase)
             })
             .ToList();

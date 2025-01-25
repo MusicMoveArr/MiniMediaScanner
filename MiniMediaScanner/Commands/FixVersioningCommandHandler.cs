@@ -45,11 +45,11 @@ public class FixVersioningCommandHandler
         foreach (var group in groupedByAlbumId)
         {
             var groupedTrackDisc = group
-                .Where(m => m.Disc < discIncrement)
+                .Where(m => m.Tag_Disc < discIncrement)
                 .GroupBy(m => new
                 {
-                    m.Track, 
-                    m.Disc
+                    m.Tag_Track, 
+                    m.Tag_Disc
                 })
                 .Where(group => group.Count() > 1);
 
@@ -78,7 +78,7 @@ public class FixVersioningCommandHandler
         }
         
         updateMetadata
-            .ForEach(track => Console.WriteLine($"Album: {track.AlbumName}, Track: {track.Track}, Disc: {track.Disc} => {track.Disc + discIncrement}, Title: {track.Title}, File: {track.Path}"));
+            .ForEach(track => Console.WriteLine($"Album: {track.AlbumName}, Track: {track.Tag_Track}, Disc: {track.Tag_Disc} => {track.Tag_Disc + discIncrement}, Title: {track.Title}, File: {track.Path}"));
         
         Console.WriteLine("Confirm changes? (Y/y or N/n)");
         bool confirm = autoConfirm || Console.ReadLine()?.ToLower() == "y";
@@ -87,7 +87,7 @@ public class FixVersioningCommandHandler
         {
             foreach (var track in updateMetadata)
             {
-                int newDisc = track.Disc + discIncrement;
+                int newDisc = track.Tag_Disc + discIncrement;
                 if (_mediaTagWriteService.SaveTag(new FileInfo(track.Path), "disc", $"{newDisc}"))
                 {
                     _importCommandHandler.ProcessFile(track.Path);

@@ -4,9 +4,9 @@ namespace MiniMediaScanner;
 
 public class MetadataInfo
 {
-    public string? MetadataId { get; set; }
+    public Guid MetadataId { get; set; }
     public string? Path { get; set; }
-    public string? AlbumId { get; set; }
+    public Guid AlbumId { get; set; }
     public string? Album { get; set; }
     public string? Artist { get; set; }
     public string? Title { get; set; }
@@ -21,37 +21,37 @@ public class MetadataInfo
     public string? MusicBrainzReleaseArtistId { get; set; }
     public string? MusicBrainzReleaseGroupId { get; set; }
 
-    public string? TagSubtitle { get; set; }
-    public string? TagAlbumSort { get; set; }
-    public string? TagComment { get; set; }
-    public int TagYear { get; set; }
-    public int TagTrack { get; set; }
-    public int TagTrackCount { get; set; }
-    public int TagDisc { get; set; }
-    public int TagDiscCount { get; set; }
-    public string? TagLyrics { get; set; }
-    public string? TagGrouping { get; set; }
-    public int TagBeatsPerMinute { get; set; }
-    public string? TagConductor { get; set; }
-    public string? TagCopyright { get; set; }
-    public DateTime? TagDateTagged { get; set; }
-    public string? TagAmazonId { get; set; }
-    public double TagReplayGainTrackGain { get; set; }
-    public double TagReplayGainTrackPeak { get; set; }
-    public double TagReplayGainAlbumGain { get; set; }
-    public double TagReplayGainAlbumPeak { get; set; }
-    public string? TagInitialKey { get; set; }
-    public string? TagRemixedBy { get; set; }
-    public string? TagPublisher { get; set; }
-    public string? TagISRC { get; set; }
-    public string? TagLength { get; set; }
-    public string? TagAcoustIdFingerPrint { get; set; }
-    public float TagAcoustIdFingerPrintDuration { get; set; }
-    public string? TagAcoustId { get; set; }
+    public string? Tag_Subtitle { get; set; }
+    public string? Tag_AlbumSort { get; set; }
+    public string? Tag_Comment { get; set; }
+    public int Tag_Year { get; set; }
+    public int Tag_Track { get; set; }
+    public int Tag_TrackCount { get; set; }
+    public int Tag_Disc { get; set; }
+    public int Tag_DiscCount { get; set; }
+    public string? Tag_Lyrics { get; set; }
+    public string? Tag_Grouping { get; set; }
+    public int Tag_BeatsPerMinute { get; set; }
+    public string? Tag_Conductor { get; set; }
+    public string? Tag_Copyright { get; set; }
+    public DateTime? Tag_DateTagged { get; set; }
+    public string? Tag_AmazonId { get; set; }
+    public double Tag_ReplayGainTrackGain { get; set; }
+    public double Tag_ReplayGainTrackPeak { get; set; }
+    public double Tag_ReplayGainAlbumGain { get; set; }
+    public double Tag_ReplayGainAlbumPeak { get; set; }
+    public string? Tag_InitialKey { get; set; }
+    public string? Tag_RemixedBy { get; set; }
+    public string? Tag_Publisher { get; set; }
+    public string? Tag_ISRC { get; set; }
+    public string? Tag_Length { get; set; }
+    public string? Tag_AcoustIdFingerPrint { get; set; }
+    public float Tag_AcoustIdFingerPrintDuration { get; set; }
+    public string? Tag_AcoustId { get; set; }
     
-    public DateTime FileLastWriteTime { get; set; }
-    public DateTime FileCreationTime { get; set; }
-    public string AllJsonTags { get; set; }
+    public DateTime File_LastWriteTime { get; set; }
+    public DateTime File_CreationTime { get; set; }
+    public string Tag_AllJsonTags { get; set; }
 
     public void NonNullableValues()
     {
@@ -106,84 +106,84 @@ public class MetadataInfo
             MusicBrainzReleaseGroupId = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagSubtitle))
+        if (string.IsNullOrWhiteSpace(Tag_Subtitle))
         {
-            TagSubtitle = string.Empty;
+            Tag_Subtitle = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagAlbumSort))
+        if (string.IsNullOrWhiteSpace(Tag_AlbumSort))
         {
-            TagAlbumSort = string.Empty;
+            Tag_AlbumSort = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagComment))
+        if (string.IsNullOrWhiteSpace(Tag_Comment))
         {
-            TagComment = string.Empty;
+            Tag_Comment = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagLyrics))
+        if (string.IsNullOrWhiteSpace(Tag_Lyrics))
         {
-            TagLyrics = string.Empty;
+            Tag_Lyrics = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagGrouping))
+        if (string.IsNullOrWhiteSpace(Tag_Grouping))
         {
-            TagGrouping = string.Empty;
+            Tag_Grouping = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagConductor))
+        if (string.IsNullOrWhiteSpace(Tag_Conductor))
         {
-            TagConductor = string.Empty;
+            Tag_Conductor = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagCopyright))
+        if (string.IsNullOrWhiteSpace(Tag_Copyright))
         {
-            TagCopyright = string.Empty;
+            Tag_Copyright = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagAmazonId))
+        if (string.IsNullOrWhiteSpace(Tag_AmazonId))
         {
-            TagAmazonId = string.Empty;
+            Tag_AmazonId = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagInitialKey))
+        if (string.IsNullOrWhiteSpace(Tag_InitialKey))
         {
-            TagInitialKey = string.Empty;
+            Tag_InitialKey = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagRemixedBy))
+        if (string.IsNullOrWhiteSpace(Tag_RemixedBy))
         {
-            TagRemixedBy = string.Empty;
+            Tag_RemixedBy = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagPublisher))
+        if (string.IsNullOrWhiteSpace(Tag_Publisher))
         {
-            TagPublisher = string.Empty;
+            Tag_Publisher = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagISRC))
+        if (string.IsNullOrWhiteSpace(Tag_ISRC))
         {
-            TagISRC = string.Empty;
+            Tag_ISRC = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagLength))
+        if (string.IsNullOrWhiteSpace(Tag_Length))
         {
-            TagLength = string.Empty;
+            Tag_Length = string.Empty;
         }
         
-        if (!TagDateTagged.HasValue)
+        if (!Tag_DateTagged.HasValue)
         {
-            TagDateTagged = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            Tag_DateTagged = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         }
         
-        if (string.IsNullOrWhiteSpace(TagAcoustIdFingerPrint))
+        if (string.IsNullOrWhiteSpace(Tag_AcoustIdFingerPrint))
         {
-            TagAcoustIdFingerPrint = string.Empty;
+            Tag_AcoustIdFingerPrint = string.Empty;
         }
         
-        if (string.IsNullOrWhiteSpace(TagAcoustId))
+        if (string.IsNullOrWhiteSpace(Tag_AcoustId))
         {
-            TagAcoustId = string.Empty;
+            Tag_AcoustId = string.Empty;
         }
 
         var stringNormalizer = new StringNormalizerService();
@@ -200,21 +200,21 @@ public class MetadataInfo
         MusicBrainzReleaseType = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzReleaseType);
         MusicBrainzReleaseArtistId = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzReleaseArtistId);
         MusicBrainzReleaseGroupId = stringNormalizer.ReplaceInvalidCharacters(MusicBrainzReleaseGroupId);
-        TagSubtitle = stringNormalizer.ReplaceInvalidCharacters(TagSubtitle);
-        TagAlbumSort = stringNormalizer.ReplaceInvalidCharacters(TagAlbumSort);
-        TagComment = stringNormalizer.ReplaceInvalidCharacters(TagComment);
-        TagLyrics = stringNormalizer.ReplaceInvalidCharacters(TagLyrics);
-        TagGrouping = stringNormalizer.ReplaceInvalidCharacters(TagGrouping);
-        TagConductor = stringNormalizer.ReplaceInvalidCharacters(TagConductor);
-        TagCopyright = stringNormalizer.ReplaceInvalidCharacters(TagCopyright);
-        TagAmazonId = stringNormalizer.ReplaceInvalidCharacters(TagAmazonId);
-        TagInitialKey = stringNormalizer.ReplaceInvalidCharacters(TagInitialKey);
-        TagRemixedBy = stringNormalizer.ReplaceInvalidCharacters(TagRemixedBy);
-        TagPublisher = stringNormalizer.ReplaceInvalidCharacters(TagPublisher);
-        TagISRC = stringNormalizer.ReplaceInvalidCharacters(TagISRC);
-        TagLength = stringNormalizer.ReplaceInvalidCharacters(TagLength);
-        TagAcoustIdFingerPrint = stringNormalizer.ReplaceInvalidCharacters(TagAcoustIdFingerPrint);
-        TagAcoustId = stringNormalizer.ReplaceInvalidCharacters(TagAcoustId);
-        AllJsonTags = stringNormalizer.ReplaceInvalidCharacters(AllJsonTags);
+        Tag_Subtitle = stringNormalizer.ReplaceInvalidCharacters(Tag_Subtitle);
+        Tag_AlbumSort = stringNormalizer.ReplaceInvalidCharacters(Tag_AlbumSort);
+        Tag_Comment = stringNormalizer.ReplaceInvalidCharacters(Tag_Comment);
+        Tag_Lyrics = stringNormalizer.ReplaceInvalidCharacters(Tag_Lyrics);
+        Tag_Grouping = stringNormalizer.ReplaceInvalidCharacters(Tag_Grouping);
+        Tag_Conductor = stringNormalizer.ReplaceInvalidCharacters(Tag_Conductor);
+        Tag_Copyright = stringNormalizer.ReplaceInvalidCharacters(Tag_Copyright);
+        Tag_AmazonId = stringNormalizer.ReplaceInvalidCharacters(Tag_AmazonId);
+        Tag_InitialKey = stringNormalizer.ReplaceInvalidCharacters(Tag_InitialKey);
+        Tag_RemixedBy = stringNormalizer.ReplaceInvalidCharacters(Tag_RemixedBy);
+        Tag_Publisher = stringNormalizer.ReplaceInvalidCharacters(Tag_Publisher);
+        Tag_ISRC = stringNormalizer.ReplaceInvalidCharacters(Tag_ISRC);
+        Tag_Length = stringNormalizer.ReplaceInvalidCharacters(Tag_Length);
+        Tag_AcoustIdFingerPrint = stringNormalizer.ReplaceInvalidCharacters(Tag_AcoustIdFingerPrint);
+        Tag_AcoustId = stringNormalizer.ReplaceInvalidCharacters(Tag_AcoustId);
+        Tag_AllJsonTags = stringNormalizer.ReplaceInvalidCharacters(Tag_AllJsonTags);
     }
 }

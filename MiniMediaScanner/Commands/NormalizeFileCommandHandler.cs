@@ -145,8 +145,8 @@ public class NormalizeFileCommandHandler
             }
         }
         
-        string newFileName = $"{GetFormatName(fileFormat, artistNormalized, albumNormalized, file.Tag_Track, file.Disc, titleNormalized, directorySeperator)}{fileInfo.Extension}";
-        string newDirectoryName = $"{GetFormatName(directoryFormat, artistNormalized, albumNormalized, file.Tag_Track, file.Disc, titleNormalized, directorySeperator)}";
+        string newFileName = $"{GetFormatName(fileFormat, artistNormalized, albumNormalized, file.Tag_Track, file.Tag_Disc, titleNormalized, directorySeperator)}{fileInfo.Extension}";
+        string newDirectoryName = $"{GetFormatName(directoryFormat, artistNormalized, albumNormalized, file.Tag_Track, file.Tag_Disc, titleNormalized, directorySeperator)}";
         string partialNewPath = Path.Combine(newDirectoryName, newFileName);
         string newFullPath = Path.Combine(subDirectory.FullName, partialNewPath).Trim();
         

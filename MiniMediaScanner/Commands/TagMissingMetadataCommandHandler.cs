@@ -62,7 +62,7 @@ public class TagMissingMetadataCommandHandler
     private void ProcessFile(MetadataInfo metadata, bool write, string accoustId, bool overwriteTagValue)
     {
         JObject? acoustIdLookup = _acoustIdService.LookupAcoustId(accoustId,
-            metadata.TagAcoustIdFingerPrint, (int)metadata.TagAcoustIdFingerPrintDuration);
+            metadata.Tag_AcoustIdFingerPrint, (int)metadata.Tag_AcoustIdFingerPrintDuration);
         
         var recordingId = acoustIdLookup?["results"]?.FirstOrDefault()?["recordings"]?.FirstOrDefault()?["id"]?.ToString();
         var acoustId = acoustIdLookup?["results"]?.FirstOrDefault()?["id"]?.ToString();

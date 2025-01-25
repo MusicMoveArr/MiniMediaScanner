@@ -65,7 +65,7 @@ public class FingerPrintMediaCommandHandler
         if (!string.IsNullOrWhiteSpace(fingerprint?.Fingerprint))
         {
             generatedFingers++;
-            _metadataRepository.UpdateMetadataFingerprint(metadata.MetadataId, fingerprint.Fingerprint, fingerprint.Duration);
+            _metadataRepository.UpdateMetadataFingerprint(metadata.MetadataId.ToString(), fingerprint.Fingerprint, fingerprint.Duration);
             _mediaTagWriteService.SaveTag(new FileInfo(metadata.Path), "acoustid fingerprint", fingerprint.Fingerprint);
         }
     }

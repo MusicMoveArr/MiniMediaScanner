@@ -59,7 +59,7 @@ public class ConvertMediaCommandHandler
         {
             var existingMetadata = _metadataRepository.GetMetadataByPath(outputFile.FullName);
 
-            existingMetadata.ForEach(metadata =>  _metadataRepository.DeleteMetadataRecords(new List<string>() { metadata.MetadataId }));
+            existingMetadata.ForEach(metadata =>  _metadataRepository.DeleteMetadataRecords(new List<string>() { metadata.MetadataId.ToString() }));
             outputFile.Delete();
             Console.WriteLine($"Deleted target, records deleted '{existingMetadata.Count}', file already exists, '{outputFile.FullName}'");
         }
@@ -68,13 +68,13 @@ public class ConvertMediaCommandHandler
         if(success)
         {
             Console.WriteLine($"Successfully converted '{file.FullName}' to '{outputFile.FullName}'");
-            _metadataRepository.UpdateMetadataPath(metadata.MetadataId, outputFile.FullName); 
+            _metadataRepository.UpdateMetadataPath(metadata.MetadataId.ToString(), outputFile.FullName); 
 
             FpcalcOutput? fingerprint = _fingerPrintService.GetFingerprint(outputFile.FullName);
 
             if (fingerprint != null)
             {
-                _metadataRepository.UpdateMetadataFingerprint(metadata.MetadataId, fingerprint.Fingerprint, fingerprint.Duration);
+                _metadataRepository.UpdateMetadataFingerprint(metadata.MetadataId.ToString(), fingerprint.Fingerprint, fingerprint.Duration);
             }
             
             file.Delete();

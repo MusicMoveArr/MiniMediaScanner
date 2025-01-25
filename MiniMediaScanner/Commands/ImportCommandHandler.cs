@@ -82,7 +82,7 @@ public class ImportCommandHandler
                 return false;
             }
                         
-            ProcessMetadata(metadata, filePath);
+            ProcessMetadata(metadata);
                 
             if (!string.IsNullOrWhiteSpace(metadata?.MusicBrainzArtistId) &&
                 !string.IsNullOrWhiteSpace(metadata?.Album) &&
@@ -102,7 +102,7 @@ public class ImportCommandHandler
         return true;
     }
     
-    private void ProcessMetadata(MetadataInfo metadata, string filePath)
+    private void ProcessMetadata(MetadataInfo metadata)
     {
         // 1. Insert/Find Artist
         var artistId = _artistRepository.InsertOrFindArtist(metadata.Artist);
@@ -111,6 +111,6 @@ public class ImportCommandHandler
         var albumId = _albumRepository.InsertOrFindAlbum(metadata.Album, artistId);
 
         // 3. Insert/Update Metadata
-        _metadataRepository.InsertOrUpdateMetadata(metadata, filePath, albumId);
+        _metadataRepository.InsertOrUpdateMetadata(metadata, albumId);
     }
 }

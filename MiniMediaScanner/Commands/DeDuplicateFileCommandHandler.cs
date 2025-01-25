@@ -74,7 +74,7 @@ public class DeDuplicateFileCommandHandler
                 }
 
                 if (!string.Equals(nonDuplicateRecord.Title, possibleDuplicateFile.Title, StringComparison.OrdinalIgnoreCase) ||
-                    !string.Equals(nonDuplicateRecord.AlbumId, possibleDuplicateFile.AlbumId, StringComparison.OrdinalIgnoreCase))
+                    !string.Equals(nonDuplicateRecord.AlbumId.ToString(), possibleDuplicateFile.AlbumId.ToString(), StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }

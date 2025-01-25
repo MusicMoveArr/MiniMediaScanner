@@ -1,3 +1,4 @@
+using Dapper;
 using Npgsql;
 
 namespace MiniMediaScanner.Repositories;
@@ -73,28 +74,20 @@ public class MusicBrainzReleaseRepository
         Guid releaseId = Guid.NewGuid();
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
         
-        conn.Open();
-        
-        cmd.Parameters.AddWithValue("id", releaseId);
-        cmd.Parameters.AddWithValue("MusicBrainzArtistId", musicBrainzArtistId);
-        cmd.Parameters.AddWithValue("MusicBrainzRemoteReleaseId", musicBrainzRemoteReleaseId);
-        cmd.Parameters.AddWithValue("Title", title);
-        cmd.Parameters.AddWithValue("Status", status);
-        cmd.Parameters.AddWithValue("StatusId", statusId);
-        cmd.Parameters.AddWithValue("Date", date);
-        cmd.Parameters.AddWithValue("Barcode", barcode);
-        cmd.Parameters.AddWithValue("Country", country);
-        cmd.Parameters.AddWithValue("Disambiguation", disambiguation);
-        cmd.Parameters.AddWithValue("Quality", quality);
-
-        var result = cmd.ExecuteScalar();
-        if (result != null)
-        {
-            releaseId = (Guid)result;
-        }
-
-        return releaseId;
+        return conn.ExecuteScalar<Guid>(query, new
+            {
+                id = releaseId,
+                MusicBrainzArtistId = musicBrainzArtistId,
+                MusicBrainzRemoteReleaseId = musicBrainzRemoteReleaseId,
+                Title = title,
+                Status = status,
+                StatusId = statusId,
+                Date = date,
+                Barcode = barcode,
+                Country = country,
+                Disambiguation = disambiguation,
+                Quality = quality
+            });
     }
 }

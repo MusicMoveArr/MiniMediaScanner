@@ -42,7 +42,7 @@ public class DeletedMediaCommandHandler
 
         if (remove && missing.Count > 0)
         {
-            _metadataRepository.DeleteMetadataRecords(missing.Select(metadata => metadata.MetadataId).ToList());
+            _metadataRepository.DeleteMetadataRecords(missing.Select(metadata => metadata.MetadataId.ToString()).ToList());
         }
         Console.WriteLine($"Total missing media files: {missingCount} for artist '{artist}'");
         return missingCount;

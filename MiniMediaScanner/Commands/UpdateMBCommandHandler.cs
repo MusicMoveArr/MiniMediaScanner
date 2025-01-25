@@ -14,11 +14,10 @@ public class UpdateMBCommandHandler
         _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
     }
     
-    public void UpdateMusicBrainzArtistsByName(List<string> names)
+    public void UpdateMusicBrainzArtistsByName(string artist)
     {
-        string aritsts = string.Join(", ", names);
-        Console.WriteLine($"Updating artist(s), {aritsts}");
-        var artistIds = _musicBrainzArtistRepository.GetMusicBrainzArtistRemoteIdsByName(names);
+        Console.WriteLine($"Updating artist, {artist}");
+        var artistIds = _musicBrainzArtistRepository.GetMusicBrainzArtistRemoteIdsByName(artist);
         artistIds.ForEach(id => UpdateMusicBrainzArtistId(id));
     }
     

@@ -1,3 +1,4 @@
+using Dapper;
 using Npgsql;
 
 namespace MiniMediaScanner.Repositories;
@@ -64,36 +65,28 @@ public class MusicBrainzReleaseTrackRepository
         Guid releaseId = Guid.NewGuid();
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
         
-        conn.Open();
-        
-        cmd.Parameters.AddWithValue("id", releaseId);
-        cmd.Parameters.AddWithValue("MusicBrainzRemoteReleaseTrackId", musicBrainzRemoteReleaseTrackId);
-        cmd.Parameters.AddWithValue("MusicBrainzRemoteRecordingTrackId", musicBrainzRemoteRecordingTrackId);
-        cmd.Parameters.AddWithValue("Title", title);
-        cmd.Parameters.AddWithValue("Status", status);
-        cmd.Parameters.AddWithValue("StatusId", string.Empty);
-        cmd.Parameters.AddWithValue("MusicBrainzRemoteReleaseId", musicBrainzRemoteReleaseId);
-        cmd.Parameters.AddWithValue("length", length);
-        cmd.Parameters.AddWithValue("number", number);
-        cmd.Parameters.AddWithValue("position", position);
-        cmd.Parameters.AddWithValue("recordingId", recordingId);
-        cmd.Parameters.AddWithValue("recordingLength", recordingLength);
-        cmd.Parameters.AddWithValue("recordingTitle", recordingTitle);
-        cmd.Parameters.AddWithValue("recordingVideo", recordingVideo);
-        cmd.Parameters.AddWithValue("mediaTrackCount", mediaTrackCount);
-        cmd.Parameters.AddWithValue("mediaFormat", mediaFormat);
-        cmd.Parameters.AddWithValue("mediaTitle", mediaTitle);
-        cmd.Parameters.AddWithValue("mediaPosition", mediaPosition);
-        cmd.Parameters.AddWithValue("mediatrackoffset", mediatrackoffset);
-
-        var result = cmd.ExecuteScalar();
-        if (result != null)
-        {
-            releaseId = (Guid)result;
-        }
-
-        return releaseId;
+        return conn.ExecuteScalar<Guid>(query, new
+            {
+                Id = releaseId,
+                MusicBrainzRemoteReleaseTrackId = musicBrainzRemoteReleaseTrackId,
+                MusicBrainzRemoteRecordingTrackId = musicBrainzRemoteRecordingTrackId,
+                Title = title,
+                Status = status,
+                StatusId = status,
+                MusicBrainzRemoteReleaseId = musicBrainzRemoteReleaseId,
+                length,
+                number,
+                position,
+                recordingId,
+                recordingLength,
+                recordingTitle,
+                recordingVideo,
+                mediaTrackCount,
+                mediaFormat,
+                mediaTitle,
+                mediaPosition,
+                mediatrackoffset
+            });
     }
 }

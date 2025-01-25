@@ -8,15 +8,15 @@ public class UpdateMBCommand
     /// Update MusicBrainz metadata
     /// </summary>
     /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artistNames">-a, Artists filter to update.</param>
+    /// <param name="artist">-a, Artist filter to update.</param>
     [Command("updatemb")]
-    public static void UpdateMB(string connectionString, List<string>? artistNames = null)
+    public static void UpdateMB(string connectionString, string artist = "")
     {
         var handler = new UpdateMBCommandHandler(connectionString);
 
-        if (artistNames?.Count > 0)
+        if (string.IsNullOrWhiteSpace(artist))
         {
-            handler.UpdateMusicBrainzArtistsByName(artistNames);
+            handler.UpdateMusicBrainzArtistsByName(artist);
         }
         else
         {

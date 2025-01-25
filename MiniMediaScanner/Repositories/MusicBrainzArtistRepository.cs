@@ -1,3 +1,4 @@
+using Dapper;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Models.MusicBrainzRecordings;
 using Npgsql;
@@ -13,29 +14,18 @@ public class MusicBrainzArtistRepository
         _connectionString = connectionString;
     }
     
-    public List<string> GetMusicBrainzArtistRemoteIdsByName(List<string> names)
+    public List<string> GetMusicBrainzArtistRemoteIdsByName(string artist)
     {
-        string query = @"SELECT MusicBrainzRemoteId FROM MusicBrainzArtist where name = any(@names)";
+        string query = @"SELECT MusicBrainzRemoteId FROM MusicBrainzArtist where lower(name) = lower(@artist)";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        cmd.Parameters.AddWithValue("names", NpgsqlDbType.Text | NpgsqlTypes.NpgsqlDbType.Array, names);
-        
-        conn.Open();
 
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<string>();
-        while (reader.Read())
-        {
-            string artistId = reader.GetString(0);
-            if (!string.IsNullOrWhiteSpace(artistId))
+        return conn
+            .Query<string>(query, new
             {
-                result.Add(artistId);
-            }
-        }
-
-        return result;
+                artist
+            })
+            .ToList();
     }
     
     public List<string> GetAllMusicBrainzArtistRemoteIds()
@@ -43,72 +33,34 @@ public class MusicBrainzArtistRepository
         string query = @"SELECT MusicBrainzRemoteId FROM MusicBrainzArtist order by name asc";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
         
-        conn.Open();
-
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<string>();
-        while (reader.Read())
-        {
-            string artistId = reader.GetString(0);
-            if (!string.IsNullOrWhiteSpace(artistId))
-            {
-                result.Add(artistId);
-            }
-        }
-
-        return result;
+        return conn
+            .Query<string>(query)
+            .ToList();
     }
     
-    public List<string> GetMusicBrainzArtistIdsByName(List<string> names)
+    public List<Guid> GetMusicBrainzArtistIdsByName(string artistName)
     {
-        string query = @"SELECT MusicBrainzArtistId FROM MusicBrainzArtist where name = any(@names)";
+        string query = @"SELECT MusicBrainzArtistId FROM MusicBrainzArtist where lower(name) = lower(@artistName)";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        cmd.Parameters.AddWithValue("names", NpgsqlDbType.Text | NpgsqlTypes.NpgsqlDbType.Array, names);
-        
-        conn.Open();
 
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<string>();
-        while (reader.Read())
-        {
-            string artistId = reader.GetGuid(0).ToString();
-            if (!string.IsNullOrWhiteSpace(artistId))
+        return conn
+            .Query<Guid>(query, new
             {
-                result.Add(artistId);
-            }
-        }
-
-        return result;
+                artistName
+            }).ToList();
     }
     
-    public List<string> GetAllMusicBrainzArtistIds()
+    public List<Guid> GetAllMusicBrainzArtistIds()
     {
         string query = @"SELECT MusicBrainzArtistId FROM MusicBrainzArtist";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
 
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<string>();
-        while (reader.Read())
-        {
-            string artistId = reader.GetGuid(0).ToString();
-            if (!string.IsNullOrWhiteSpace(artistId))
-            {
-                result.Add(artistId);
-            }
-        }
-
-        return result;
+        return conn
+            .Query<Guid>(query)
+            .ToList();
     }
 
     public Guid InsertMusicBrainzArtist(string remoteMusicBrainzArtistId, 
@@ -135,7 +87,8 @@ public class MusicBrainzArtistRepository
             disambiguation = string.Empty;
         }
         
-        string query = @"INSERT INTO MusicBrainzArtist (MusicBrainzArtistId, MusicBrainzRemoteId, Name, Type, Country, SortName, Disambiguation)
+        string query = @"INSERT INTO MusicBrainzArtist (MusicBrainzArtistId, 
+                               MusicBrainzRemoteId, Name, Type, Country, SortName, Disambiguation)
                          VALUES (@id, @MusicBrainzRemoteId, @name, @type, @Country, @SortName, @Disambiguation)
                          ON CONFLICT (MusicBrainzRemoteId) 
                          DO UPDATE SET 
@@ -146,27 +99,18 @@ public class MusicBrainzArtistRepository
                              Disambiguation = EXCLUDED.Disambiguation
                          RETURNING MusicBrainzArtistId";
         Guid artistId = Guid.NewGuid();
-
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        
-        cmd.Parameters.AddWithValue("id", artistId);
-        cmd.Parameters.AddWithValue("MusicBrainzRemoteId", remoteMusicBrainzArtistId);
-        cmd.Parameters.AddWithValue("name", artistName);
-        cmd.Parameters.AddWithValue("type", artistType);
-        cmd.Parameters.AddWithValue("Country", country);
-        cmd.Parameters.AddWithValue("SortName", sortName);
-        cmd.Parameters.AddWithValue("Disambiguation", disambiguation);
 
-        var result = cmd.ExecuteScalar();
-        if (result != null)
-        {
-            artistId = (Guid)result;
-        }
-
-        return artistId;
+        return conn.ExecuteScalar<Guid>(query, new
+            {
+                id = artistId,
+                MusicBrainzRemoteId = remoteMusicBrainzArtistId,
+                name = artistName,
+                type = artistType,
+                Country = country,
+                SortName = sortName,
+                Disambiguation = disambiguation
+            });
     }
     
     public Guid? GetRemoteMusicBrainzArtist(string remoteMusicBrainzArtistId)
@@ -174,18 +118,11 @@ public class MusicBrainzArtistRepository
         string query = @"SELECT MusicBrainzArtistId FROM MusicBrainzArtist WHERE MusicBrainzRemoteId = @id";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        
-        cmd.Parameters.AddWithValue("id", remoteMusicBrainzArtistId);
 
-        var result = cmd.ExecuteScalar();
-        if (!Guid.TryParse(result?.ToString(), out Guid artistId))
-        {
-            return null;
-        }
-        return artistId;
+        return conn.ExecuteScalar<Guid?>(query, new
+            {
+                id = remoteMusicBrainzArtistId
+            });
     }
 
     public MusicBrainzArtistModel? GetMusicBrainzArtistByRecordingId(string recordingId)

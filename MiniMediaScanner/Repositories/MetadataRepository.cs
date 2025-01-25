@@ -1,5 +1,6 @@
 using MiniMediaScanner.Models;
 using Npgsql;
+using Dapper;
 
 namespace MiniMediaScanner.Repositories;
 
@@ -19,15 +20,13 @@ public class MetadataRepository
                          WHERE MetadataId = cast(@id as uuid)";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        
-        cmd.Parameters.AddWithValue("id", metadataId);
-        cmd.Parameters.AddWithValue("fingerprint", fingerprint);
-        cmd.Parameters.AddWithValue("duration", duration);
 
-        var result = cmd.ExecuteNonQuery();
+        conn.Execute(query, new
+        {
+            id = metadataId,
+            fingerprint,
+            duration
+        });
     }
     
     public void UpdateMetadataPath(string metadataId, string path)
@@ -35,14 +34,12 @@ public class MetadataRepository
         string query = @"UPDATE metadata SET Path = @path WHERE MetadataId = cast(@id as uuid)";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        
-        cmd.Parameters.AddWithValue("id", metadataId);
-        cmd.Parameters.AddWithValue("path", path);
 
-        var result = cmd.ExecuteNonQuery();
+        conn.Execute(query, new
+        {
+            id = metadataId,
+            path
+        });
     }
     
     public List<string> GetMissingTracksByArtist(string artistName)
@@ -87,30 +84,18 @@ public class MetadataRepository
                      and m.metadataid is null";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        cmd.CommandTimeout = 60;
-        cmd.Parameters.AddWithValue("artistName", artistName.ToLower());
         
-        conn.Open();
-
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<string>();
-        while (reader.Read())
-        {
-            string trackName = reader.GetString(0);
-            if (!string.IsNullOrWhiteSpace(trackName))
+        return conn
+            .Query<string>(query, new
             {
-                result.Add(trackName);
-            }
-        }
-
-        return result;
+                artistName
+            }, commandTimeout: 60)
+            .ToList();
     }
     
     public List<MetadataModel> PossibleDuplicateFiles(string artistName)
     {
-        string query = @"select cast(m.MetadataId as text), m.Path, m.Title, cast(album.albumId as text)
+        string query = @"select m.MetadataId, m.Path, m.Title, album.albumId
                          from artists artist
                          join albums album on album.artistid = artist.artistid
                          join metadata m on m.albumid = album.albumid
@@ -119,78 +104,21 @@ public class MetadataRepository
                          and m.""path"" ~ '\([0-9]*\)\.([a-zA-Z0-9]{2,5})'";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
         
-        conn.Open();
-
-        cmd.Parameters.AddWithValue("artistName", artistName);
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<MetadataModel>();
-        while (reader.Read())
-        {
-            string metadataId = reader.GetString(0);
-            string path = reader.GetString(1);
-            string title = reader.GetString(2);
-            string albumId = reader.GetString(3);
-            result.Add(new MetadataModel()
-            {
-                MetadataId = metadataId,
-                Path = path,
-                Title = title,
-                AlbumId = albumId
-            });
-        }
-
-        return result;
-    }
-    
-    public List<MetadataModel> GetAllMetadata(int offset, int limit)
-    {
-        string query = @$"select cast(m.MetadataId as text), 
-                                 m.path, m.title, 
-                                 cast(m.albumid as text), 
-                                 artist.""name"", 
-                                 album.title, 
-                                 m.tag_track
-                          from artists artist
-                          join albums album on album.artistid = artist.artistid
-                          join metadata m on m.albumid = album.albumid 
-                          order by m.""path"" asc 
-                          OFFSET {offset}
-                          LIMIT {limit}";
-
-        using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<MetadataModel>();
-        while (reader.Read())
-        {
-            result.Add(new MetadataModel()
-            {
-                MetadataId = reader.GetString(0),
-                Path = reader.GetString(1),
-                Title = reader.GetString(2),
-                AlbumId = reader.GetString(3),
-                ArtistName = reader.GetString(4),
-                AlbumName = reader.GetString(5),
-                Tag_Track = reader.GetInt32(6)
-            });
-        }
-
-        return result;
+        return conn.Query<MetadataModel>(query, 
+                new
+                {
+                    artistName
+                })
+                .ToList();
     }
     
     public List<MetadataInfo> GetMissingMusicBrainzMetadataRecords(string artistName)
     {
-        string query = @$"SELECT cast(m.MetadataId as text), 
+        string query = @$"SELECT m.MetadataId, 
                                   m.Path, 
                                   m.Title, 
-                                  cast(m.AlbumId as text), 
+                                  m.AlbumId, 
                                   m.MusicBrainzArtistId, 
                                   m.MusicBrainzDiscId, 
                                   m.MusicBrainzReleaseCountry, 
@@ -227,7 +155,7 @@ public class MetadataRepository
                                   m.Tag_AcoustIdFingerPrint, 
                                   m.Tag_AcoustId,
                                   m.Tag_AcoustIdFingerPrint_Duration,
-                                  album.title
+                                  album.title AS Album
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
@@ -239,68 +167,17 @@ public class MetadataRepository
                               and m.Tag_AcoustIdFingerPrint_Duration > 0";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        cmd.Parameters.AddWithValue("artistName", artistName);
-        
-        conn.Open();
 
-        using var reader = cmd.ExecuteReader();
-        var result = new List<MetadataInfo>();
-        
-        while (reader.Read())
-        {
-            result.Add(new MetadataInfo
+        return conn
+            .Query<MetadataInfo>(query, new
             {
-                MetadataId = reader.GetString(0),
-                Path = reader.GetString(1),
-                Title = reader.GetString(2),
-                AlbumId = reader.GetString(3),
-                MusicBrainzArtistId = reader.GetString(4),
-                MusicBrainzDiscId = reader.GetString(5),
-                MusicBrainzReleaseCountry = reader.GetString(6),
-                MusicBrainzReleaseId = reader.GetString(7),
-                MusicBrainzTrackId = reader.GetString(8),
-                MusicBrainzReleaseStatus = reader.GetString(9),
-                MusicBrainzReleaseType = reader.GetString(10),
-                MusicBrainzReleaseArtistId = reader.GetString(11),
-                MusicBrainzReleaseGroupId = reader.GetString(12),
-                TagSubtitle = reader.GetString(13),
-                TagAlbumSort = reader.GetString(14),
-                TagComment = reader.GetString(15),
-                TagYear = reader.GetInt32(16),
-                TagTrack = reader.GetInt32(17),
-                TagTrackCount = reader.GetInt32(18),
-                TagDisc = reader.GetInt32(19),
-                TagDiscCount = reader.GetInt32(20),
-                TagLyrics = reader.GetString(21),
-                TagGrouping = reader.GetString(22),
-                TagBeatsPerMinute = reader.GetInt32(23),
-                TagConductor = reader.GetString(24),
-                TagCopyright = reader.GetString(25),
-                TagDateTagged = reader.GetDateTime(26),
-                TagAmazonId = reader.GetString(27),
-                TagReplayGainTrackGain = reader.GetDouble(28),
-                TagReplayGainTrackPeak = reader.GetDouble(29),
-                TagReplayGainAlbumGain = reader.GetDouble(30),
-                TagReplayGainAlbumPeak = reader.GetDouble(31),
-                TagInitialKey = reader.GetString(32),
-                TagRemixedBy = reader.GetString(33),
-                TagPublisher = reader.GetString(34),
-                TagISRC = reader.GetString(35),
-                TagLength = reader.GetString(36),
-                TagAcoustIdFingerPrint = reader.GetString(37),
-                TagAcoustId = reader.GetString(38),
-                TagAcoustIdFingerPrintDuration = reader.GetFloat(39),
-                Album = reader.GetString(40),
-            });
-        }
-
-        return result;
+                artistName
+            }).ToList();
     }
     
     public List<MetadataModel> GetAllMetadataPathsByMissingFingerprint(string artistName)
     {
-        string query = @$"SELECT cast(m.MetadataId as text), m.Path
+        string query = @$"SELECT m.MetadataId, m.Path
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
@@ -309,159 +186,73 @@ public class MetadataRepository
                            -- or m.tag_acoustidfingerprint_duration = 0)";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        cmd.Parameters.AddWithValue("artistName", artistName);
         
-        conn.Open();
-
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<MetadataModel>();
-        while (reader.Read())
+        return conn.Query<MetadataModel>(query, new
         {
-            string metadataId = reader.GetString(0);
-            string path = reader.GetString(1);
-            result.Add(new MetadataModel()
-            {
-                MetadataId = metadataId,
-                Path = path
-            });
-        }
-
-        return result;
+            artistName
+        }).ToList();
     }
     
     public List<MetadataModel> GetMetadataByArtist(string artistName)
     {
-        string query = @$"SELECT cast(m.MetadataId as text), 
+        string query = @$"SELECT m.MetadataId, 
                                  m.Path, 
                                  m.Title, 
-                                 cast(m.AlbumId as text),
+                                 m.AlbumId,
                                  tag_alljsontags,
-                                 album.title,
+                                 album.title AS AlbumName,
                                  tag_track,
                                  tag_trackcount,
                                  tag_disc,
                                  tag_disccount,
-                                 artist.name
+                                 artist.name AS ArtistName
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
                         where lower(artist.name) = lower(@artistName)";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
         
-        conn.Open();
-
-        cmd.Parameters.AddWithValue("artistName", artistName);
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<MetadataModel>();
-        while (reader.Read())
+        return conn.Query<MetadataModel>(query, new
         {
-            string metadataId = reader.GetString(0);
-            string path = reader.GetString(1);
-            string title = reader.GetString(2);
-            string albumId = reader.GetString(3);
-            string allJsonTags = reader.IsDBNull(4) ? string.Empty : reader.GetString(4);
-            string albumTitle = reader.IsDBNull(5) ? string.Empty : reader.GetString(5);
-            int track = reader.GetInt32(6);
-            int trackCount = reader.GetInt32(7);
-            int disc = reader.GetInt32(8);
-            int discCount = reader.GetInt32(9);
-            string dbArtistName = reader.GetString(10);
-            
-            result.Add(new MetadataModel()
-            {
-                MetadataId = metadataId,
-                Path = path,
-                Title = title,
-                AlbumId = albumId,
-                AllJsonTags = allJsonTags,
-                AlbumName = albumTitle,
-                Track = track,
-                TrackCount = trackCount,
-                Disc = disc,
-                DiscCount = discCount,
-                ArtistName = dbArtistName,
-                Tag_Track = track
-            });
-        }
-
-        return result;
+            artistName
+        }).ToList();
     }
     
     public List<MetadataModel> GetMetadataByPath(string targetPath)
     {
-        string query = @$"SELECT cast(m.MetadataId as text), 
+        string query = @$"SELECT m.MetadataId, 
                                  m.Path, 
                                  m.Title, 
-                                 cast(m.AlbumId as text)
+                                 m.AlbumId
                         FROM metadata m
                         where m.path = @path";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
 
-        cmd.Parameters.AddWithValue("path", targetPath);
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<MetadataModel>();
-        while (reader.Read())
-        {
-            string metadataId = reader.GetString(0);
-            string path = reader.GetString(1);
-            string title = reader.GetString(2);
-            string albumId = reader.GetString(3);
-            result.Add(new MetadataModel()
+        return conn
+            .Query<MetadataModel>(query, new
             {
-                MetadataId = metadataId,
-                Path = path,
-                Title = title,
-                AlbumId = albumId
-            });
-        }
-
-        return result;
+                path = targetPath
+            }).ToList();
     }
     
     public List<MetadataModel> GetMetadataByFileExtension(string fileExtension)
     {
-        string query = @$"SELECT cast(m.MetadataId as text), 
+        string query = @$"SELECT m.MetadataId, 
                                  m.Path, 
                                  m.Title, 
-                                 cast(m.AlbumId as text)
+                                 m.AlbumId
                         FROM metadata m
                         where m.path like '%.' || @fileExtension";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
 
-        cmd.Parameters.AddWithValue("fileExtension", fileExtension);
-        using var reader = cmd.ExecuteReader();
-        
-        var result = new List<MetadataModel>();
-        while (reader.Read())
-        {
-            string metadataId = reader.GetString(0);
-            string path = reader.GetString(1);
-            string title = reader.GetString(2);
-            string albumId = reader.GetString(3);
-            result.Add(new MetadataModel()
+        return conn
+            .Query<MetadataModel>(query, new
             {
-                MetadataId = metadataId,
-                Path = path,
-                Title = title,
-                AlbumId = albumId
-            });
-        }
-
-        return result;
+                fileExtension
+            }).ToList();
     }
     
     public void DeleteMetadataRecords(List<string> metadataIds)
@@ -469,51 +260,40 @@ public class MetadataRepository
         string query = @"DELETE FROM metadata WHERE metadataid = ANY(@id)";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-    
-        conn.Open();
-    
-        Guid[] uuidArray = metadataIds.Select(Guid.Parse).ToArray();
-    
-        // Pass the array as a parameter with Uuid | Array type
-        cmd.Parameters.AddWithValue("id", NpgsqlTypes.NpgsqlDbType.Uuid | NpgsqlTypes.NpgsqlDbType.Array, uuidArray);
-
-        cmd.ExecuteNonQuery();
+        
+        conn.Execute(query, new
+        {
+            id = metadataIds.Select(id => Guid.Parse(id)).ToList()
+        });
     }
-    
-    
-    
     
     public bool MetadataCanUpdate(string path, DateTime lastWriteTime, DateTime creationTime)
     {
-        string query = @"SELECT cast(MetadataId as text), File_LastWriteTime, File_CreationTime 
+        string query = @"SELECT MetadataId, File_LastWriteTime, File_CreationTime 
                          FROM metadata 
                          WHERE path = @path
                          LIMIT 1";
         
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
-        
-        conn.Open();
-        cmd.Parameters.AddWithValue("path", path);
-        using var reader = cmd.ExecuteReader();
-        bool canUpdate = true;
-        
-        if (reader.Read())
-        {
-            string metadataId = reader.GetString(0);
-            DateTime dbLastWriteTime = reader.GetDateTime(1);
-            DateTime dbCreationTime = reader.GetDateTime(2);
 
-            canUpdate = !string.IsNullOrWhiteSpace(metadataId) &&
-                        (dbLastWriteTime.ToString("yyyy-MM-dd HH:mm:ss") != lastWriteTime.ToString("yyyy-MM-dd HH:mm:ss") ||
-                         dbCreationTime.ToString("yyyy-MM-dd HH:mm:ss") != creationTime.ToString("yyyy-MM-dd HH:mm:ss"));
+        CanUpdateMetadataModel? canUpdateMetadataModel = conn
+            .Query<CanUpdateMetadataModel>(query, new
+            {
+                path
+            }).FirstOrDefault();
+
+        bool canUpdate = true;
+        if (canUpdateMetadataModel != null)
+        {
+            canUpdate = !canUpdateMetadataModel.MetadataId.Equals(Guid.Empty) &&
+                        (canUpdateMetadataModel.File_LastWriteTime?.ToString("yyyy-MM-dd HH:mm:ss") != lastWriteTime.ToString("yyyy-MM-dd HH:mm:ss") ||
+                         canUpdateMetadataModel.File_CreationTime?.ToString("yyyy-MM-dd HH:mm:ss") != creationTime.ToString("yyyy-MM-dd HH:mm:ss"));
             
         }
         return canUpdate;
     }
     
-    public void InsertOrUpdateMetadata(MetadataInfo metadata, string filePath, Guid albumId)
+    public void InsertOrUpdateMetadata(MetadataInfo metadata, Guid albumId)
     {
         string query = @"
             INSERT INTO Metadata (MetadataId, 
@@ -558,7 +338,7 @@ public class MetadataRepository
                                   File_LastWriteTime,
                                   File_CreationTime,
                                   Tag_AllJsonTags)
-            VALUES (@id, @path, @title, @albumId, 
+            VALUES (@MetadataId, @path, @title, @albumId, 
                     @MusicBrainzArtistId, 
                     @MusicBrainzDiscId, 
                     @MusicBrainzReleaseCountry, 
@@ -638,56 +418,16 @@ public class MetadataRepository
                 MusicBrainzReleaseArtistId = EXCLUDED.MusicBrainzReleaseArtistId,
                 MusicBrainzReleaseGroupId = EXCLUDED.MusicBrainzReleaseGroupId";
 
-        Guid metadataId = Guid.NewGuid();
+        if (metadata.MetadataId.Equals(Guid.Empty))
+        {
+            metadata.MetadataId = Guid.NewGuid();
+        }
+
+        metadata.AlbumId = albumId;
         
         metadata.NonNullableValues();
         using var conn = new NpgsqlConnection(_connectionString);
-        using var cmd = new NpgsqlCommand(query, conn);
         
-        conn.Open();
-        cmd.Parameters.AddWithValue("id", metadataId);
-        cmd.Parameters.AddWithValue("path", filePath);
-        cmd.Parameters.AddWithValue("title", metadata.Title);
-        cmd.Parameters.AddWithValue("albumId", albumId);
-        cmd.Parameters.AddWithValue("MusicBrainzArtistId", metadata.MusicBrainzArtistId);
-        cmd.Parameters.AddWithValue("MusicBrainzDiscId", metadata.MusicBrainzDiscId);
-        cmd.Parameters.AddWithValue("MusicBrainzReleaseCountry", metadata.MusicBrainzReleaseCountry);
-        cmd.Parameters.AddWithValue("MusicBrainzReleaseId", metadata.MusicBrainzReleaseId);
-        cmd.Parameters.AddWithValue("MusicBrainzTrackId", metadata.MusicBrainzTrackId);
-        cmd.Parameters.AddWithValue("MusicBrainzReleaseStatus", metadata.MusicBrainzReleaseStatus);
-        cmd.Parameters.AddWithValue("MusicBrainzReleaseType", metadata.MusicBrainzReleaseType);
-        cmd.Parameters.AddWithValue("MusicBrainzReleaseArtistId", metadata.MusicBrainzReleaseArtistId);
-        cmd.Parameters.AddWithValue("MusicBrainzReleaseGroupId", metadata.MusicBrainzReleaseGroupId);
-        cmd.Parameters.AddWithValue("Tag_Subtitle", metadata.TagSubtitle);
-        cmd.Parameters.AddWithValue("Tag_AlbumSort", metadata.TagAlbumSort);
-        cmd.Parameters.AddWithValue("Tag_Comment", metadata.TagComment);
-        cmd.Parameters.AddWithValue("Tag_Year", metadata.TagYear);
-        cmd.Parameters.AddWithValue("Tag_Track", metadata.TagTrack);
-        cmd.Parameters.AddWithValue("Tag_TrackCount", metadata.TagTrackCount);
-        cmd.Parameters.AddWithValue("Tag_Disc", metadata.TagDisc);
-        cmd.Parameters.AddWithValue("Tag_DiscCount", metadata.TagDiscCount);
-        cmd.Parameters.AddWithValue("Tag_Lyrics", metadata.TagLyrics);
-        cmd.Parameters.AddWithValue("Tag_Grouping", metadata.TagGrouping);
-        cmd.Parameters.AddWithValue("Tag_BeatsPerMinute", metadata.TagBeatsPerMinute);
-        cmd.Parameters.AddWithValue("Tag_Conductor", metadata.TagConductor);
-        cmd.Parameters.AddWithValue("Tag_Copyright", metadata.TagCopyright);
-        cmd.Parameters.AddWithValue("Tag_DateTagged", metadata.TagDateTagged);
-        cmd.Parameters.AddWithValue("Tag_AmazonId", metadata.TagAmazonId);
-        cmd.Parameters.AddWithValue("Tag_ReplayGainTrackGain", metadata.TagReplayGainTrackGain);
-        cmd.Parameters.AddWithValue("Tag_ReplayGainTrackPeak", metadata.TagReplayGainTrackPeak);
-        cmd.Parameters.AddWithValue("Tag_ReplayGainAlbumGain", metadata.TagReplayGainAlbumGain);
-        cmd.Parameters.AddWithValue("Tag_ReplayGainAlbumPeak", metadata.TagReplayGainAlbumPeak);
-        cmd.Parameters.AddWithValue("Tag_InitialKey", metadata.TagInitialKey);
-        cmd.Parameters.AddWithValue("Tag_RemixedBy", metadata.TagRemixedBy);
-        cmd.Parameters.AddWithValue("Tag_Publisher", metadata.TagPublisher);
-        cmd.Parameters.AddWithValue("Tag_ISRC", metadata.TagISRC);
-        cmd.Parameters.AddWithValue("Tag_Length", metadata.TagLength);
-        cmd.Parameters.AddWithValue("Tag_AcoustIdFingerPrint", metadata.TagAcoustIdFingerPrint);
-        cmd.Parameters.AddWithValue("Tag_AcoustId", metadata.TagAcoustId);
-        cmd.Parameters.AddWithValue("File_LastWriteTime", metadata.FileLastWriteTime);
-        cmd.Parameters.AddWithValue("File_CreationTime", metadata.FileCreationTime);
-        cmd.Parameters.AddWithValue("Tag_AllJsonTags", metadata.AllJsonTags);
-
-        cmd.ExecuteNonQuery();
+        conn.Execute(query, metadata);
     }
 }
