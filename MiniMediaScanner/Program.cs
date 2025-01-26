@@ -7,12 +7,12 @@ using Quartz.Impl;
 
 namespace MiniMediaScanner;
 
-class Program
+public class Program
 {
     public static string[] ConsoleArguments { get; private set; }
-    public static ConsoleApp.ConsoleAppBuilder AppBuilder { get; private set; }
-    
-    static async Task Main(string[] args)
+    internal static ConsoleApp.ConsoleAppBuilder AppBuilder { get; private set; }
+
+    public static async Task Main(string[] args)
     {
         ConsoleArguments = args;
         AppBuilder = ConsoleApp.Create();

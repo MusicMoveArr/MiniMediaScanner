@@ -46,7 +46,7 @@ public class MetadataInfo
     public string? Tag_ISRC { get; set; }
     public string? Tag_Length { get; set; }
     public string? Tag_AcoustIdFingerPrint { get; set; }
-    public float Tag_AcoustIdFingerPrintDuration { get; set; }
+    public float Tag_AcoustIdFingerPrint_Duration { get; set; }
     public string? Tag_AcoustId { get; set; }
     
     public DateTime File_LastWriteTime { get; set; }

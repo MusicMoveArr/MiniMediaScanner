@@ -105,7 +105,7 @@ public class MusicBrainzAPIService
     {
         DelayAPICall();
         
-        Console.WriteLine("Requesting MusicBrainz GetRecordingById");
+        Console.WriteLine($"Requesting MusicBrainz GetRecordingById, {recordingId}");
         
         try
         {
