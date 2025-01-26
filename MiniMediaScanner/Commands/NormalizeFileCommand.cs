@@ -22,8 +22,8 @@ public class NormalizeFileCommand
     /// <param name="rename">-r, rename file.</param>
     /// <param name="overwrite">-w, overwrite existing files.</param>
     /// <param name="subDirectoryDepth">-s, sub-directory depth to root-folder.</param>
-    /// <param name="fileFormat">-f, rename file format (required for renaming) {artist} {album} {track} {title}.</param>
-    /// <param name="directoryFormat">-df, rename directory format (required for renaming) {artist} {album} {track} {title}.</param>
+    /// <param name="fileFormat">-f, rename file format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}.</param>
+    /// <param name="directoryFormat">-df, rename directory format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}.</param>
     /// <param name="directorySeperator">-ds, Directory Seperator replacer, replace '/' '\' to .e.g. '_'.</param>
     [Command("normalizefile")]
     public static void NormalizeFile(
