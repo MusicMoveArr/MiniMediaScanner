@@ -28,6 +28,7 @@ class Program
         AppBuilder.Add("equalizemediatag", EqualizeMediaTagCommand.EqualizeMediaTag);
         AppBuilder.Add("refreshmetadata", RefreshMetadataCommand.RefreshMetadata);
         AppBuilder.Add("fixversioning", FixVersioningCommand.FixVersioning);
+        AppBuilder.Add("coverartarchive", CoverArtArchiveCommand.CoverArtArchive);
         
         string? importPath = Environment.GetEnvironmentVariable("IMPORT_PATH");
         string? cronExpression = Environment.GetEnvironmentVariable("CRON");
@@ -37,6 +38,7 @@ class Program
         {
             ConsoleArguments = [ "import", "--connection-string", connectionString, "-p", importPath ];
         }
+        
         if (!string.IsNullOrWhiteSpace(cronExpression))
         {
             await CreateSchedulerAsync(cronExpression);
@@ -49,6 +51,7 @@ class Program
             }
             catch (Exception e)
             {
+                Console.WriteLine(e.Message);
             }
         }
     }

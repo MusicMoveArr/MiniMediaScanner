@@ -218,6 +218,27 @@ public class MetadataRepository
             artistName
         }).ToList();
     }
+    public List<MetadataPathCoverModel> GetFolderPathsByArtistForCovers(string artistName, string album)
+    {
+        string query = @$"SELECT distinct regexp_replace(path, '[^/]+$', '') AS FolderPath, 
+                                 m.MusicBrainzReleaseId,
+                                 artist.name as ArtistName,
+                                 album.title AS AlbumName
+                          FROM metadata m
+                          JOIN albums album ON album.albumid = m.albumid
+                          JOIN artists artist ON artist.artistid = album.artistid
+                          where lower(artist.name) = lower(@artistName)
+                                and length(m.MusicBrainzReleaseId) > 0
+                                and (length(@album) = 0 or @album is null or lower(album.title) = lower(@album))";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn.Query<MetadataPathCoverModel>(query, new
+        {
+            artistName,
+            album
+        }).ToList();
+    }
     
     public List<MetadataModel> GetMetadataByPath(string targetPath)
     {
