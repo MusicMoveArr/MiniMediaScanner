@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
+using SmartFormat;
 
 namespace MiniMediaScanner.Commands;
 
@@ -144,9 +145,13 @@ public class NormalizeFileCommandHandler
                 return false;
             }
         }
+
+        file.ArtistName = artistNormalized;
+        file.AlbumName = albumNormalized;
+        file.Title = titleNormalized;
         
-        string newFileName = $"{GetFormatName(fileFormat, artistNormalized, albumNormalized, file.Tag_Track, file.Tag_Disc, titleNormalized, directorySeperator)}{fileInfo.Extension}";
-        string newDirectoryName = $"{GetFormatName(directoryFormat, artistNormalized, albumNormalized, file.Tag_Track, file.Tag_Disc, titleNormalized, directorySeperator)}";
+        string newFileName = $"{GetFormatName(file, fileFormat, directorySeperator)}{fileInfo.Extension}";
+        string newDirectoryName = $"{GetFormatName(file, directoryFormat, directorySeperator)}";
         string partialNewPath = Path.Combine(newDirectoryName, newFileName);
         string newFullPath = Path.Combine(subDirectory.FullName, partialNewPath).Trim();
         
@@ -235,28 +240,14 @@ public class NormalizeFileCommandHandler
         return true;
     }
     
-    public string GetFormatName(string format, 
-        string artist, 
-        string album, 
-        int track,
-        int disc,
-        string title, 
+    public string GetFormatName(MetadataModel file,
+        string format, 
         string seperator)
     {
-        format = format.Replace("{artist}", ReplaceDirectorySeparators(artist, seperator));
-        format = format.Replace("{album}", ReplaceDirectorySeparators(album, seperator));
-
-        if (disc > 1)
-        {
-            format = format.Replace("{track}", $"{disc.ToString("D2")}-{track.ToString("D2")}" );
-        }
-        else
-        {
-            format = format.Replace("{track}", track.ToString("D2"));
-        }
-        
-        
-        format = format.Replace("{title}", ReplaceDirectorySeparators(title, seperator));
+        file.ArtistName = ReplaceDirectorySeparators(file.ArtistName, seperator);
+        file.Title = ReplaceDirectorySeparators(file.Title, seperator);
+        file.AlbumName = ReplaceDirectorySeparators(file.AlbumName, seperator);
+        format = Smart.Format(format, file);
         format = format.Trim();
         return format;
     }

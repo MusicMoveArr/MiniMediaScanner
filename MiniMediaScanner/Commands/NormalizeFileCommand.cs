@@ -1,4 +1,6 @@
 using ConsoleAppFramework;
+using MiniMediaScanner.Models;
+using SmartFormat;
 
 namespace MiniMediaScanner.Commands;
 
@@ -51,14 +53,15 @@ public class NormalizeFileCommand
             return;
         }
         
+        MetadataModel file = new MetadataModel();
+        file.ArtistName = "Mini";
+        file.AlbumName = "Media";
+        file.Title = "Mini Media";
+        file.Tag_Disc = 1;
+        file.Tag_Track = 7;
+        
         //run small test to see if format is correct
-        string newFileName = handler.GetFormatName(fileFormat, 
-            "artistName", 
-            "albumName", 
-            5,
-            1,
-            "someTitle",
-            directorySeperator);
+        string newFileName = handler.GetFormatName(file, fileFormat, directorySeperator);
         
         if (newFileName.Contains("{") || newFileName.Contains("}"))
         {
@@ -67,13 +70,7 @@ public class NormalizeFileCommand
         }
         
         //run small test to see if format is correct
-        string newDirectoryName = handler.GetFormatName(directoryFormat, 
-            "artistName", 
-            "albumName", 
-            5,
-            1,
-            "someTitle",
-            directorySeperator);
+        string newDirectoryName = handler.GetFormatName(file, directoryFormat, directorySeperator);
         
         if (newDirectoryName.Contains("{") || newDirectoryName.Contains("}"))
         {
