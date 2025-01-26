@@ -97,8 +97,8 @@ dotnet MiniMediaScanner.dll normalizefile --connection-string "Host=192.168.1.2;
 --overwrite \
 --sub-directory-depth 2 \
 --rename \
---file-format "{artist} - {album} - {track} - {title}" \
---directory-format "{artist}/{album}" \
+--file-format "{ArtistName} - {AlbumName} - {Tag_Disc:cond:<=1?{Tag_Track:00}|{Tag_Disc:00}-{Tag_Track:00}} - {Title}" \
+--directory-format "{ArtistName}/{AlbumName}" \
 --directory-seperator "_"
 ```
 
