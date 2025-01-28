@@ -14,7 +14,7 @@ public class UpdateMBCommand
     {
         var handler = new UpdateMBCommandHandler(connectionString);
 
-        if (string.IsNullOrWhiteSpace(artist))
+        if (!string.IsNullOrWhiteSpace(artist))
         {
             handler.UpdateMusicBrainzArtistsByName(artist);
         }
