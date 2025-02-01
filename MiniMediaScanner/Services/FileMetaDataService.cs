@@ -8,11 +8,18 @@ public class FileMetaDataService
     private const string VariousArtistsName = "Various Artists";
     private const string AcoustidFingerprintTag = "acoustid fingerprint";
     private const string AcoustidIdTag = "acoustid id";
+
+    private string[] ignoreTags = new string[]
+    {
+        "GEOB.",
+        "PRIV.TRAKTOR4"
+    };
     
     public MetadataInfo GetMetadataInfo(FileInfo fileInfo)
     {
         Track trackInfo = new Track(fileInfo.FullName);
         var mediaTags = trackInfo.AdditionalFields
+            .Where(tag => !ignoreTags.Any(ignoreTag => tag.Key.ToLower().StartsWith(ignoreTag.ToLower())))
             .GroupBy(pair => pair.Key.ToLower())
             .Select(pair => pair.First())
             .ToDictionary(StringComparer.OrdinalIgnoreCase);
