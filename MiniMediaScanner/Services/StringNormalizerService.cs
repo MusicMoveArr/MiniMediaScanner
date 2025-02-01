@@ -108,6 +108,8 @@ public class StringNormalizerService
         {
             return string.Empty;
         }
-        return value.Replace("\0", string.Empty);
+        return value.Replace("\0", string.Empty)
+                    .Replace("\\u0000", string.Empty)
+                    .Replace("\\u0001", string.Empty);
     }
 }
