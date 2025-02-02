@@ -84,7 +84,7 @@ public class MetadataRepository
 	                     or (lower(m.path) like '%/' || ut.artist_name || '/%' --check by just the arist path
 	                         and lower(m.title) = ut.track_title)
  
-                     where ut.artist_name = @artistName
+                     where ut.artist_name = lower(@artistName)
                      and ut.track_title not like '%(%'
                      and m.metadataid is null";
 
