@@ -35,6 +35,8 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 12. FixVersioning - Find media that are using the same track/disc numbering, usually normal version and (AlbumVersion), (Live) etc
     The media with the longest file name and contains TrackFilters will get incremented disc number
     This will make it so the normal version of the album stays at disc 1 but remix(etc) gets disc number 1001+
+13. Cover ArtArchive - Grab covers from the CoverArtArchive and save them as cover.jpg
+14. RemoveTag - Remove specific tags from Artist/Albums
 
 # Examples
 ```
