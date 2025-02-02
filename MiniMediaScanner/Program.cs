@@ -29,6 +29,7 @@ public class Program
         AppBuilder.Add("refreshmetadata", RefreshMetadataCommand.RefreshMetadata);
         AppBuilder.Add("fixversioning", FixVersioningCommand.FixVersioning);
         AppBuilder.Add("coverartarchive", CoverArtArchiveCommand.CoverArtArchive);
+        AppBuilder.Add("removetag", RemoveTagCommand.RemoveTag);
         
         string? importPath = Environment.GetEnvironmentVariable("IMPORT_PATH");
         string? cronExpression = Environment.GetEnvironmentVariable("CRON");

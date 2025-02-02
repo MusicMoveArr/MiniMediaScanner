@@ -16,78 +16,123 @@ public class DeDuplicateFileCommandHandler
         _artistRepository = new ArtistRepository(connectionString);
         _metadataRepository = new MetadataRepository(connectionString);
     }
+
+    public void CheckDuplicateFiles(bool delete)
+    {
+        _artistRepository.GetAllArtistNames()
+            .ForEach(artist => CheckDuplicateFiles(artist, delete));
+    }
     
     public void CheckDuplicateFiles(string artistName, bool delete)
     {
-        var artistNames = _artistRepository.GetAllArtistNames();
+        FindDuplicateFileExtensions(artistName, delete);
+        FindDuplicateFileVersions(artistName, delete);
+    }
 
-        if (!string.IsNullOrWhiteSpace(artistName))
+    private void FindDuplicateFileExtensions(string artistName, bool delete)
+    {
+        var duplicateFiles = _metadataRepository.GetDuplicateFileExtensions(artistName)
+            .GroupBy(group => group.FilePathWithoutExtension);
+
+        foreach (var duplicateFileVersions in duplicateFiles)
         {
-            artistNames = artistNames
-                .Where(a => a.ToLower() == artistName.ToLower())
-                .ToList();
-        }
+            var fileWithoutExtension = duplicateFileVersions.First().FilePathWithoutExtension;
+            var recordToKeep = ImportCommandHandler.MediaFileExtensions
+                .Select(ext => fileWithoutExtension + "." + ext)
+                .Select(path => _metadataRepository
+                    .GetMetadataByPath(path)
+                    .FirstOrDefault())
+                .Where(path => path != null)
+                .Where(path => new FileInfo(path.Path).Exists)
+                .FirstOrDefault(nonRecord => nonRecord != null);
 
-        //regex for files ending with (1).flac, (2).mp3 etc
-        string regexFilter = @" \([0-9]*\)(?=\.([a-zA-Z0-9]{2,5})$)";
-        
-        foreach (string artist in artistNames)
-        {
-            List<MetadataModel> possibleDuplicateFiles = _metadataRepository.PossibleDuplicateFiles(artist);
-
-            foreach (MetadataModel possibleDuplicateFile in possibleDuplicateFiles)
+            if (recordToKeep == null)
             {
-                string nonDuplicateFile = Regex.Replace(possibleDuplicateFile.Path, regexFilter, string.Empty);
-                MetadataModel? nonDuplicateRecord = _metadataRepository
-                    .GetMetadataByPath(nonDuplicateFile)
-                    .FirstOrDefault();
+                continue;
+            }
 
-                //try to find another non-duplicate version, different media extension
-                if (nonDuplicateRecord == null)
-                {
-                    string extension = Path.GetExtension(nonDuplicateFile).ToLower().Replace(".", "");
-                    string fileWithoutExtension = Path.ChangeExtension(nonDuplicateFile, "");
-                    
-                    nonDuplicateRecord = ImportCommandHandler.MediaFileExtensions
-                        .Where(ext => ext != extension)
-                        .Select(ext => fileWithoutExtension + ext)
-                        .Select(path => _metadataRepository
-                            .GetMetadataByPath(path)
-                            .FirstOrDefault())
-                        .FirstOrDefault(nonRecord => nonRecord != null);
+            var toRemove = duplicateFileVersions
+                .Where(file => !string.Equals(recordToKeep.Path, file.Path))
+                .Where(file => new FileInfo(file.Path).Exists)
+                .ToList();
 
-                    if (nonDuplicateRecord != null)
-                    {
-                        nonDuplicateFile = nonDuplicateRecord.Path;
-                    }
-                }
-                
-                    
-                
-                FileInfo nonDuplicatefileInfo = new FileInfo(nonDuplicateFile);
-                FileInfo duplicatefileInfo = new FileInfo(possibleDuplicateFile.Path);
-                if (!nonDuplicatefileInfo.Exists  ||
-                    !duplicatefileInfo.Exists ||
-                    nonDuplicateRecord == null)
-                {
-                    continue;
-                }
+            if (toRemove.Count == 0)
+            {
+                continue;
+            }
 
-                if (!string.Equals(nonDuplicateRecord.Title, possibleDuplicateFile.Title, StringComparison.OrdinalIgnoreCase) ||
-                    !string.Equals(nonDuplicateRecord.AlbumId.ToString(), possibleDuplicateFile.AlbumId.ToString(), StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
+            foreach (var file in toRemove)
+            {
                 if (delete)
                 {
-                    Console.WriteLine($"Delete duplicate file {possibleDuplicateFile.Path}");
-                    duplicatefileInfo.Delete();
+                    Console.WriteLine($"Delete duplicate file {file.Path}");
+                    new FileInfo(file.Path).Delete();
+                    _metadataRepository.DeleteMetadataRecords(new List<string>(new string[] { file.MetadataId.ToString() }));
                 }
                 else
                 {
-                    Console.WriteLine($"Duplicate file {possibleDuplicateFile.Path}");
+                    Console.WriteLine($"Duplicate file {file.Path}");
                 }
+            }
+        }
+    }
+    
+    private void FindDuplicateFileVersions(string artistName, bool delete)
+    {
+        //regex for files ending with (1).flac, (2).mp3 etc
+        string regexFilter = @" \([0-9]*\)(?=\.([a-zA-Z0-9]{2,5})$)";
+        List<MetadataModel> possibleDuplicateFiles = _metadataRepository.GetDuplicateFileVersions(artistName);
+
+        foreach (MetadataModel possibleDuplicateFile in possibleDuplicateFiles)
+        {
+            string nonDuplicateFile = Regex.Replace(possibleDuplicateFile.Path, regexFilter, string.Empty);
+            MetadataModel? nonDuplicateRecord = _metadataRepository
+                .GetMetadataByPath(nonDuplicateFile)
+                .FirstOrDefault();
+
+            //try to find another non-duplicate version, different media extension
+            if (nonDuplicateRecord == null)
+            {
+                string extension = Path.GetExtension(nonDuplicateFile).ToLower().Replace(".", "");
+                string fileWithoutExtension = Path.ChangeExtension(nonDuplicateFile, "");
+                
+                nonDuplicateRecord = ImportCommandHandler.MediaFileExtensions
+                    .Where(ext => ext != extension)
+                    .Select(ext => fileWithoutExtension + ext)
+                    .Select(path => _metadataRepository
+                        .GetMetadataByPath(path)
+                        .FirstOrDefault())
+                    .FirstOrDefault(nonRecord => nonRecord != null);
+
+                if (nonDuplicateRecord != null)
+                {
+                    nonDuplicateFile = nonDuplicateRecord.Path;
+                }
+            }
+            
+            FileInfo nonDuplicatefileInfo = new FileInfo(nonDuplicateFile);
+            FileInfo duplicatefileInfo = new FileInfo(possibleDuplicateFile.Path);
+            if (!nonDuplicatefileInfo.Exists  ||
+                !duplicatefileInfo.Exists ||
+                nonDuplicateRecord == null)
+            {
+                continue;
+            }
+
+            if (!string.Equals(nonDuplicateRecord.Title, possibleDuplicateFile.Title, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(nonDuplicateRecord.AlbumId.ToString(), possibleDuplicateFile.AlbumId.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (delete)
+            {
+                Console.WriteLine($"Delete duplicate file {possibleDuplicateFile.Path}");
+                duplicatefileInfo.Delete();
+            }
+            else
+            {
+                Console.WriteLine($"Duplicate file {possibleDuplicateFile.Path}");
             }
         }
     }

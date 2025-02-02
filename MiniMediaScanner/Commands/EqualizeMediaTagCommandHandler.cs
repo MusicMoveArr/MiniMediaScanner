@@ -42,24 +42,7 @@ public class EqualizeMediaTagCommandHandler
         foreach (var group in groupedByAlbumId)
         {
             string albumName = group.First().AlbumName;
-            switch (tag.ToLower())
-            {
-                case "date":
-                case "originaldate":
-                case "originalyear":
-                case "year":
-                case "disc":
-                case "asin":
-                case "catalognumber":
-                case "artistsortorder":
-                case "sort_artist":
-                case "totaldiscs":
-                case "total discs":
-                case "disctotal":
-                case "albumartistsortorder":
-                    success = ProcessGenericTag(group.ToList(), artist, albumName, autoConfirm, tag, writetag);
-                    break;
-            }
+            success = ProcessGenericTag(group.ToList(), artist, albumName, autoConfirm, tag, writetag);
         }
     }
 

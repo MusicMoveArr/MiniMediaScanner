@@ -146,6 +146,10 @@ public class NormalizeFileCommandHandler
             }
         }
 
+        string oldArtistName = file.ArtistName;
+        string oldAlbumName = file.AlbumName;
+        string oldTitle = file.Title;
+
         file.ArtistName = artistNormalized;
         file.AlbumName = albumNormalized;
         file.Title = titleNormalized;
@@ -218,9 +222,9 @@ public class NormalizeFileCommandHandler
             Console.WriteLine($"File: {oldPath}");
             Console.WriteLine($"Moving to: {newFullPath}");
             Console.WriteLine($"Success: {success}");
-            Console.WriteLine($"Updated artist: {updatedArtistName}, artist name: {file.ArtistName} {(updatedArtistName ? $" => {artistNormalized}" : string.Empty)}");
-            Console.WriteLine($"Updated album: {updatedalbumName}, album name: {file.AlbumName} {(updatedalbumName ? $" => {albumNormalized}" : string.Empty)}");
-            Console.WriteLine($"Updated title: {updatedTitleName}, title: {file.Title} {(updatedTitleName ? $" => {titleNormalized}" : string.Empty)}");
+            Console.WriteLine($"Updated artist: {updatedArtistName}, artist name: {oldArtistName} {(updatedArtistName ? $" => {artistNormalized}" : string.Empty)}");
+            Console.WriteLine($"Updated album: {updatedalbumName}, album name: {oldAlbumName} {(updatedalbumName ? $" => {albumNormalized}" : string.Empty)}");
+            Console.WriteLine($"Updated title: {updatedTitleName}, title: {oldTitle} {(updatedTitleName ? $" => {titleNormalized}" : string.Empty)}");
             Console.WriteLine();
         }
                 

@@ -67,6 +67,7 @@ public class TagMissingMetadataCommandHandler
         var recordingId = acoustIdLookup?["results"]?.FirstOrDefault()?["recordings"]?.FirstOrDefault()?["id"]?.ToString();
         var acoustId = acoustIdLookup?["results"]?.FirstOrDefault()?["id"]?.ToString();
 
+        //var recordingRecord = _musicBrainzArtistRepository.GetMusicBrainzArtistByRecordingId(recordingId);
         if (string.IsNullOrWhiteSpace(recordingId))
         {
             Console.WriteLine($"No recording ID found from AcoustID for '{metadata.Path}'");
@@ -76,9 +77,6 @@ public class TagMissingMetadataCommandHandler
         
         var data = _musicBrainzAPIService.GetRecordingById(recordingId);
         MusicBrainzArtistReleaseModel? release = data?.Releases?.FirstOrDefault();
-        
-
-        //var recordingRecord = _musicBrainzArtistRepository.GetMusicBrainzArtistByRecordingId(recordingId);
         
         if (release == null)
         {
@@ -108,10 +106,6 @@ public class TagMissingMetadataCommandHandler
             UpdateTag(track, "date", release.Date, ref trackInfoUpdated, overwriteTagValue);
             UpdateTag(track, "originaldate", release.Date, ref trackInfoUpdated, overwriteTagValue);
         }
-
-
-        UpdateTag(track, "barcode", release.Barcode, ref trackInfoUpdated, overwriteTagValue);
-
         
         string? musicBrainzTrackId = release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Id;
         string? musicBrainzArtistId = data?.ArtistCredit?.FirstOrDefault()?.Artist?.Id;
@@ -165,7 +159,7 @@ public class TagMissingMetadataCommandHandler
         UpdateTag(track, "Track Number", release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Position?.ToString(), ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "Total Tracks", release.Media?.FirstOrDefault()?.TrackCount.ToString(), ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MEDIA", release.Media?.FirstOrDefault()?.Format, ref trackInfoUpdated, overwriteTagValue);
-        
+
         if (trackInfoUpdated && _mediaTagWriteService.SafeSave(track))
         {
             _importCommandHandler.ProcessFile(metadata.Path);
@@ -175,6 +169,11 @@ public class TagMissingMetadataCommandHandler
     private void UpdateTag(Track track, string tagName, string? value, ref bool trackInfoUpdated, bool overwriteTagValue)
     {
         if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (int.TryParse(value, out int intValue) && intValue == 0)
         {
             return;
         }

@@ -74,7 +74,8 @@ public class ConvertMediaCommandHandler
 
             if (fingerprint != null)
             {
-                _metadataRepository.UpdateMetadataFingerprint(metadata.MetadataId.ToString(), fingerprint.Fingerprint, fingerprint.Duration);
+                FileInfo fileInfo = new FileInfo(outputFile.FullName);
+                _metadataRepository.UpdateMetadataFingerprint(metadata.MetadataId.ToString(), fingerprint.Fingerprint, fingerprint.Duration, fileInfo.LastWriteTime, fileInfo.CreationTime);
             }
             
             file.Delete();

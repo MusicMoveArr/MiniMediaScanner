@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
@@ -47,6 +48,8 @@ public class ImportCommandHandler
 
     public bool ProcessFile(string filePath, bool forceReimport = false)
     {
+        var metadata = default(MetadataInfo);
+        
         try
         {
             if (!MediaFileExtensions.Any(ext => filePath.EndsWith(ext)))
@@ -66,10 +69,8 @@ public class ImportCommandHandler
             {
                 return false;
             }
-                    
-            Console.WriteLine($"Scanning file {filePath}");
 
-            var metadata = default(MetadataInfo);
+            Console.WriteLine($"Scanning {fileInfo.FullName}");
 
             try
             {
@@ -81,6 +82,7 @@ public class ImportCommandHandler
                 Console.WriteLine(e.Message);
                 return false;
             }
+            
                         
             ProcessMetadata(metadata);
                 

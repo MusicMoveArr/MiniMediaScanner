@@ -1,6 +1,7 @@
 using System.Diagnostics;
+using System.Text.Json;
+using MiniMediaScanner.JsonConverters;
 using MiniMediaScanner.Models;
-using MiniMediaScanner.Models.MusicBrainzRecordings;
 using RestSharp;
 
 namespace MiniMediaScanner.Services;
@@ -12,7 +13,6 @@ public class MusicBrainzAPIService
     public MusicBrainzArtistModel? GetArtist(string musicBrainzArtistId)
     {
         DelayAPICall();
-        
         Console.WriteLine($"Requesting MusicBrainz GetArtist '{musicBrainzArtistId}'");
 
         try
@@ -29,13 +29,12 @@ public class MusicBrainzAPIService
         catch (Exception e)
         {
             Console.WriteLine(e);
-            return null;
         }
+        return null;
     }
     public MusicBrainzArtistInfoModel? GetArtistInfo(string musicBrainzArtistId)
     {
         DelayAPICall();
-
         Console.WriteLine($"Requesting MusicBrainz GetArtistInfo '{musicBrainzArtistId}'");
         
         try
@@ -45,20 +44,19 @@ public class MusicBrainzAPIService
             using RestClient client = new RestClient(url);
             RestRequest request = new RestRequest();
             var response =   client.Get<MusicBrainzArtistInfoModel>(request);
+            
             _stopwatch.Restart();
             return response;
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            return null;
         }
-        
+        return null;
     }
     public MusicBrainzReleaseModel? GetTracks(string musicBrainzAlbumId)
     {
         DelayAPICall();
-        
         Console.WriteLine($"Requesting MusicBrainz Tracks '{musicBrainzAlbumId}'");
         
         try
@@ -68,19 +66,19 @@ public class MusicBrainzAPIService
             using RestClient client = new RestClient(url);
             RestRequest request = new RestRequest();
             var response =  client.Get<MusicBrainzReleaseModel>(request);
+            
             _stopwatch.Restart();
             return response;
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
-            return null;
         }
+        return null;
     }
     public MusicBrainzArtistRelationModel GetExternalLinks(string musicBrainzArtistId)
     {
         DelayAPICall();
-        
         Console.WriteLine("Requesting MusicBrainz external links");
         
         try
@@ -88,6 +86,7 @@ public class MusicBrainzAPIService
             string url = $"https://musicbrainz.org/ws/2/artist/{musicBrainzArtistId}?inc=url-rels&fmt=json";
 
             using RestClient client = new RestClient(url);
+            
             RestRequest request = new RestRequest();
             var response = client.Get<MusicBrainzArtistRelationModel>(request);
 
@@ -97,22 +96,22 @@ public class MusicBrainzAPIService
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
-            return null;
         }
+        return null;
     }
     
     public MusicBrainzArtistModel GetRecordingById(string recordingId)
     {
         DelayAPICall();
-        
         Console.WriteLine($"Requesting MusicBrainz GetRecordingById, {recordingId}");
-        
+
         try
         {
             string url = $"https://musicbrainz.org/ws/2/recording/{recordingId}?fmt=json&inc=isrcs+artists+releases+release-groups+url-rels+media";
 
             using RestClient client = new RestClient(url);
             RestRequest request = new RestRequest();
+            
             var response = client.Get<MusicBrainzArtistModel>(request);
 
             _stopwatch.Restart();
@@ -121,8 +120,8 @@ public class MusicBrainzAPIService
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
-            return null;
         }
+        return null;
     }
     
     public MusicBrainzArtistModel? GetReleasesForArtist(string artistId, int limit, int offset)
@@ -147,15 +146,15 @@ public class MusicBrainzAPIService
         catch (HttpRequestException e)
         {
             Console.WriteLine(e.Message);
-            return null;
         }
+        return null;
     }
-
+    
     private void DelayAPICall()
     {
         if (_stopwatch.ElapsedMilliseconds < 1000)
         {
-            Thread.Sleep((1000 - (int)_stopwatch.ElapsedMilliseconds) + 300);
+            Thread.Sleep(1000);
         }
     }
 }

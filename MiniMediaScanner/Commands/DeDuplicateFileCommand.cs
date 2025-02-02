@@ -15,6 +15,13 @@ public class DeDuplicateFileCommand
     {
         var handler = new DeDuplicateFileCommandHandler(connectionString);
 
-        handler.CheckDuplicateFiles(artist, delete);
+        if (string.IsNullOrWhiteSpace(artist))
+        {
+            handler.CheckDuplicateFiles(delete);
+        }
+        else
+        {
+            handler.CheckDuplicateFiles(artist, delete);
+        }
     }
 }

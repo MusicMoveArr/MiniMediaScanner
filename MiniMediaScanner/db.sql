@@ -59,7 +59,7 @@ CREATE TABLE public.metadata (
     file_lastwritetime timestamp DEFAULT '1999-01-08 00:00:00'::timestamp without time zone NULL,
     file_creationtime timestamp DEFAULT '1999-01-08 00:00:00'::timestamp without time zone NULL,
     tag_acoustidfingerprint_duration float8 DEFAULT 0 NULL,
-    tag_alljsontags text NULL,
+    tag_alljsontags jsonb NULL,
     CONSTRAINT metadata_path_key UNIQUE (path),
     CONSTRAINT metadata_pkey PRIMARY KEY (metadataid)
 );
