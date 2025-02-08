@@ -18,7 +18,9 @@ public class CoverArtArchiveCommandHandler
     public void CheckAllMissingCovers(string album, string coverFileName)
     {
         _artistRepository.GetAllArtistNames()
-            .ForEach(artist => CheckAllMissingCovers(artist, album, coverFileName));
+            .AsParallel()
+            .WithDegreeOfParallelism(4)
+            .ForAll(artist => CheckAllMissingCovers(artist, album, coverFileName));
     }
     
     public void CheckAllMissingCovers(string artist, string album, string coverFileName)
