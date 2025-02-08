@@ -22,15 +22,15 @@ public class RemoveTagCommandHandler
         _importCommandHandler = new ImportCommandHandler(connectionString);
     }
 
-    public void RemoveTagFromMedia(string album, string tagName, bool autoConfirm)
+    public void RemoveTagFromMedia(string album, List<string> tagNames, bool autoConfirm)
     {
         _artistRepository.GetAllArtistNames()
-            .ForEach(artist => RemoveTagFromMedia(artist, album, tagName, autoConfirm));
+            .ForEach(artist => RemoveTagFromMedia(artist, album, tagNames, autoConfirm));
     }
 
-    public void RemoveTagFromMedia(string artist, string album, string tagName, bool autoConfirm)
+    public void RemoveTagFromMedia(string artist, string album, List<string> tagNames, bool autoConfirm)
     {
-        var metadatas = _metadataRepository.GetMetadataByTagRecords(artist, tagName)
+        var metadatas = _metadataRepository.GetMetadataByTagRecords(artist, tagNames)
             .Where(metadata => string.IsNullOrWhiteSpace(album) || 
                                string.Equals(metadata.Album, album, StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -42,7 +42,7 @@ public class RemoveTagCommandHandler
             {
                 try
                 {
-                    ProcessFile(metadata, tagName, autoConfirm);
+                    ProcessFile(metadata, tagNames, autoConfirm);
                 }
                 catch (Exception e)
                 {
@@ -51,11 +51,20 @@ public class RemoveTagCommandHandler
             });
     }
                 
-    private void ProcessFile(MetadataInfo metadata, string tagName, bool autoConfirm)
+    private void ProcessFile(MetadataInfo metadata, List<string> tagNames, bool autoConfirm)
     {
+        if (!new FileInfo(metadata.Path).Exists)
+        {
+            return;
+        }
+        
         bool trackInfoUpdated = false;
         Track track = new Track(metadata.Path);
-        UpdateTag(track, tagName, string.Empty, ref trackInfoUpdated);
+
+        foreach (string tagName in tagNames)
+        {
+            UpdateTag(track, tagName, string.Empty, ref trackInfoUpdated);
+        }
 
         if (!trackInfoUpdated)
         {

@@ -213,7 +213,7 @@ public class MetadataRepository
     }
     
     
-    public List<MetadataInfo> GetMetadataByTagRecords(string artistName, string tagName)
+    public List<MetadataInfo> GetMetadataByTagRecords(string artistName, List<String> tagNames)
     {
         string query = @$"SELECT m.MetadataId, 
                                   m.Path, 
@@ -260,7 +260,11 @@ public class MetadataRepository
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
                         where lower(artist.name) = lower(@artistName)
-                        and LENGTH(tag_alljsontags->>@tagName) > 0";
+                        AND EXISTS (
+                            SELECT 1
+                            FROM jsonb_each_text(m.tag_alljsontags) AS tags
+                            WHERE tags.key = ANY(@tagNames) AND LENGTH(tags.value) > 0
+                        )";
 
         using var conn = new NpgsqlConnection(_connectionString);
 
@@ -268,7 +272,7 @@ public class MetadataRepository
             .Query<MetadataInfo>(query, new
             {
                 artistName,
-                tagName
+                tagNames
             }).ToList();
     }
     
