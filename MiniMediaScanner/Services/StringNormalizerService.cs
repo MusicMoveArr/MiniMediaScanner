@@ -16,6 +16,8 @@ public class StringNormalizerService
         input = input.Replace('–', '-'); //en dash -> hypen
         input = input.Replace('—', '-'); //em dash -> hypen
         input = input.Replace("…", "..."); //horizontal ellipsis -> 3 dots
+        input = input.Replace("\u00d7", "x"); //very similar "x" looking character
+        input = input.Replace("\u2502", "|"); //very similar "|" looking character
             
         // Words to exclude from capitalization (except if they're the first word)
         HashSet<string> smallWords = new HashSet<string> { "of", "the", "and", "in", "on", "at", "for", "to", "a" };
