@@ -8,7 +8,7 @@ namespace MiniMediaScanner.Services;
 
 public class MusicBrainzAPIService
 {
-    private Stopwatch _stopwatch = Stopwatch.StartNew();
+    private static Stopwatch _stopwatch = Stopwatch.StartNew();
     
     public MusicBrainzArtistModel? GetArtist(string musicBrainzArtistId)
     {

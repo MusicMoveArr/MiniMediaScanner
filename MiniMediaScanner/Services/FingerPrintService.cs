@@ -17,6 +17,7 @@ public class FingerPrintService
                 Arguments = $"-json \"{filePath}\"",  // Path to the audio file
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
+                RedirectStandardError = true,
                 CreateNoWindow = true
             }
         };
@@ -25,12 +26,6 @@ public class FingerPrintService
         process.Start();
         string output = process.StandardOutput.ReadToEnd();
         process.WaitForExit();
-
-        // Check if fingerprint was successfully generated
-        if (process.ExitCode != 0)
-        {
-            return null;
-        }
 
         return ParseFingerprint(output);
     }

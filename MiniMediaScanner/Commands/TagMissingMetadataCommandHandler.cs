@@ -29,7 +29,7 @@ public class TagMissingMetadataCommandHandler
         _normalizerService = new StringNormalizerService();
         _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
     }
-
+    
     public void FingerPrintMedia(string accoustId, bool write, string album, bool overwriteTagValue)
     {
         _artistRepository.GetAllArtistNames()

@@ -78,11 +78,12 @@ public class MetadataRepository
                      left join metadata m on
 	                     (m.albumid = album.albumid --check by albumid
 	                      and lower(m.title) = ut.track_title)
-	                     or (lower(m.path) like '%/' || ut.album_title || '/%' --check album by path
-	                        and lower(m.path) like '%/' || ut.artist_name || '/%' --check album by artist
+	                     or (m.path ilike '%/' || ut.album_title || '/%' --check album by path
+	                        and m.path ilike '%/' || ut.artist_name || '/%' --check album by artist
 	                         and lower(m.title) = ut.track_title)
-	                     or (lower(m.path) like '%/' || ut.artist_name || '/%' --check by just the arist path
+	                     or (m.path ilike '%/' || ut.artist_name || '/%' --check by just the arist path
 	                         and lower(m.title) = ut.track_title)
+	                     or (lower(m.title) = ut.track_title and m.path ilike '%' || ut.artist_name || '%')
  
                      where ut.artist_name = lower(@artistName)
                      and ut.track_title not like '%(%'
@@ -210,7 +211,6 @@ public class MetadataRepository
                 artistName
             }).ToList();
     }
-    
     
     
     public List<MetadataInfo> GetMetadataByTagRecords(string artistName, string tagName)
@@ -355,6 +355,21 @@ public class MetadataRepository
             }).ToList();
     }
     
+    public List<string> GetPathByLikePath(string path)
+    {
+        string query = @$"SELECT m.Path
+                        FROM metadata m
+                        where m.path like @path || '%'";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+
+        return conn
+            .Query<string>(query, new
+            {
+                path
+            }).ToList();
+    }
+    
     public List<MetadataModel> GetMetadataByFileExtension(string fileExtension)
     {
         string query = @$"SELECT m.MetadataId, 
@@ -496,6 +511,7 @@ public class MetadataRepository
             ON CONFLICT (Path)
             DO UPDATE SET
                 Title = EXCLUDED.Title,
+                AlbumId = EXCLUDED.AlbumId,
                 Tag_Subtitle = EXCLUDED.Tag_Subtitle,
                 Tag_AlbumSort = EXCLUDED.Tag_AlbumSort,
                 Tag_Comment = EXCLUDED.Tag_Comment,

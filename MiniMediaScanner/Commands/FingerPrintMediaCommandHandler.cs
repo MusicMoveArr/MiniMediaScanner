@@ -22,7 +22,6 @@ public class FingerPrintMediaCommandHandler
         _mediaTagWriteService = new MediaTagWriteService();
     }
     
-
     public void FingerPrintMedia(string album)
     {
         _artistRepository.GetAllArtistNames()

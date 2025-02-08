@@ -12,12 +12,12 @@ public class ImportCommand
     [Command("import")]
     public static void Import(string connectionString, string path)
     {
+        var handler = new ImportCommandHandler(connectionString);
+        
         var sortedTopDirectories = Directory
             .EnumerateFileSystemEntries(path, "*.*", SearchOption.TopDirectoryOnly)
             .OrderBy(dir => dir)
             .ToList();
-
-        var handler = new ImportCommandHandler(connectionString);
         
         sortedTopDirectories
             .AsParallel()

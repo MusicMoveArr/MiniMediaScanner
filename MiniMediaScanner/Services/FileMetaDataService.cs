@@ -12,7 +12,7 @@ public class FileMetaDataService
     private string[] ignoreTags = new string[]
     {
         "GEOB.",
-        "PRIV.TRAKTOR4"
+        "PRIV."
     };
     
     public MetadataInfo GetMetadataInfo(FileInfo fileInfo)

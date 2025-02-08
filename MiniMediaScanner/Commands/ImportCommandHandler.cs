@@ -83,7 +83,6 @@ public class ImportCommandHandler
                 return false;
             }
             
-                        
             ProcessMetadata(metadata);
                 
             if (!string.IsNullOrWhiteSpace(metadata?.MusicBrainzArtistId) &&
