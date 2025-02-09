@@ -108,9 +108,12 @@ public class TagMissingMetadataCommandHandler
         }
         
         string? musicBrainzTrackId = release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Id;
-        string? musicBrainzArtistId = data?.ArtistCredit?.FirstOrDefault()?.Artist?.Id;
+        string? musicBrainzReleaseArtistId = data?.ArtistCredit?.FirstOrDefault()?.Artist?.Id;
         string? musicBrainzAlbumId = release.Id;
         string? musicBrainzReleaseGroupId = release.ReleaseGroup.Id;
+        
+        string artists = string.Join(';', data?.ArtistCredit.Select(artist => artist.Name));
+        string musicBrainzArtistIds = string.Join(';', data?.ArtistCredit.Select(artist => artist.Artist.Id));
 
         if (string.IsNullOrWhiteSpace(track.Title))
         {
@@ -129,17 +132,19 @@ public class TagMissingMetadataCommandHandler
             UpdateTag(track, "Artist", data.ArtistCredit.FirstOrDefault()?.Name, ref trackInfoUpdated, overwriteTagValue);
         }
 
+        UpdateTag(track, "ARTISTS", artists, ref trackInfoUpdated, overwriteTagValue);
+        UpdateTag(track, "ISRC", data.ISRCS.FirstOrDefault(), ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "SCRIPT", release?.TextRepresentation?.Script, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "barcode", release.Barcode, ref trackInfoUpdated, overwriteTagValue);
 
-        UpdateTag(track, "MusicBrainz Artist Id", musicBrainzArtistId, ref trackInfoUpdated, overwriteTagValue);
+        UpdateTag(track, "MusicBrainz Artist Id", musicBrainzArtistIds, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MusicBrainz Track Id", recordingId, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MusicBrainz Release Track Id", musicBrainzTrackId, ref trackInfoUpdated, overwriteTagValue);
-        UpdateTag(track, "MusicBrainz Release Artist Id", musicBrainzArtistId, ref trackInfoUpdated, overwriteTagValue);
+        UpdateTag(track, "MusicBrainz Release Artist Id", musicBrainzReleaseArtistId, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MusicBrainz Release Group Id", musicBrainzReleaseGroupId, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MusicBrainz Release Id", release.Id, ref trackInfoUpdated, overwriteTagValue);
 
-        UpdateTag(track, "MusicBrainz Album Artist Id", musicBrainzArtistId, ref trackInfoUpdated, overwriteTagValue);
+        UpdateTag(track, "MusicBrainz Album Artist Id", musicBrainzArtistIds, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MusicBrainz Album Id", musicBrainzAlbumId, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MusicBrainz Album Type", release.ReleaseGroup.PrimaryType, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MusicBrainz Album Release Country", release.Country, ref trackInfoUpdated, overwriteTagValue);

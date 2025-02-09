@@ -196,6 +196,10 @@ public class MediaTagWriteService
                 track.AdditionalFields[GetFieldName(track, "Acoustid Fingerprint")] = value;
                 updated = IsDictionaryUpdated(track, oldValues, "Acoustid Fingerprint");
                 return true;
+            case "isrcs":
+                updated = !string.Equals(track.ISRC, value);
+                track.ISRC = value;
+                return true;
         }
 
         return false;
