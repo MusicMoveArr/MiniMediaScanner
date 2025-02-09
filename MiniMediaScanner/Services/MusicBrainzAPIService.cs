@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using System.Text.Json;
-using MiniMediaScanner.JsonConverters;
 using MiniMediaScanner.Models;
+using Polly;
+using Polly.Retry;
 using RestSharp;
 
 namespace MiniMediaScanner.Services;
@@ -12,79 +12,80 @@ public class MusicBrainzAPIService
     
     public MusicBrainzArtistModel? GetArtist(string musicBrainzArtistId)
     {
-        DelayAPICall();
+        RetryPolicy retryPolicy = GetRetryPolicy();
         Console.WriteLine($"Requesting MusicBrainz GetArtist '{musicBrainzArtistId}'");
+        string url = $"https://musicbrainz.org/ws/2/release?artist={musicBrainzArtistId}&fmt=json";
 
-        try
+        return retryPolicy.Execute(() =>
         {
-            string url = $"https://musicbrainz.org/ws/2/release?artist={musicBrainzArtistId}&fmt=json";
-
             using RestClient client = new RestClient(url);
             RestRequest request = new RestRequest();
             var response =  client.Get<MusicBrainzArtistModel>(request);
             
             _stopwatch.Restart();
             return response;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
-        return null;
+        });
     }
     public MusicBrainzArtistInfoModel? GetArtistInfo(string musicBrainzArtistId)
     {
-        DelayAPICall();
+        RetryPolicy retryPolicy = GetRetryPolicy();
         Console.WriteLine($"Requesting MusicBrainz GetArtistInfo '{musicBrainzArtistId}'");
-        
-        try
-        {
-            string url = $"https://musicbrainz.org/ws/2/artist/{musicBrainzArtistId}?inc=aliases&fmt=json";
+        string url = $"https://musicbrainz.org/ws/2/artist/{musicBrainzArtistId}?inc=aliases&fmt=json";
 
+        return retryPolicy.Execute(() =>
+        {
             using RestClient client = new RestClient(url);
             RestRequest request = new RestRequest();
             var response =   client.Get<MusicBrainzArtistInfoModel>(request);
             
             _stopwatch.Restart();
             return response;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
-        return null;
+        });
     }
     public MusicBrainzReleaseModel? GetTracks(string musicBrainzAlbumId)
     {
-        DelayAPICall();
+        RetryPolicy retryPolicy = GetRetryPolicy();
         Console.WriteLine($"Requesting MusicBrainz Tracks '{musicBrainzAlbumId}'");
-        
-        try
-        {
-            string url = $"https://musicbrainz.org/ws/2/release/{musicBrainzAlbumId}?inc=recordings&fmt=json";
+        string url = $"https://musicbrainz.org/ws/2/release/{musicBrainzAlbumId}?inc=recordings&fmt=json";
 
+        return retryPolicy.Execute(() =>
+        {
             using RestClient client = new RestClient(url);
             RestRequest request = new RestRequest();
             var response =  client.Get<MusicBrainzReleaseModel>(request);
             
             _stopwatch.Restart();
             return response;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
-        }
-        return null;
+        });
+            
     }
-    public MusicBrainzArtistRelationModel GetExternalLinks(string musicBrainzArtistId)
+    public MusicBrainzArtistReleaseModel? GetReleaseWithLabel(string musicBrainzReleaseId)
     {
-        DelayAPICall();
-        Console.WriteLine("Requesting MusicBrainz external links");
+        RetryPolicy retryPolicy = GetRetryPolicy();
+        //ServiceUnavailable
         
-        try
-        {
-            string url = $"https://musicbrainz.org/ws/2/artist/{musicBrainzArtistId}?inc=url-rels&fmt=json";
+        Console.WriteLine($"Requesting MusicBrainz GetReleaseWithLabel '{musicBrainzReleaseId}'");
+        string url = $"https://musicbrainz.org/ws/2/release/{musicBrainzReleaseId}?inc=labels&fmt=json";
 
+        return retryPolicy.Execute(() =>
+        {
+            using RestClient client = new RestClient(url);
+            RestRequest request = new RestRequest();
+            var response =  client.Get<MusicBrainzArtistReleaseModel>(request);
+            
+            _stopwatch.Restart();
+            return response;
+        });
+    }
+    
+    public MusicBrainzArtistRelationModel? GetExternalLinks(string musicBrainzArtistId)
+    {
+        RetryPolicy retryPolicy = GetRetryPolicy();
+        Console.WriteLine("Requesting MusicBrainz external links");
+        string url = $"https://musicbrainz.org/ws/2/artist/{musicBrainzArtistId}?inc=url-rels&fmt=json";
+
+        return retryPolicy.Execute(() =>
+        {
             using RestClient client = new RestClient(url);
             
             RestRequest request = new RestRequest();
@@ -92,23 +93,19 @@ public class MusicBrainzAPIService
 
             _stopwatch.Restart();
             return response;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
-        }
-        return null;
+        });
     }
     
-    public MusicBrainzArtistModel GetRecordingById(string recordingId)
+    public MusicBrainzArtistModel? GetRecordingById(string recordingId)
     {
-        DelayAPICall();
+        RetryPolicy retryPolicy = GetRetryPolicy();
+        //ServiceUnavailable
+        
         Console.WriteLine($"Requesting MusicBrainz GetRecordingById, {recordingId}");
+        string url = $"https://musicbrainz.org/ws/2/recording/{recordingId}?fmt=json&inc=isrcs+artists+releases+release-groups+url-rels+media";
 
-        try
+        return retryPolicy.Execute(() =>
         {
-            string url = $"https://musicbrainz.org/ws/2/recording/{recordingId}?fmt=json&inc=isrcs+artists+releases+release-groups+url-rels+media";
-
             using RestClient client = new RestClient(url);
             RestRequest request = new RestRequest();
             
@@ -116,45 +113,36 @@ public class MusicBrainzAPIService
 
             _stopwatch.Restart();
             return response;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
-        }
-        return null;
+        });
     }
     
     public MusicBrainzArtistModel? GetReleasesForArtist(string artistId, int limit, int offset)
     {
-        DelayAPICall();
-        
-        // Build the URL with the artistId, limit, and offset
+        RetryPolicy retryPolicy = GetRetryPolicy();
         var url = $"https://musicbrainz.org/ws/2/release?artist={artistId}&inc=recordings&fmt=json&limit={limit}&offset={offset}";
 
         Console.WriteLine($"Requesting MusicBrainz Releases '{artistId}', limit '{limit}', offset '{offset}'");
-        
-        try
+
+        return retryPolicy.Execute(() =>
         {
-            // Make the HTTP GET request
             using RestClient client = new RestClient(url);
             RestRequest request = new RestRequest();
             var response = client.Get<MusicBrainzArtistModel>(request);
 
             _stopwatch.Restart();
             return response;
-        }
-        catch (HttpRequestException e)
-        {
-            Console.WriteLine(e.Message);
-        }
-        return null;
+        });
     }
-    
-    private void DelayAPICall()
+
+    private RetryPolicy GetRetryPolicy()
     {
-        if (_stopwatch.ElapsedMilliseconds < 1000)
-        {
-            Thread.Sleep(1000);
-        }
+        RetryPolicy retryPolicy = Policy
+            .Handle<HttpRequestException>()
+            .WaitAndRetry(5, retryAttempt => 
+                    TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                (exception, timeSpan, retryCount, context) => {
+                    Console.WriteLine($"Retry {retryCount} after {timeSpan.TotalSeconds} sec due to: {exception.Message}");
+                });
+        return retryPolicy;
     }
 }

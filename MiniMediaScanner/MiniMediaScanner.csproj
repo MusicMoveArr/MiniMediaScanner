@@ -19,6 +19,7 @@
       <PackageReference Include="FFMpegCore" Version="5.1.0" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
       <PackageReference Include="Npgsql" Version="9.0.2" />
+      <PackageReference Include="Polly" Version="8.5.2" />
       <PackageReference Include="Quartz" Version="3.13.1" />
       <PackageReference Include="RestSharp" Version="112.1.0" />
       <PackageReference Include="SmartFormat" Version="3.5.3" />
