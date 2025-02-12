@@ -11,7 +11,7 @@ public class AcoustIdService
 {
     public JObject? LookupAcoustId(string acoustIdApiKey, string fingerprint, int duration)
     {
-        if (string.IsNullOrWhiteSpace(acoustIdApiKey))
+        if (string.IsNullOrWhiteSpace(acoustIdApiKey) || duration <= 0)
         {
             return null;
         }
