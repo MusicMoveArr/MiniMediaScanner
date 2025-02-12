@@ -33,6 +33,7 @@ public class FingerPrintMediaCommandHandler
         Console.WriteLine($"Processing artist '{artist}'");
         var metadata = _metadataRepository.GetAllMetadataPathsByMissingFingerprint(artist)
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
+            .Where(metadata => new FileInfo(metadata.Path).Exists)
             .ToList();
         
         metadata
@@ -56,7 +57,6 @@ public class FingerPrintMediaCommandHandler
         if (sw.Elapsed.Seconds >= 5)
         {
             Console.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss")}] Generated FingerPrints: {generatedFingers}");
-            generatedFingers = 0;
             sw.Restart();
         }
         
