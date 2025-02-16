@@ -11,8 +11,12 @@ public class FileMetaDataService
 
     private string[] ignoreTags = new string[]
     {
+        "GEO.Serato",
         "GEOB.",
-        "PRIV."
+        "PRIV.",
+        "NCON",
+        "RVA2",
+        "EO"
     };
     
     public MetadataInfo GetMetadataInfo(FileInfo fileInfo)
