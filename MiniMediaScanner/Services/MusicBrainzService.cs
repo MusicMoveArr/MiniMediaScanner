@@ -5,7 +5,6 @@ namespace MiniMediaScanner.Services;
 public class MusicBrainzService
 {
     private readonly MusicBrainzAPIService _musicBrainzApiService;
-    private readonly List<string> _musicBrainzIds = new List<string>();
     private const int BulkRequestLimit = 100;
     private readonly MusicBrainzArtistRepository _musicBrainzArtistRepository;
     private readonly MusicBrainzReleaseRepository _musicBrainzReleaseRepository;
@@ -53,12 +52,18 @@ public class MusicBrainzService
     {
         try
         {
-            if (_musicBrainzIds.Contains(musicBrainzArtistId) ||
-                (!updateExisting && _musicBrainzArtistRepository.GetRemoteMusicBrainzArtist(musicBrainzArtistId).HasValue))
+            if (!updateExisting && _musicBrainzArtistRepository.GetRemoteMusicBrainzArtistId(musicBrainzArtistId).HasValue)
             {
                 return;
             }
-            _musicBrainzIds.Add(musicBrainzArtistId);
+
+            DateTime lastSyncTime = _musicBrainzArtistRepository.GetBrainzArtistLastSyncTime(musicBrainzArtistId);
+
+            if (DateTime.Now.Subtract(lastSyncTime).TotalDays < 7)
+            {
+                Console.WriteLine($"Skipped synchronizing for MusicBrainzArtistId '{musicBrainzArtistId}' synced already within 7days");
+                return;
+            }
             
             var musicBrainzArtistInfo = _musicBrainzApiService.GetArtistInfo(musicBrainzArtistId);
 

@@ -96,7 +96,8 @@ public class MusicBrainzArtistRepository
                              Type = EXCLUDED.Type, 
                              Country = EXCLUDED.Country, 
                              SortName = EXCLUDED.SortName, 
-                             Disambiguation = EXCLUDED.Disambiguation
+                             Disambiguation = EXCLUDED.Disambiguation,
+                             lastsynctime = current_timestamp
                          RETURNING MusicBrainzArtistId";
         Guid artistId = Guid.NewGuid();
         using var conn = new NpgsqlConnection(_connectionString);
@@ -113,7 +114,7 @@ public class MusicBrainzArtistRepository
             });
     }
     
-    public Guid? GetRemoteMusicBrainzArtist(string remoteMusicBrainzArtistId)
+    public Guid? GetRemoteMusicBrainzArtistId(string remoteMusicBrainzArtistId)
     {
         string query = @"SELECT MusicBrainzArtistId FROM MusicBrainzArtist WHERE MusicBrainzRemoteId = @id";
 
@@ -123,6 +124,17 @@ public class MusicBrainzArtistRepository
             {
                 id = remoteMusicBrainzArtistId
             });
+    }
+    public DateTime GetBrainzArtistLastSyncTime(string remoteMusicBrainzArtistId)
+    {
+        string query = @"SELECT lastsynctime FROM MusicBrainzArtist WHERE MusicBrainzRemoteId = @id";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+
+        return conn.ExecuteScalar<DateTime>(query, new
+        {
+            id = remoteMusicBrainzArtistId
+        });
     }
 
 

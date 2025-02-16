@@ -129,3 +129,4 @@ alter table musicbrainzreleasetrack add column mediaformat text null;
 alter table musicbrainzreleasetrack add column mediatitle text null;
 alter table musicbrainzreleasetrack add column mediaposition int default 0;
 alter table musicbrainzreleasetrack add column mediatrackoffset int default 0;
+ALTER TABLE public.musicbrainzartist ADD lastsynctime timestamp DEFAULT current_timestamp;
