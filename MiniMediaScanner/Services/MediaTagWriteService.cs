@@ -200,6 +200,10 @@ public class MediaTagWriteService
                 updated = !string.Equals(track.ISRC, value);
                 track.ISRC = value;
                 return true;
+            case "label":
+                track.AdditionalFields[GetFieldName(track, "LABEL")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "LABEL");
+                return true;
         }
 
         return false;
