@@ -49,7 +49,7 @@ public class ImportCommandHandler
     public bool ProcessFile(string filePath, bool forceReimport = false)
     {
         var metadata = default(MetadataInfo);
-        
+
         try
         {
             if (!MediaFileExtensions.Any(ext => filePath.EndsWith(ext)))

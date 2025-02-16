@@ -46,6 +46,8 @@ public class TagMissingMetadataCommandHandler
         Console.WriteLine($"Checking artist '{artist}', found {metadata.Count} tracks to process");
 
         metadata
+            .Where(metadata => new FileInfo(metadata.Path).Exists)
+            .ToList()
             .ForEach(metadata =>
             {
                 try
@@ -67,13 +69,13 @@ public class TagMissingMetadataCommandHandler
         var recordingId = acoustIdLookup?["results"]?.FirstOrDefault()?["recordings"]?.FirstOrDefault()?["id"]?.ToString();
         var acoustId = acoustIdLookup?["results"]?.FirstOrDefault()?["id"]?.ToString();
 
+        
         //var recordingRecord = _musicBrainzArtistRepository.GetMusicBrainzArtistByRecordingId(recordingId);
         if (string.IsNullOrWhiteSpace(recordingId))
         {
             Console.WriteLine($"No recording ID found from AcoustID for '{metadata.Path}'");
             return;
         }
-
         
         var data = _musicBrainzAPIService.GetRecordingById(recordingId);
         MusicBrainzArtistReleaseModel? release = data?.Releases?.FirstOrDefault();
@@ -90,8 +92,31 @@ public class TagMissingMetadataCommandHandler
             return;
         }
 
-        bool trackInfoUpdated = false;
+        
         Track track = new Track(metadata.Path);
+        bool trackInfoUpdated = false;
+        string? musicBrainzTrackId = release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Id;
+        string? musicBrainzReleaseArtistId = data?.ArtistCredit?.FirstOrDefault()?.Artist?.Id;
+        string? musicBrainzAlbumId = release.Id;
+        string? musicBrainzReleaseGroupId = release.ReleaseGroup.Id;
+        
+        string artists = string.Join(';', data?.ArtistCredit.Select(artist => artist.Name));
+        string musicBrainzArtistIds = string.Join(';', data?.ArtistCredit.Select(artist => artist.Artist.Id));
+        string isrcs = data?.ISRCS != null ? string.Join(';', data?.ISRCS) : string.Empty;
+
+        MusicBrainzArtistReleaseModel withLabeLInfo = _musicBrainzAPIService.GetReleaseWithLabel(release.Id);
+        var label = withLabeLInfo?.LabeLInfo?.FirstOrDefault(label => label?.Label?.Type?.ToLower().Contains("production") == true);
+
+        if (label == null && withLabeLInfo?.LabeLInfo?.Count == 1)
+        {
+            label = withLabeLInfo?.LabeLInfo?.FirstOrDefault();
+        }
+
+        if (!string.IsNullOrWhiteSpace(label?.Label?.Name))
+        {
+            UpdateTag(track, "LABEL", label?.Label.Name, ref trackInfoUpdated, overwriteTagValue);
+            UpdateTag(track, "CATALOGNUMBER", label?.CataLogNumber, ref trackInfoUpdated, overwriteTagValue);
+        }
 
         if ((!track.Date.HasValue ||
              track.Date.Value.ToString("yyyy-MM-dd") != release.Date))
@@ -106,14 +131,6 @@ public class TagMissingMetadataCommandHandler
             UpdateTag(track, "date", release.Date, ref trackInfoUpdated, overwriteTagValue);
             UpdateTag(track, "originaldate", release.Date, ref trackInfoUpdated, overwriteTagValue);
         }
-        
-        string? musicBrainzTrackId = release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Id;
-        string? musicBrainzReleaseArtistId = data?.ArtistCredit?.FirstOrDefault()?.Artist?.Id;
-        string? musicBrainzAlbumId = release.Id;
-        string? musicBrainzReleaseGroupId = release.ReleaseGroup.Id;
-        
-        string artists = string.Join(';', data?.ArtistCredit.Select(artist => artist.Name));
-        string musicBrainzArtistIds = string.Join(';', data?.ArtistCredit.Select(artist => artist.Artist.Id));
 
         if (string.IsNullOrWhiteSpace(track.Title))
         {
@@ -123,17 +140,17 @@ public class TagMissingMetadataCommandHandler
         {
             UpdateTag(track, "Album", release.Title, ref trackInfoUpdated, overwriteTagValue);
         }
-        if (string.IsNullOrWhiteSpace(track.AlbumArtist))
+        if (string.IsNullOrWhiteSpace(track.AlbumArtist)  || track.AlbumArtist.ToLower().Contains("various"))
         {
             UpdateTag(track, "AlbumArtist", data.ArtistCredit.FirstOrDefault()?.Name, ref trackInfoUpdated, overwriteTagValue);
         }
-        if (string.IsNullOrWhiteSpace(track.Artist))
+        if (string.IsNullOrWhiteSpace(track.Artist) || track.Artist.ToLower().Contains("various"))
         {
             UpdateTag(track, "Artist", data.ArtistCredit.FirstOrDefault()?.Name, ref trackInfoUpdated, overwriteTagValue);
         }
 
         UpdateTag(track, "ARTISTS", artists, ref trackInfoUpdated, overwriteTagValue);
-        UpdateTag(track, "ISRC", data.ISRCS.FirstOrDefault(), ref trackInfoUpdated, overwriteTagValue);
+        UpdateTag(track, "ISRC", isrcs, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "SCRIPT", release?.TextRepresentation?.Script, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "barcode", release.Barcode, ref trackInfoUpdated, overwriteTagValue);
 

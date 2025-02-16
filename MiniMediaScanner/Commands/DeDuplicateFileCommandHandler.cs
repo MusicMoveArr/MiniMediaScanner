@@ -25,10 +25,54 @@ public class DeDuplicateFileCommandHandler
     
     public void CheckDuplicateFiles(string artistName, bool delete)
     {
+        FindDuplicateAlbumFileNames(artistName, delete);
         FindDuplicateFileExtensions(artistName, delete);
         FindDuplicateFileVersions(artistName, delete);
     }
 
+    private void FindDuplicateAlbumFileNames(string artistName, bool delete)
+    {
+        var duplicateFiles = _metadataRepository.GetDuplicateAlbumFileNames(artistName)
+            .GroupBy(group => new { group.AlbumId, group.FileName });
+
+        foreach (var duplicateFileVersions in duplicateFiles)
+        {
+            var recordToKeep = duplicateFileVersions
+                .FirstOrDefault(path => new FileInfo(path.Path).Exists);
+
+            if (recordToKeep == null)
+            {
+                continue;
+            }
+
+            var toRemove = duplicateFileVersions
+                .Where(file => !string.Equals(recordToKeep.Path, file.Path))
+                .Where(file => new FileInfo(file.Path).Exists)
+                .ToList();
+
+            if (toRemove.Count == 0)
+            {
+                continue;
+            }
+
+            Console.WriteLine($"Keeping file {recordToKeep.Path}");
+            foreach (var file in toRemove)
+            {
+                if (delete)
+                {
+                    Console.WriteLine($"Delete duplicate file {file.Path}");
+                    new FileInfo(file.Path).Delete();
+                    _metadataRepository.DeleteMetadataRecords(new List<string>(new string[] { file.MetadataId.ToString() }));
+                }
+                else
+                {
+                    Console.WriteLine($"Duplicate file {file.Path}");
+                }
+            }
+            Console.WriteLine($"");
+        }
+    }
+    
     private void FindDuplicateFileExtensions(string artistName, bool delete)
     {
         var duplicateFiles = _metadataRepository.GetDuplicateFileExtensions(artistName)
@@ -61,6 +105,7 @@ public class DeDuplicateFileCommandHandler
                 continue;
             }
 
+            Console.WriteLine($"Keeping file {recordToKeep.Path}");
             foreach (var file in toRemove)
             {
                 if (delete)
@@ -74,6 +119,7 @@ public class DeDuplicateFileCommandHandler
                     Console.WriteLine($"Duplicate file {file.Path}");
                 }
             }
+            Console.WriteLine($"");
         }
     }
     
@@ -125,6 +171,7 @@ public class DeDuplicateFileCommandHandler
                 continue;
             }
 
+            Console.WriteLine($"Keeping file {nonDuplicateRecord.Path}");
             if (delete)
             {
                 Console.WriteLine($"Delete duplicate file {possibleDuplicateFile.Path}");
@@ -134,6 +181,7 @@ public class DeDuplicateFileCommandHandler
             {
                 Console.WriteLine($"Duplicate file {possibleDuplicateFile.Path}");
             }
+            Console.WriteLine($"");
         }
     }
 }

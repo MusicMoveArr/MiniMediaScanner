@@ -13,4 +13,6 @@ public class MetadataModel
     public int Tag_TrackCount { get; set; }
     public int Tag_Disc { get; set; }
     public int Tag_DiscCount { get; set; }
+    
+    public string Tag_AcoustIdFingerprint { get; set; }
 }

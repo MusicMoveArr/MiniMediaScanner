@@ -8,15 +8,22 @@ public class MissingCommandHandler
 {
     private readonly ArtistRepository _artistRepository;
     private readonly MetadataRepository _metadataRepository;
+    private readonly MissingRepository _missingRepository;
 
     public MissingCommandHandler(string connectionString)
     {
         _artistRepository = new ArtistRepository(connectionString);
         _metadataRepository = new MetadataRepository(connectionString);
+        _missingRepository = new MissingRepository(connectionString);
     }
     
     public void CheckMissingTracksByArtist(string artistName)
     {
+        //var musicBrainzRecords = _missingRepository.GetMusicBrainzRecords(artistName);
+        //var associatedArtists = _missingRepository.GetAssociatedArtists(artistName);
+        
+        
+        
         _metadataRepository.GetMissingTracksByArtist(artistName)
             .ToList()
             .ForEach(track =>

@@ -61,7 +61,7 @@ public class MetadataRepository
                                  JOIN musicbrainzrelease re 
                                      ON re.musicbrainzartistid = CAST(ar.musicbrainzartistid AS TEXT)
                                      --AND lower(re.country) = lower(ar.country)
-                                     --and lower(re.status) = 'official'
+                                      AND (lower(re.status) = 'official' OR LENGTH(re.status) = 0)
                                  JOIN musicbrainzreleasetrack track 
                                      ON track.musicbrainzremotereleaseid = re.musicbrainzremotereleaseid
                          ) AS subquery
@@ -83,10 +83,9 @@ public class MetadataRepository
 	                         and lower(m.title) = ut.track_title)
 	                     or (m.path ilike '%/' || ut.artist_name || '/%' --check by just the arist path
 	                         and lower(m.title) = ut.track_title)
-	                     or (lower(m.title) = ut.track_title and m.path ilike '%' || ut.artist_name || '%')
+	                     or (lower(m.title) = ut.track_title and m.path ilike '%/' || ut.artist_name || '/%')
  
                      where ut.artist_name = lower(@artistName)
-                     and ut.track_title not like '%(%'
                      and m.metadataid is null";
 
         using var conn = new NpgsqlConnection(_connectionString);
@@ -148,6 +147,35 @@ public class MetadataRepository
                 })
             .ToList();
     }
+    public List<DuplicateAlbumFileNameModel> GetDuplicateAlbumFileNames(string artistName)
+    {
+        string query = @"WITH duplicates AS (
+                             SELECT 
+                                 m.MetadataId,
+                                 m.Path,
+                                 m.Title,
+                                 album.AlbumId,
+                                 REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g') AS FileName,
+                                 COUNT(*) OVER (PARTITION BY album.albumId, REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g')) AS duplicate_count
+                             FROM artists artist
+                             JOIN albums album ON album.artistid = artist.artistid
+                             JOIN metadata m ON m.albumid = album.albumid
+                             WHERE LOWER(artist.name) = LOWER(@artistName)
+                         )
+                         SELECT MetadataId, Path, Title, AlbumId, FileName, duplicate_count
+                         FROM duplicates
+                         WHERE duplicate_count > 1
+                         ORDER BY albumId, FileName, Path";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn.Query<DuplicateAlbumFileNameModel>(query, 
+                new
+                {
+                    artistName
+                })
+            .ToList();
+    }
     
     public List<MetadataInfo> GetMissingMusicBrainzMetadataRecords(string artistName)
     {
@@ -199,7 +227,8 @@ public class MetadataRepository
                         and (length(m.MusicBrainzArtistId) = 0 or 
                               length(m.MusicBrainzTrackId) = 0 or
                               length(m.MusicBrainzReleaseArtistId) = 0 or
-                              length(m.MusicBrainzReleaseArtistId) = 0)
+                              length(m.MusicBrainzReleaseArtistId) = 0 or
+                              tag_alljsontags->>'ARTISTS' is null)
                               and length(m.tag_acoustidfingerprint) > 0
                               and m.Tag_AcoustIdFingerPrint_Duration > 0";
 
@@ -260,7 +289,7 @@ public class MetadataRepository
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
                         where lower(artist.name) = lower(@artistName)
-                        AND EXISTS (
+                         AND EXISTS (
                             SELECT 1
                             FROM jsonb_each_text(m.tag_alljsontags) AS tags
                             WHERE tags.key = ANY(@tagNames) AND LENGTH(tags.value) > 0
@@ -273,7 +302,7 @@ public class MetadataRepository
             {
                 artistName,
                 tagNames
-            }).ToList();
+            }, commandTimeout: 120).ToList();
     }
     
     public List<MetadataModel> GetAllMetadataPathsByMissingFingerprint(string artistName)
@@ -283,8 +312,8 @@ public class MetadataRepository
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
                         where lower(artist.name) = lower(@artistName)
-                        and (length( m.tag_acoustidfingerprint) = 0 )
-                           -- or m.tag_acoustidfingerprint_duration = 0)";
+                        and (length( m.tag_acoustidfingerprint) = 0
+                            or m.tag_acoustidfingerprint_duration = 0)";
 
         using var conn = new NpgsqlConnection(_connectionString);
         
@@ -346,7 +375,8 @@ public class MetadataRepository
         string query = @$"SELECT m.MetadataId, 
                                  m.Path, 
                                  m.Title, 
-                                 m.AlbumId
+                                 m.AlbumId,
+                                 m.tag_acoustidfingerprint
                         FROM metadata m
                         where m.path = @path";
 
@@ -540,8 +570,8 @@ public class MetadataRepository
                 Tag_Publisher = EXCLUDED.Tag_Publisher,
                 Tag_ISRC = EXCLUDED.Tag_ISRC,
                 Tag_Length = EXCLUDED.Tag_Length,
-                Tag_AcoustIdFingerPrint = EXCLUDED.Tag_AcoustIdFingerPrint,
-                Tag_AcoustId = EXCLUDED.Tag_AcoustId,
+                Tag_AcoustIdFingerPrint = COALESCE(metadata.Tag_AcoustIdFingerPrint, EXCLUDED.Tag_AcoustIdFingerPrint),
+                Tag_AcoustId = COALESCE(metadata.Tag_AcoustId, EXCLUDED.Tag_AcoustId),
                 File_LastWriteTime = EXCLUDED.File_LastWriteTime,
                 File_CreationTime = EXCLUDED.File_CreationTime,
                 Tag_AllJsonTags = EXCLUDED.Tag_AllJsonTags::jsonb,

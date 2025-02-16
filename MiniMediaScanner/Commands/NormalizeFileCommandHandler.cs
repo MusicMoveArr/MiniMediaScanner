@@ -135,15 +135,11 @@ public class NormalizeFileCommandHandler
             return false;
         }
         
-        DirectoryInfo? subDirectory = fileInfo.Directory!;
-        for (int i = 0; i < subDirectoryDepth; i++)
+        DirectoryInfo? musicRootDirectory = GetMusicRootFolder(fileInfo, file.ArtistName, subDirectoryDepth);
+        if(musicRootDirectory == null)
         {
-            subDirectory = subDirectory?.Parent;
-            if (subDirectory == null)
-            {
-                Console.WriteLine($"Depth is too low, directory does not exist for '{fileInfo.Directory?.FullName}'");
-                return false;
-            }
+            Console.WriteLine($"Depth is too low, directory does not exist for '{fileInfo.Directory?.FullName}'");
+            return false;
         }
 
         string oldArtistName = file.ArtistName;
@@ -156,15 +152,17 @@ public class NormalizeFileCommandHandler
         
         string newFileName = $"{GetFormatName(file, fileFormat, directorySeperator)}{fileInfo.Extension}";
         string newDirectoryName = $"{GetFormatName(file, directoryFormat, directorySeperator)}";
+        newDirectoryName = GetDirectoryCaseInsensitive(musicRootDirectory, newDirectoryName);
+
         string partialNewPath = Path.Combine(newDirectoryName, newFileName);
-        string newFullPath = Path.Combine(subDirectory.FullName, partialNewPath).Trim();
+        string newFullPath = Path.Combine(musicRootDirectory.FullName, partialNewPath).Trim();
         
         FileInfo newFileInfo = new FileInfo(newFullPath);
 
         if (!updatedArtistName && 
             !updatedalbumName && 
             !updatedTitleName && 
-            newFileInfo.Name == fileInfo.Name)
+            newFileInfo.FullName == fileInfo.FullName)
         {
             return false;
         }
@@ -268,5 +266,61 @@ public class NormalizeFileCommandHandler
         }
 
         return input;
+    }
+
+    private string GetDirectoryCaseInsensitive(DirectoryInfo directory, string directoryPath)
+    {
+        DirectoryInfo tempDirectory = directory;
+        string[] subDirectories = directoryPath.Split(Path.DirectorySeparatorChar);
+        List<string> newSubDirectoryNames = new List<string>();
+        foreach (string subDirectory in subDirectories)
+        {
+            if (tempDirectory == null)
+            {
+                newSubDirectoryNames.Add(subDirectory);
+                continue;
+            }
+            string dirName = GetNextDirectoryCaseInsensitive(tempDirectory, subDirectory, out tempDirectory);
+            newSubDirectoryNames.Add(dirName);
+        }
+        
+        return string.Join(Path.DirectorySeparatorChar, newSubDirectoryNames);
+    }
+
+    private string GetNextDirectoryCaseInsensitive(DirectoryInfo directory, string subDirectory, out DirectoryInfo? targetDir)
+    {
+        targetDir = directory.GetDirectories()
+            .OrderBy(dir => dir.Name)
+            .FirstOrDefault(dir => string.Equals(dir.Name, subDirectory, StringComparison.OrdinalIgnoreCase));
+
+        if (targetDir != null)
+        {
+            return targetDir.Name;
+        }
+        return subDirectory;
+    }
+
+    private DirectoryInfo? GetMusicRootFolder(FileInfo fileInfo, string artistName, int subDirectoryDepth)
+    {
+        DirectoryInfo subDirectory = fileInfo.Directory!;
+
+        if (subDirectoryDepth > 0)
+        {
+            for (int i = 0; i < subDirectoryDepth; i++)
+            {
+                subDirectory = subDirectory?.Parent;
+                if (subDirectory == null)
+                {
+                    return null;
+                }
+            }
+            return subDirectory;
+        }
+
+        while (subDirectory != null && !string.Equals(subDirectory.Name, artistName, StringComparison.OrdinalIgnoreCase))
+        {
+            subDirectory = subDirectory.Parent;
+        }
+        return subDirectory.Parent;
     }
 }
