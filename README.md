@@ -36,7 +36,10 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
     The media with the longest file name and contains TrackFilters will get incremented disc number
     This will make it so the normal version of the album stays at disc 1 but remix(etc) gets disc number 1001+
 13. Cover ArtArchive - Grab covers from the CoverArtArchive and save them as cover.jpg
-14. RemoveTag - Remove specific tags from Artist/Albums
+14. Cover Extract - Extract the covers directly from the media files and save them as cover.jpg
+15. RemoveTag - Remove specific tags from Artist/Albums
+16. RefreshMetadata - Simply do a quick refresh of the metadata for an artist/album
+17. SplitArtist - Split Artist is kind of experimental, it will try to split the 2 artist's that have the same name apart into 2 seperate artists
 
 # Examples
 ```
@@ -103,6 +106,27 @@ dotnet MiniMediaScanner.dll normalizefile --connection-string "Host=192.168.1.2;
 --directory-format "{ArtistName}/{AlbumName}" \
 --directory-seperator "_"
 ```
+
+## more Example
+```
+export CONNECTIONSTRING="Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia"
+dotnet MiniMediaScanner.dll import -p ~/Music/
+dotnet MiniMediaScanner.dll deletedmedia -a deadmau5
+dotnet MiniMediaScanner.dll deduplicate -d -a deadmau5
+dotnet MiniMediaScanner.dll fingerprint -a deadmau5
+dotnet MiniMediaScanner.dll tagmissingmetadata --accoustid xxxxx -w -a deadmau5
+dotnet MiniMediaScanner.dll removetag --tag artistsort -a deadmau5
+dotnet MiniMediaScanner.dll removetag --tags ["artistsort", "albumartistsortorder"] --artist deadmau5
+dotnet MiniMediaScanner.dll coverextract --artist deadmau5
+dotnet MiniMediaScanner.dll coverartarchive --artist deadmau5
+dotnet MiniMediaScanner.dll equalizemediatag -t date -wt date -y --artist deadmau5
+dotnet MiniMediaScanner.dll equalizemediatag -t originalyear -wt originalyear -y --artist deadmau5
+dotnet MiniMediaScanner.dll equalizemediatag -t originaldate -wt originaldate -y --artist deadmau5
+dotnet MiniMediaScanner.dll equalizemediatag -t year -wt year -y --artist deadmau5
+dotnet MiniMediaScanner.dll fixversioning -f ["("] --confirm --artist deadmau5
+
+```
+
 
 # Personal way to fix for example artist Pendulum
 What all  of this will do:
