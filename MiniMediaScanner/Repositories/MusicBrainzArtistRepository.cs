@@ -1,6 +1,6 @@
 using Dapper;
-using MiniMediaScanner.Models;
-using MiniMediaScanner.Models.MusicBrainzRecordings;
+using MiniMediaScanner.Models.MusicBrainz;
+using MiniMediaScanner.Models.MusicBrainz.MusicBrainzRecordings;
 using Npgsql;
 using NpgsqlTypes;
 

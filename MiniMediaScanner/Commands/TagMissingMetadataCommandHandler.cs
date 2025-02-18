@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using ATL;
-using MiniMediaScanner.Models;
+using MiniMediaScanner.Models.MusicBrainz;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 using Newtonsoft.Json.Linq;

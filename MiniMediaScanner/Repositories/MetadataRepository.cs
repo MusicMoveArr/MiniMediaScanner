@@ -289,7 +289,7 @@ public class MetadataRepository
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
                         where lower(artist.name) = lower(@artistName)
-                         AND EXISTS (
+                          AND EXISTS (
                             SELECT 1
                             FROM jsonb_each_text(m.tag_alljsontags) AS tags
                             WHERE tags.key = ANY(@tagNames) AND LENGTH(tags.value) > 0
@@ -354,9 +354,9 @@ public class MetadataRepository
                                  m.MusicBrainzReleaseId,
                                  artist.name as ArtistName,
                                  album.title AS AlbumName
-                          FROM metadata m
-                          JOIN albums album ON album.albumid = m.albumid
-                          JOIN artists artist ON artist.artistid = album.artistid
+                          FROM artists artist
+                          JOIN albums album ON album.artistid = artist.artistid
+                          JOIN metadata m ON m.albumid = album.albumid
                           where lower(artist.name) = lower(@artistName)
                                 and length(m.MusicBrainzReleaseId) > 0
                                 and (length(@album) = 0 or @album is null or lower(album.title) = lower(@album))";

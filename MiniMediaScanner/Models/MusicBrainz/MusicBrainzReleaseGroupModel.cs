@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace MiniMediaScanner.Models;
+namespace MiniMediaScanner.Models.MusicBrainz;
 
 public class MusicBrainzReleaseGroupModel
 {

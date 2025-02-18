@@ -34,6 +34,7 @@ public class MediaTagWriteService
                 track.AlbumArtist = value;
                 return true;
             case "albumartistsortorder":
+            case "sort_album_artist":
                 updated = !string.Equals(track.SortAlbumArtist, value);
                 track.SortAlbumArtist = value;
                 return true;
@@ -47,6 +48,10 @@ public class MediaTagWriteService
             case "artists":
                 track.AdditionalFields[GetFieldName(track,"ARTISTS")] = value;
                 updated = IsDictionaryUpdated(track, oldValues, "ARTISTS");
+                return true;
+            case "artists_sort":
+                track.AdditionalFields[GetFieldName(track,"ARTISTS_SORT")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "ARTISTS_SORT");
                 return true;
             case "artist":
                 updated = !string.Equals(track.Artist, value);

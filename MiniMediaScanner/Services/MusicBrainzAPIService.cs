@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using MiniMediaScanner.Models;
+using MiniMediaScanner.Models.MusicBrainz;
 using Polly;
 using Polly.Retry;
 using RestSharp;

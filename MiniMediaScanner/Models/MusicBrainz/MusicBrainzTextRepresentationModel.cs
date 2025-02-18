@@ -1,4 +1,4 @@
-namespace MiniMediaScanner.Models;
+namespace MiniMediaScanner.Models.MusicBrainz;
 
 public class MusicBrainzTextRepresentationModel
 {

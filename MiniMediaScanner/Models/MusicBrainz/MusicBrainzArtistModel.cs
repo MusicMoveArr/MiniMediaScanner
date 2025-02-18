@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using MiniMediaScanner.Models.MusicBrainzRecordings;
+using MiniMediaScanner.Models.MusicBrainz.MusicBrainzRecordings;
 
-namespace MiniMediaScanner.Models;
+namespace MiniMediaScanner.Models.MusicBrainz;
 
 public class MusicBrainzArtistModel
 {

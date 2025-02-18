@@ -1,4 +1,4 @@
-namespace MiniMediaScanner.Models.MusicBrainzRecordings;
+namespace MiniMediaScanner.Models.MusicBrainz.MusicBrainzRecordings;
 
 public class MusicBrainzArtistCreditEntityModel
 {

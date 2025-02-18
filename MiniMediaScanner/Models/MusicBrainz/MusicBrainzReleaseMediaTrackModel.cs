@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using MiniMediaScanner.JsonConverters;
 
-namespace MiniMediaScanner.Models;
+namespace MiniMediaScanner.Models.MusicBrainz;
 
 public class MusicBrainzReleaseMediaTrackModel
 {
