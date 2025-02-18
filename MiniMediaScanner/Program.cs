@@ -36,6 +36,15 @@ public class Program
         string? importPath = Environment.GetEnvironmentVariable("IMPORT_PATH");
         string? cronExpression = Environment.GetEnvironmentVariable("CRON");
         string? connectionString = Environment.GetEnvironmentVariable("CONNECTIONSTRING");
+
+        if (!string.IsNullOrWhiteSpace(connectionString) && 
+            !ConsoleArguments.Any(arg => arg.Equals("-C")) && 
+            !ConsoleArguments.Any(arg => arg.Equals("--connection-string")))
+        {
+            var temp = ConsoleArguments.ToList();
+            temp.AddRange(["--connection-string", connectionString]);
+            ConsoleArguments = temp.ToArray();
+        }
         
         if (!string.IsNullOrWhiteSpace(importPath))
         {
