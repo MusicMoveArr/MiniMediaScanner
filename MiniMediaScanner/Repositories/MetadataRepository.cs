@@ -335,7 +335,8 @@ public class MetadataRepository
                                  tag_trackcount,
                                  tag_disc,
                                  tag_disccount,
-                                 artist.name AS ArtistName
+                                 artist.name AS ArtistName,
+                                 m.MusicBrainzArtistId
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
@@ -348,6 +349,7 @@ public class MetadataRepository
             artistName
         }).ToList();
     }
+    
     public List<MetadataPathCoverModel> GetFolderPathsByArtistForCovers(string artistName, string album)
     {
         string query = @$"SELECT distinct regexp_replace(path, '[^/]+$', '') AS FolderPath, 

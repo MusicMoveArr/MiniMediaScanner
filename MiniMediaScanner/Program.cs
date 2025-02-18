@@ -31,6 +31,7 @@ public class Program
         AppBuilder.Add("coverartarchive", CoverArtArchiveCommand.CoverArtArchive);
         AppBuilder.Add("removetag", RemoveTagCommand.RemoveTag);
         AppBuilder.Add("coverextract", CoverExtractCommand.CoverExtract);
+        AppBuilder.Add("splitartist", SplitArtistCommand.SplitArtist);
         
         string? importPath = Environment.GetEnvironmentVariable("IMPORT_PATH");
         string? cronExpression = Environment.GetEnvironmentVariable("CRON");

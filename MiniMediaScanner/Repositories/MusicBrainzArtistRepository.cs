@@ -137,6 +137,33 @@ public class MusicBrainzArtistRepository
         });
     }
 
+    public List<MusicBrainzSplitArtistModel> GetSplitBrainzArtist(string artistName)
+    {
+        string query = @"SELECT 
+                             a.musicbrainzremoteid,
+                             a.name, 
+                             coalesce(a.country, re.country) as Country, 
+                             a.type, 
+                             re.date,
+                             re.country
+                         FROM musicbrainzartist a
+                         LEFT JOIN LATERAL (
+                             SELECT re.date AS date, re.country
+                             FROM musicbrainzrelease re
+                             WHERE re.musicbrainzartistid = a.musicbrainzartistid::text
+                             ORDER BY re.date ASC
+                             LIMIT 1
+                         ) re ON true
+                         where lower(a.name) = lower(@artistName)
+                         GROUP BY a.musicbrainzremoteid, a.name, coalesce(a.country, re.country), a.type, re.date, re.country";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+
+        return conn.Query<MusicBrainzSplitArtistModel>(query, new
+        {
+            artistName
+        }).ToList();
+    }
 
     public MusicBrainzArtistModel? GetMusicBrainzArtistByRecordingId(string recordingId)
     {
