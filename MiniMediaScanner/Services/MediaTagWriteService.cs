@@ -35,6 +35,7 @@ public class MediaTagWriteService
                 return true;
             case "albumartistsortorder":
             case "sort_album_artist":
+            case "sortalbumartist":
                 updated = !string.Equals(track.SortAlbumArtist, value);
                 track.SortAlbumArtist = value;
                 return true;
@@ -42,6 +43,7 @@ public class MediaTagWriteService
             case "artist-sort":
             case "sort_artist":
             case "artistsortorder":
+            case "sortartist":
                 updated = !string.Equals(track.SortArtist, value);
                 track.SortArtist = value;
                 return true;
