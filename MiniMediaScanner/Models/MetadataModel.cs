@@ -16,4 +16,5 @@ public class MetadataModel
     
     public string Tag_AcoustIdFingerprint { get; set; }
     public string MusicBrainzArtistId { get; set; }
+    public string Tag_AcoustId { get; set; }
 }

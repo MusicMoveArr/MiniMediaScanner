@@ -119,24 +119,22 @@ public class MetadataRepository
     }
     public List<DuplicateFileExtensionModel> GetDuplicateFileExtensions(string artistName)
     {
-        string query = @"SELECT 
-                             m.MetadataId,
-                             m.Path,
-                             m.Title,
-                             album.albumId,
-                             REGEXP_REPLACE(m.Path, '\.([a-zA-Z0-9]{2,5})$', '') AS FilePathWithoutExtension
-                         from artists artist
-                         join albums album on album.artistid = artist.artistid
-                         join metadata m on m.albumid = album.albumid
-                         INNER JOIN (
-                             SELECT 
-                                 REGEXP_REPLACE(Path, '\.([a-zA-Z0-9]{2,5})$', '') AS FilePathWithoutExtension
-                             FROM metadata
-                             GROUP BY FilePathWithoutExtension
-                             HAVING COUNT(*) > 1
-                         ) d ON REGEXP_REPLACE(m.Path, '\.([a-zA-Z0-9]{2,5})$', '') = d.FilePathWithoutExtension
-                         where lower(artist.name) = lower(@artistName)
-                         ORDER BY FilePathWithoutExtension, m.metadataid";
+        string query = @"WITH duplicates AS (
+                              SELECT 
+                                  m.MetadataId,
+                                  m.Path,
+                                  m.Title,
+                                  album.AlbumId,
+                                  REGEXP_REPLACE(m.Path, '\.([a-zA-Z0-9]{2,5})$', '') AS FilePathWithoutExtension,
+                                  COUNT(*) OVER (PARTITION BY album.albumId, REGEXP_REPLACE(m.Path, '\.([a-zA-Z0-9]{2,5})$', '')) AS duplicate_count
+                              FROM artists artist
+                              JOIN albums album ON album.artistid = artist.artistid
+                              JOIN metadata m ON m.albumid = album.albumid
+                              WHERE LOWER(artist.name) = lower(@artistName)
+                          )
+                          SELECT MetadataId, Path, Title, AlbumId, FilePathWithoutExtension, duplicate_count
+                          FROM duplicates
+                          WHERE duplicate_count > 1";
 
         using var conn = new NpgsqlConnection(_connectionString);
         
@@ -173,7 +171,7 @@ public class MetadataRepository
                 new
                 {
                     artistName
-                })
+                }, commandTimeout: 120)
             .ToList();
     }
     
@@ -336,7 +334,8 @@ public class MetadataRepository
                                  tag_disc,
                                  tag_disccount,
                                  artist.name AS ArtistName,
-                                 m.MusicBrainzArtistId
+                                 m.MusicBrainzArtistId,
+                                 m.tag_acoustid
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid

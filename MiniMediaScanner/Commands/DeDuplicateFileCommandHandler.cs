@@ -25,9 +25,17 @@ public class DeDuplicateFileCommandHandler
     
     public void CheckDuplicateFiles(string artistName, bool delete)
     {
-        FindDuplicateAlbumFileNames(artistName, delete);
-        FindDuplicateFileExtensions(artistName, delete);
-        FindDuplicateFileVersions(artistName, delete);
+        Console.WriteLine($"Checking artist '{artistName}'");
+        try
+        {
+            FindDuplicateAlbumFileNames(artistName, delete);
+            FindDuplicateFileExtensions(artistName, delete);
+            FindDuplicateFileVersions(artistName, delete);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
     }
 
     private void FindDuplicateAlbumFileNames(string artistName, bool delete)

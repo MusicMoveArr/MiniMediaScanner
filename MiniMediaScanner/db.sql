@@ -130,3 +130,9 @@ alter table musicbrainzreleasetrack add column mediatitle text null;
 alter table musicbrainzreleasetrack add column mediaposition int default 0;
 alter table musicbrainzreleasetrack add column mediatrackoffset int default 0;
 ALTER TABLE public.musicbrainzartist ADD lastsynctime timestamp DEFAULT current_timestamp;
+
+CREATE INDEX idx_albums_artistid ON albums (artistid);
+CREATE INDEX idx_metadata_albumid ON metadata (albumid);
+
+CREATE INDEX idx_metadata_albumfoldername_filename
+    ON metadata (albumid, REGEXP_REPLACE(Path, '^.*/([^/]*/[^/]+)$', '\1', 'g'));
