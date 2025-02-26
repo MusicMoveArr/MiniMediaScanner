@@ -10,8 +10,9 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 1. Postgres support
 2. Import Full/Partially your entire library multi-threaded
 3. MusicBrainz support (+cached in Postgres)
-4. All commands are multi-threaded for performance
-5. Low memory footprint
+4. Spotify support (+cached in Postgres)
+5. All commands are multi-threaded for performance
+6. Low memory footprint
 
 # Commands
 1. Import - Import Full/Partially your entire library multi-threaded
@@ -40,6 +41,9 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 15. RemoveTag - Remove specific tags from Artist/Albums
 16. RefreshMetadata - Simply do a quick refresh of the metadata for an artist/album
 17. SplitArtist - Split Artist is kind of experimental, it will try to split the 2 artist's that have the same name apart into 2 seperate artists
+18. Stats - Show basic stats of your database
+19. UpdateSpotify - Update/Add artists into the database from Spotify's API
+20. SplitTag - Split specific tag's into single value fields by specific seperator like ';'
 
 # Examples
 ```
@@ -107,6 +111,8 @@ dotnet MiniMediaScanner.dll normalizefile --connection-string "Host=192.168.1.2;
 --directory-seperator "_"
 ```
 
+
+
 ## more Example
 ```
 export CONNECTIONSTRING="Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia"
@@ -124,9 +130,37 @@ dotnet MiniMediaScanner.dll equalizemediatag -t originalyear -wt originalyear -y
 dotnet MiniMediaScanner.dll equalizemediatag -t originaldate -wt originaldate -y --artist deadmau5
 dotnet MiniMediaScanner.dll equalizemediatag -t year -wt year -y --artist deadmau5
 dotnet MiniMediaScanner.dll fixversioning -f ["("] --confirm --artist deadmau5
-
+dotnet MiniMediaScanner.dll updatespotify -SID "xxxxx" -SIS "xxxxxx" --artist deadmau5
+dotnet MiniMediaScanner.dll stats
+dotnet MiniMediaScanner.dll splittag -t AlbumArtist -wt ARTISTS -s ; -ow -rt -wto -y -a deadmau5
 ```
 
+# Split Tag explained
+The SplitTag command will split multi-value tags as a single value into the same or another tag
+
+Some media like the "abuse" the wrong tags for another purpose like filling AlbumArtist/Artist tag with the value of ARTISTS
+
+To fix this problem easy, we can tell it to read the tag AlbumArtist (-t AlbumArtist) and use it's original value (-rto) to write to ARTISTS (-wt ARTISTS)
+
+We used in this example as well (-wto) (updateWriteTagOriginalValue) to write the original value to ARTISTS from AlbumArtist, otherwise ARTISTS will become as well a single value field
+
+To automate this process you can tell it to automatically confirm with (-y)
+
+(-s) or --seperator, is used to tell how to seperate the values, in most cases it's ';'
+
+```
+dotnet MiniMediaScanner.dll splittag -t AlbumArtist -wt ARTISTS -s ; -ow -rt -wto -y -a deadmau5
+```
+
+Output example,
+It will move value "deadmau5;187 Lockdown" that was in AlbumArtist over to the ARTISTS
+And write only the single value into AlbumArtist
+```
+Checking artist 'deadmau5', found 1 tracks to process
+Updating tag 'ARTISTS' value '' => 'deadmau5;187 Lockdown'
+Updating tag 'AlbumArtist' value 'deadmau5;187 Lockdown' => 'deadmau5'
+Confirm changes? (Y/y or N/n)
+```
 
 # Personal way to fix for example artist Pendulum
 What all  of this will do:
@@ -137,16 +171,17 @@ What all  of this will do:
 5. fixversioning command will set the disc number +1000 (for example disc number 1 to 10001, disc number 5 to 10005) with files containing "("
 6. equalizemediatag commands will set the same tags of (date, originalyear, originaldate, catalognumber, asin) for the media of each album, making the media show up correct in order for best viewing/listening experience
 ```
-dotnet MiniMediaScanner.dll import --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" --path "~/nfs_share_music/Pendulum"
-dotnet MiniMediaScanner.dll deletedmedia --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a Pendulum
-dotnet MiniMediaScanner.dll fingerprint --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a Pendulum
-dotnet MiniMediaScanner.dll tagmissingmetadata --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a Pendulum --accoustid xxxxxxxx -w
-dotnet MiniMediaScanner.dll fixversioning --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a Pendulum -f "["("]" -y
-dotnet MiniMediaScanner.dll equalizemediatag --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a Pendulum -t date -wt date -y
-dotnet MiniMediaScanner.dll equalizemediatag --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a Pendulum -t originalyear -wt originalyear -y
-dotnet MiniMediaScanner.dll equalizemediatag --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a Pendulum -t originaldate -wt originaldate -y
-dotnet MiniMediaScanner.dll equalizemediatag --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a Pendulum -t catalognumber -wt catalognumber -y
-dotnet MiniMediaScanner.dll equalizemediatag --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a Pendulum -t asin -wt asin -y
+export CONNECTIONSTRING="Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia"
+dotnet MiniMediaScanner.dll import --path "~/nfs_share_music/Pendulum"
+dotnet MiniMediaScanner.dll deletedmedia -a Pendulum
+dotnet MiniMediaScanner.dll fingerprint -a Pendulum
+dotnet MiniMediaScanner.dll tagmissingmetadata -a Pendulum --accoustid xxxxxxxx -w
+dotnet MiniMediaScanner.dll fixversioning -a Pendulum -f "["("]" -y
+dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t date -wt date -y
+dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t originalyear -wt originalyear -y
+dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t originaldate -wt originaldate -y
+dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t catalognumber -wt catalognumber -y
+dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t asin -wt asin -y
 
 ```
 
