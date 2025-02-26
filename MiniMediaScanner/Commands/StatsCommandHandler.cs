@@ -27,5 +27,9 @@ public class StatsCommandHandler
         Console.WriteLine($"Cached MusicBrainz Albums: {_statsRepository.GetGenericCount("musicbrainzrelease")}");
         Console.WriteLine($"Cached MusicBrainz Tracks: {_statsRepository.GetGenericCount("musicbrainzreleasetrack")}");
         
+        Console.WriteLine($"Cached Spotify Artists: {_statsRepository.GetGenericCount("spotify_artist")}");
+        Console.WriteLine($"Cached Spotify Albums: {_statsRepository.GetGenericCount("spotify_album")}");
+        Console.WriteLine($"Cached Spotify Tracks: {_statsRepository.GetGenericCount("spotify_track")}");
+        
     }
 }
