@@ -10,8 +10,9 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 1. Postgres support
 2. Import Full/Partially your entire library multi-threaded
 3. MusicBrainz support (+cached in Postgres)
-4. All commands are multi-threaded for performance
-5. Low memory footprint
+4. Spotify support (+cached in Postgres)
+5. All commands are multi-threaded for performance
+6. Low memory footprint
 
 # Commands
 1. Import - Import Full/Partially your entire library multi-threaded
