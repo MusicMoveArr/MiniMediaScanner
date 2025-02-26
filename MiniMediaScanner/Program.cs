@@ -32,6 +32,10 @@ public class Program
         AppBuilder.Add("removetag", RemoveTagCommand.RemoveTag);
         AppBuilder.Add("coverextract", CoverExtractCommand.CoverExtract);
         AppBuilder.Add("splitartist", SplitArtistCommand.SplitArtist);
+        //AppBuilder.Add("deduplicatesingles", DeDuplicateSinglesCommand.DeDuplicateSingles);
+        AppBuilder.Add("stats", StatsCommand.Stats);
+        AppBuilder.Add("updatespotify", UpdateSpotifyCommand.UpdateSpotify);
+        AppBuilder.Add("splittag", SplitTagCommand.SplitTag);
         
         string? importPath = Environment.GetEnvironmentVariable("IMPORT_PATH");
         string? cronExpression = Environment.GetEnvironmentVariable("CRON");

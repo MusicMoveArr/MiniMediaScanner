@@ -82,6 +82,7 @@ CREATE TABLE public.musicbrainzartist (
 );
 CREATE INDEX idx_musicbrainzartist_id ON public.musicbrainzartist USING btree (musicbrainzartistid);
 CREATE INDEX musicbrainzartist_name_idx ON public.musicbrainzartist USING btree (name);
+CREATE INDEX musicbrainzartist_name_lowercase_idx ON public.musicbrainzartist USING btree (lower(name));
 
 CREATE TABLE public.musicbrainzrelease (
     musicbrainzreleaseid uuid NOT NULL,
@@ -136,3 +137,90 @@ CREATE INDEX idx_metadata_albumid ON metadata (albumid);
 
 CREATE INDEX idx_metadata_albumfoldername_filename
     ON metadata (albumid, REGEXP_REPLACE(Path, '^.*/([^/]*/[^/]+)$', '\1', 'g'));
+
+
+CREATE TABLE public.spotify_artist (
+    Id text NOT NULL,
+    Name text NOT NULL,
+    Popularity int NOT NULL,
+    Type text NOT NULL,
+    Uri text NOT NULL,
+    TotalFollowers int NOT NULL,
+    Href text NOT NULL,
+    Genres text NOT NULL,
+    lastsynctime timestamp DEFAULT current_timestamp,
+    CONSTRAINT spotify_artist_pkey PRIMARY KEY (Id)
+);
+
+CREATE TABLE public.spotify_artist_image (
+    ArtistId text NOT NULL,
+    Height int NOT NULL,
+    Width int NOT NULL,
+    Url text NOT NULL,
+    CONSTRAINT spotify_artist_image_pkey PRIMARY KEY (ArtistId, Height, Width)
+);
+
+CREATE TABLE public.spotify_album (
+    AlbumId text NOT NULL,
+    AlbumGroup text NOT NULL,
+    AlbumType text NOT NULL,
+    Name text NOT NULL,
+    ReleaseDate text NOT NULL,
+    ReleaseDatePrecision text NOT NULL,
+    TotalTracks int NOT NULL,
+    Type text NOT NULL,
+    Uri text NOT NULL,
+    Label text NOT NULL,
+    Popularity int NOT NULL,
+    CONSTRAINT spotify_album_pkey PRIMARY KEY (AlbumId)
+);
+
+CREATE TABLE public.spotify_album_image (
+    AlbumId text NOT NULL,
+    Height int NOT NULL,
+    Width int NOT NULL,
+    Url text NOT NULL,
+    CONSTRAINT spotify_album_image_pkey PRIMARY KEY (AlbumId, Height, Width)
+);
+
+CREATE TABLE public.spotify_album_artist (
+    AlbumId text NOT NULL,
+    ArtistId text NOT NULL,
+    Type text NOT NULL,
+    CONSTRAINT spotify_album_artist_pkey PRIMARY KEY (AlbumId, ArtistId, Type)
+);
+CREATE TABLE public.spotify_album_externalid (
+    AlbumId text NOT NULL,
+    Name text NOT NULL,
+    Value text NOT NULL,
+    CONSTRAINT spotify_album_externalid_pkey PRIMARY KEY (AlbumId, Name)
+);
+
+CREATE TABLE public.spotify_track (
+    TrackId text NOT NULL,
+    AlbumId text NOT NULL,
+    DiscNumber int NOT NULL,
+    DurationMs int NOT NULL,
+    Explicit bool NOT NULL,
+    Href text NOT NULL,
+    IsPlayable bool NOT NULL,
+    LinkedFrom text NOT NULL,
+    Name text NOT NULL,
+    PreviewUrl text NOT NULL,
+    TrackNumber int NOT NULL,
+    Type text NOT NULL,
+    Uri text NOT NULL,
+    CONSTRAINT spotify_track_pkey PRIMARY KEY (TrackId, AlbumId)
+);
+
+CREATE TABLE public.spotify_track_artist (
+    TrackId text NOT NULL,
+    ArtistId text NOT NULL,
+    CONSTRAINT spotify_track_artist_pkey PRIMARY KEY (TrackId, ArtistId)
+);
+CREATE TABLE public.spotify_track_externalid (
+    TrackId text NOT NULL,
+    Name text NOT NULL,
+    Value text NOT NULL,
+    CONSTRAINT spotify_track_externalid_pkey PRIMARY KEY (TrackId, Name)
+);

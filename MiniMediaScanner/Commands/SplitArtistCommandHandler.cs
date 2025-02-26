@@ -135,12 +135,13 @@ public class SplitArtistCommandHandler
             return;
         }
         
+        string orgValue = string.Empty;
         bool tempIsUpdated = false;
-        _mediaTagWriteService.UpdateTrackTag(track, tagName, value, ref tempIsUpdated);
+        _mediaTagWriteService.UpdateTrackTag(track, tagName, value, ref tempIsUpdated, ref orgValue);
 
         if (tempIsUpdated)
         {
-            Console.WriteLine($"Updating tag '{tagName}' => '{value}'");
+            Console.WriteLine($"Updating tag '{tagName}' value '{orgValue}' => '{value}'");
             trackInfoUpdated = true;
         }
     }

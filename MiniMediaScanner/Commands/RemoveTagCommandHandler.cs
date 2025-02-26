@@ -30,25 +30,33 @@ public class RemoveTagCommandHandler
 
     public void RemoveTagFromMedia(string artist, string album, List<string> tagNames, bool autoConfirm)
     {
-        var metadatas = _metadataRepository.GetMetadataByTagRecords(artist, tagNames)
-            .Where(metadata => string.IsNullOrWhiteSpace(album) || 
-                               string.Equals(metadata.Album, album, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        try
+        {
+            var metadatas = _metadataRepository.GetMetadataByTagRecords(artist, tagNames)
+                .Where(metadata => string.IsNullOrWhiteSpace(album) || 
+                                   string.Equals(metadata.Album, album, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-        Console.WriteLine($"Checking artist '{artist}', found {metadatas.Count} tracks to process");
+            Console.WriteLine($"Checking artist '{artist}', found {metadatas.Count} tracks to process");
 
-        metadatas
-            .ForEach(metadata =>
-            {
-                try
+            metadatas
+                .ForEach(metadata =>
                 {
-                    ProcessFile(metadata, tagNames, autoConfirm);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                }
-            });
+                    try
+                    {
+                        ProcessFile(metadata, tagNames, autoConfirm);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                });
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
     }
                 
     private void ProcessFile(MetadataInfo metadata, List<string> tagNames, bool autoConfirm)
@@ -70,11 +78,11 @@ public class RemoveTagCommandHandler
         {
             return;
         }
-        
+
         Console.WriteLine("Confirm changes? (Y/y or N/n)");
         bool confirm = autoConfirm || Console.ReadLine()?.ToLower() == "y";
         
-        if (trackInfoUpdated && confirm && _mediaTagWriteService.SafeSave(track))
+        if (confirm && _mediaTagWriteService.SafeSave(track))
         {
             _importCommandHandler.ProcessFile(metadata.Path);
         }
@@ -84,8 +92,9 @@ public class RemoveTagCommandHandler
     {
         tagName = _mediaTagWriteService.GetFieldName(track, tagName);
         
+        string orgValue = string.Empty;
         bool tempIsUpdated = false;
-        _mediaTagWriteService.UpdateTrackTag(track, tagName, value, ref tempIsUpdated);
+        _mediaTagWriteService.UpdateTrackTag(track, tagName, value, ref tempIsUpdated, ref orgValue);
 
         if (tempIsUpdated)
         {

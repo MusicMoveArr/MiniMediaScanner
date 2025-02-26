@@ -1,3 +1,4 @@
+using System.Text;
 using MiniMediaScanner.Models;
 using Npgsql;
 using Dapper;
@@ -47,14 +48,35 @@ public class MetadataRepository
         });
     }
     
-    public List<string> GetMissingTracksByArtist(string artistName)
+    
+    
+    public List<string> GetMissingTracksByArtist(List<string> artistNames)
     {
-        string query = @"WITH unique_tracks AS (
+        StringBuilder filter = new StringBuilder();
+
+        int index = 0;
+        foreach (string artistName in artistNames)
+        {
+            if (index == 0)
+            {
+                filter.AppendLine($"m.tag_alljsontags @> jsonb_build_object('artist', '{artistName}', 'title', ut.track_title)");
+            }
+            else
+            {
+                filter.AppendLine($"or m.tag_alljsontags @> jsonb_build_object('artist', '{artistName}', 'title', ut.track_title)");
+            }
+
+            filter.AppendLine($"or m.tag_alljsontags @> jsonb_build_object('AlbumArtist', '{artistName}', 'title', ut.track_title)");
+            filter.AppendLine($"or (lower(m.tag_alljsontags->>'ARTISTS') ilike '%{artistName}%' and lower(m.tag_alljsontags->>'title') = lower(ut.track_title))");
+            index++;
+        }
+        
+        string query = @$"WITH unique_tracks AS (
                          SELECT *
                          FROM (
-                             select lower(re.title) as album_title, lower(ar.name) as artist_name, lower(track.title) as track_title, lower(re.status) as status,
+                             select lower(re.title) as album_title, lower(ar.name) as artist_name, track.title as track_title, lower(re.status) as status,
                                     ROW_NUMBER() OVER (
-                                        PARTITION BY lower(track.title), lower(re.title), lower(ar.name), lower(track.title)
+                                        PARTITION BY track.title, lower(re.title), lower(ar.name)
                                     ) AS rn
                                     
                                FROM musicbrainzartist ar
@@ -70,31 +92,16 @@ public class MetadataRepository
                      SELECT distinct ut.artist_name || ' - ' || ut.album_title || ' - ' || ut.track_title
                      FROM unique_tracks ut
  
-                     left join artists a on lower(a.name) = ut.artist_name
-                     left join albums album on 
-	                     album.artistid = a.artistid 
-	                     and lower(album.title) = ut.album_title
- 
-                     left join metadata m on
-	                     (m.albumid = album.albumid --check by albumid
-	                      and lower(m.title) = ut.track_title)
-	                     or (m.path ilike '%/' || ut.album_title || '/%' --check album by path
-	                        and m.path ilike '%/' || ut.artist_name || '/%' --check album by artist
-	                         and lower(m.title) = ut.track_title)
-	                     or (m.path ilike '%/' || ut.artist_name || '/%' --check by just the arist path
-	                         and lower(m.title) = ut.track_title)
-	                     or (lower(m.title) = ut.track_title and m.path ilike '%/' || ut.artist_name || '/%')
+                     left join metadata m on {filter}
  
                      where ut.artist_name = lower(@artistName)
                      and m.metadataid is null";
 
         using var conn = new NpgsqlConnection(_connectionString);
         
+        
         return conn
-            .Query<string>(query, new
-            {
-                artistName
-            }, commandTimeout: 60)
+            .Query<string>(query, param: new {artistName = artistNames.First()}, commandTimeout: 9999)
             .ToList();
     }
     
@@ -225,7 +232,7 @@ public class MetadataRepository
                         and (length(m.MusicBrainzArtistId) = 0 or 
                               length(m.MusicBrainzTrackId) = 0 or
                               length(m.MusicBrainzReleaseArtistId) = 0 or
-                              length(m.MusicBrainzReleaseArtistId) = 0 or
+                              length(m.MusicBrainzReleaseGroupId) = 0 or
                               tag_alljsontags->>'ARTISTS' is null)
                               and length(m.tag_acoustidfingerprint) > 0
                               and m.Tag_AcoustIdFingerPrint_Duration > 0";
@@ -287,11 +294,7 @@ public class MetadataRepository
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
                         where lower(artist.name) = lower(@artistName)
-                          AND EXISTS (
-                            SELECT 1
-                            FROM jsonb_each_text(m.tag_alljsontags) AS tags
-                            WHERE tags.key = ANY(@tagNames) AND LENGTH(tags.value) > 0
-                        )";
+                              and m.tag_alljsontags ?| array[@tagNames]";
 
         using var conn = new NpgsqlConnection(_connectionString);
 
@@ -300,6 +303,32 @@ public class MetadataRepository
             {
                 artistName,
                 tagNames
+            }, commandTimeout: 120).ToList();
+    }
+    
+    
+    public List<MetadataInfo> GetMetadataByTagValueRecords(string artistName, string tagName, string value)
+    {
+        string query = @$"SELECT m.MetadataId, 
+                                  m.Path, 
+                                  m.Title, 
+                                  m.AlbumId, 
+                                  m.Tag_AllJsonTags,
+                                  album.title AS Album
+                        FROM metadata m
+                        JOIN albums album ON album.albumid = m.albumid
+                        JOIN artists artist ON artist.artistid = album.artistid
+                        where lower(artist.name) = lower(@artistName)
+                              and m.tag_alljsontags->>@tagName like '%' || @value ||'%'";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+
+        return conn
+            .Query<MetadataInfo>(query, new
+            {
+                artistName,
+                tagName,
+                value
             }, commandTimeout: 120).ToList();
     }
     

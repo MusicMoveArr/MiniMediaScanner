@@ -138,6 +138,7 @@ public class MusicBrainzAPIService
     {
         RetryPolicy retryPolicy = Policy
             .Handle<HttpRequestException>()
+            .Or<TimeoutException>()
             .WaitAndRetry(5, retryAttempt => 
                     TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 (exception, timeSpan, retryCount, context) => {
