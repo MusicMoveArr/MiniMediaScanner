@@ -56,7 +56,7 @@ public class SpotifyService
         
         DateTime? lastSyncTime = _spotifyRepository.GetArtistLastSyncTime(artistId);
 
-        if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < 2)
+        if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < 7)
         {
             Console.WriteLine($"Skipped synchronizing for Spotify '{artistId}' synced already within 7days");
             return;
