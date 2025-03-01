@@ -141,43 +141,47 @@ public class MissingRepository
             }, commandTimeout: 60)
             .ToList();
     }
-    
-    
-    public List<string> GetMissingTracksByArtistSpotify(string artistName)
+	
+	public List<string> GetMissingTracksByArtistMusicBrainz2(string artistName)
     {
-        string query = @"with original_artist AS(
-							select id from spotify_artist
-							where lower(name) = lower(@artistName) 
-							order by popularity desc
-							limit 1
+        string query = @"WITH MusicLibrary AS (
+						    SELECT 
+						        a.artistid, 
+						        a.name AS artist_name, 
+						        al.albumid, 
+						        al.title AS album_name, 
+						        m.metadataid, 
+						        m.title AS track_name, 
+						        m.musicbrainztrackid ,
+						        m.path
+						    FROM metadata m
+						    JOIN albums al ON m.albumid = al.albumid
+						    JOIN artists a ON al.artistid = a.artistid
+						    where lower(a.name) = lower(@artistName)
 						),
-						unique_tracks AS (
-							select distinct lower(ab.name) as album_title, lower(ar.name) as artist_name, lower(track.name) as track_title, ar.id as artist_id
-							from spotify_artist ar
-							left join spotify_album_artist ab_ar on ab_ar.artistid = ar.id
-							left join spotify_album ab on ab.albumid = ab_ar.albumid
-							left join spotify_track track on track.albumid = ab.albumid
+						MusicBrainzData AS (
+						    SELECT 
+						        ma.musicbrainzartistid, 
+						        ma.name AS artist_name, 
+						        mr.musicbrainzreleaseid, 
+						        mr.title AS album_name, 
+						        mrt.musicbrainzreleasetrackid, 
+						        mrt.title AS track_name 
+						    FROM musicbrainzreleasetrack mrt
+						    JOIN musicbrainzrelease mr ON mrt.musicbrainzremotereleaseid = mr.musicbrainzremotereleaseid
+						    JOIN musicbrainzartist ma ON mr.musicbrainzartistid = ma.musicbrainzartistid::text
+						    where lower(ma.name) = lower(@artistName)
 						)
-						SELECT distinct ut.artist_name || ' - ' || replace(ut.album_title, '-', '')  || ' - ' || replace(ut.track_title, '-', '')
-						FROM unique_tracks ut
-						left join original_artist orgArtist on 1=1
-
-						left join artists a on lower(a.name) = ut.artist_name
-						left join albums album on 
-						     album.artistid = a.artistid 
-						     and lower(album.title) = ut.album_title
-
-						left join metadata m on
-						     (m.albumid = album.albumid --check by albumid
-						      and lower(m.title) = ut.track_title)
-						     or (m.path ilike '%/' || ut.album_title || '/%' --check album by path
-						        and m.path ilike '%/' || ut.artist_name || '/%' --check album by artist
-						         and lower(m.title) = ut.track_title)
-						     or (m.path ilike '%/' || ut.artist_name || '/%' --check by just the arist path
-						         and lower(m.title) = ut.track_title)
-
-						where  ut.artist_id = orgArtist.id
-						and m.metadataid is null";
+						SELECT distinct mb.artist_name || ' - ' || mb.album_name || ' - ' || mb.track_name
+						FROM MusicBrainzData mb
+						LEFT JOIN MusicLibrary ml 
+						    ON (lower(mb.artist_name) = lower(ml.artist_name)
+						    AND lower(mb.album_name) = lower(ml.album_name)
+						    --AND lower(mb.track_name) = lower(ml.track_name)
+						    and similarity(mb.track_name, ml.track_name) >= 0.8)
+						    or (similarity(mb.track_name, ml.track_name) >= 0.8 and lower(mb.artist_name) = lower(ml.artist_name))
+							
+						WHERE ml.track_name IS NULL";
 
         using var conn = new NpgsqlConnection(_connectionString);
         
@@ -187,5 +191,54 @@ public class MissingRepository
                 artistName
             }, commandTimeout: 60)
             .ToList();
+    }
+	
+    public List<string> GetMissingTracksByArtistSpotify2(string artistName)
+    {
+	    string query = @"WITH MusicLibrary AS (
+						    SELECT 
+						        a.artistid, 
+						        a.name AS artist_name, 
+						        al.albumid, 
+						        al.title AS album_name, 
+						        m.title AS track_name, 
+						        tag_alljsontags->>'ARTISTS' as Artists
+						    FROM metadata m
+						    JOIN albums al ON m.albumid = al.albumid
+						    JOIN artists a ON al.artistid = a.artistid
+						    where lower(a.name) = lower(@artistName)
+						),
+						MusicBrainzData AS (
+							select artist.id as artist_id, 
+							        artist.name AS artist_name, 
+							        album.name AS album_name, 
+							        track.name AS track_name
+							from spotify_track track
+							 join spotify_album album on album.albumid = track.albumid
+							 join spotify_track_artist track_artist on track_artist.trackid = track.trackid
+							 join spotify_album_artist album_artist on album_artist.albumid = album.albumid 
+							 join spotify_artist artist on artist.id = track_artist.artistid or 
+														   artist.id = album_artist.artistid
+						    where lower(artist.name) = lower(@artistName)
+						)
+						SELECT distinct mb.artist_name || ' - ' || mb.album_name || ' - ' || mb.track_name
+						FROM MusicBrainzData mb
+						LEFT JOIN MusicLibrary ml 
+						    ON (lower(mb.artist_name) = lower(ml.artist_name)
+						    AND lower(mb.album_name) = lower(ml.album_name)
+						    --AND lower(mb.track_name) = lower(ml.track_name)
+						    and similarity(mb.track_name, ml.track_name) >= 0.8)
+						    or (similarity(mb.track_name, ml.track_name) >= 0.8 and lower(mb.artist_name) = lower(ml.artist_name))
+						    or (similarity(mb.track_name, ml.track_name) >= 0.8 and ml.Artists ilike '%' || ml.artist_name || '%')
+						WHERE ml.track_name IS null ";
+
+	    using var conn = new NpgsqlConnection(_connectionString);
+        
+	    return conn
+		    .Query<string>(query, new
+		    {
+			    artistName
+		    }, commandTimeout: 60)
+		    .ToList();
     }
 }

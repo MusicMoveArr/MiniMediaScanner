@@ -18,7 +18,7 @@ public class MissingCommandHandler
         _missingRepository = new MissingRepository(connectionString);
     }
     
-    public void CheckMissingTracksByArtist(string artistName)
+    public void CheckMissingTracksByArtist(string artistName, string provider)
     {
         /*var musicBrainzRecords = _missingRepository.GetMusicBrainzRecords(artistName);
         var metadata = _missingRepository.GetMetadataByArtist(artistName);
@@ -48,7 +48,8 @@ public class MissingCommandHandler
                 Console.WriteLine(track);
             });*/
         
-        var missingTracks = _missingRepository.GetMissingTracksByArtistSpotify(artistName);
+        var missingTracks = provider.ToLower() == "spotify" ? _missingRepository.GetMissingTracksByArtistSpotify2(artistName) :
+                                                                        _missingRepository.GetMissingTracksByArtistMusicBrainz2(artistName);
 
         missingTracks.ForEach(track =>
         {
@@ -56,13 +57,14 @@ public class MissingCommandHandler
         });
     }
     
-    public void CheckAllMissingTracks()
+    public void CheckAllMissingTracks(string provider)
     {
         var filteredNames = _artistRepository.GetAllArtistNames();
 
         foreach (string artistName in filteredNames)
         {
-            var missingTracks = _missingRepository.GetMissingTracksByArtistSpotify(artistName);
+            var missingTracks = provider.ToLower() == "spotify" ? _missingRepository.GetMissingTracksByArtistSpotify2(artistName) :
+                                                                            _missingRepository.GetMissingTracksByArtistMusicBrainz2(artistName);
 
             missingTracks.ForEach(track =>
             {
