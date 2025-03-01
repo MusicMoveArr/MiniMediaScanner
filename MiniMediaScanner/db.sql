@@ -224,3 +224,24 @@ CREATE TABLE public.spotify_track_externalid (
     Value text NOT NULL,
     CONSTRAINT spotify_track_externalid_pkey PRIMARY KEY (TrackId, Name)
 );
+
+
+CREATE INDEX idx_spotify_artist_image_artistid ON public.spotify_artist_image (ArtistId);
+
+
+CREATE INDEX idx_spotify_album_image_albumid ON public.spotify_album_image (AlbumId);
+
+CREATE INDEX idx_spotify_album_artist_albumid ON public.spotify_album_artist (AlbumId);
+CREATE INDEX idx_spotify_album_artist_artistid ON public.spotify_album_artist (ArtistId);
+
+CREATE INDEX idx_spotify_album_externalid_albumid ON public.spotify_album_externalid (AlbumId);
+
+CREATE INDEX idx_spotify_track_albumid ON public.spotify_track (AlbumId);
+
+CREATE INDEX idx_spotify_track_artist_trackid ON public.spotify_track_artist (TrackId);
+CREATE INDEX idx_spotify_track_artist_artistid ON public.spotify_track_artist (ArtistId);
+
+CREATE INDEX idx_spotify_track_externalid_trackid ON public.spotify_track_externalid (TrackId);
+
+
+CREATE INDEX idx_spotify_artist_name_lower ON public.spotify_artist (LOWER(name));
