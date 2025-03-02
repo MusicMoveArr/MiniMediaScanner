@@ -14,7 +14,7 @@ public class MissingCommand
     public static void Missing(string connectionString, string artist = "", string provider = "musicbrainz")
     {
         if (string.IsNullOrWhiteSpace(provider) ||
-            (provider.ToLower() != "musicbrainz" && artist.ToLower() != "spotify"))
+            (provider.ToLower() != "musicbrainz" && provider.ToLower() != "spotify"))
         {
             Console.WriteLine("Provider must be either 'musicbrainz' or 'spotify'");
             return;
