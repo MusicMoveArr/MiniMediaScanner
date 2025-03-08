@@ -16,7 +16,7 @@ public class MusicBrainzArtistRepository
     
     public List<string> GetMusicBrainzArtistRemoteIdsByName(string artist)
     {
-        string query = @"SELECT MusicBrainzRemoteId FROM MusicBrainzArtist where lower(name) = lower(@artist)";
+        string query = @"SELECT cast(MusicBrainzRemoteId as text) FROM MusicBrainzArtist where lower(name) = lower(@artist)";
 
         using var conn = new NpgsqlConnection(_connectionString);
 
@@ -30,7 +30,7 @@ public class MusicBrainzArtistRepository
     
     public List<string> GetAllMusicBrainzArtistRemoteIds()
     {
-        string query = @"SELECT MusicBrainzRemoteId FROM MusicBrainzArtist order by name asc";
+        string query = @"SELECT cast(MusicBrainzRemoteId as text) FROM MusicBrainzArtist order by name asc";
 
         using var conn = new NpgsqlConnection(_connectionString);
         
@@ -63,7 +63,7 @@ public class MusicBrainzArtistRepository
             .ToList();
     }
 
-    public Guid InsertMusicBrainzArtist(string remoteMusicBrainzArtistId, 
+    public Guid InsertMusicBrainzArtist(Guid remoteMusicBrainzArtistId, 
         string artistName, 
         string artistType,
         string country,
@@ -125,7 +125,7 @@ public class MusicBrainzArtistRepository
                 id = remoteMusicBrainzArtistId
             });
     }
-    public DateTime GetBrainzArtistLastSyncTime(string remoteMusicBrainzArtistId)
+    public DateTime GetBrainzArtistLastSyncTime(Guid remoteMusicBrainzArtistId)
     {
         string query = @"SELECT lastsynctime FROM MusicBrainzArtist WHERE MusicBrainzRemoteId = @id";
 
@@ -150,7 +150,7 @@ public class MusicBrainzArtistRepository
                          LEFT JOIN LATERAL (
                              SELECT re.date AS date, re.country
                              FROM musicbrainzrelease re
-                             WHERE re.musicbrainzartistid = a.musicbrainzartistid::text
+                             WHERE re.musicbrainzartistid = a.musicbrainzartistid
                              ORDER BY re.date ASC
                              LIMIT 1
                          ) re ON true
@@ -169,7 +169,7 @@ public class MusicBrainzArtistRepository
     {
         const string query = @"
                                 SELECT 
-                                    cast(a.musicbrainzremoteid as text) AS ArtistMusicBrainzRemoteId,
+                                    a.musicbrainzremoteid AS ArtistMusicBrainzRemoteId,
                                     a.releasecount AS ArtistReleaseCount,
                                     a.disambiguation AS ArtistDisambiguation,
                                     a.name AS ArtistName,
@@ -196,7 +196,7 @@ public class MusicBrainzArtistRepository
                                     rt.recordingvideo AS ReleaseTrackRecordingVideo
                                 FROM musicbrainzreleasetrack rt
                                  join musicbrainzrelease r on r.musicbrainzremotereleaseid = rt.musicbrainzremotereleaseid
-                                 join musicbrainzartist a on cast(a.musicbrainzartistid as text) = r.musicbrainzartistid 
+                                 join musicbrainzartist a on a.musicbrainzartistid = r.musicbrainzartistid 
                                 WHERE rt.recordingid = @recordingId";
 
         var lookup = new Dictionary<string, MusicBrainzArtistModel>();
@@ -221,7 +221,7 @@ public class MusicBrainzArtistRepository
                     Disambiguation = record.ArtistDisambiguation,
                     Name = record.ArtistName,
                     Type = record.ArtistType,
-                    Id = record.ArtistMusicBrainzRemoteId,
+                    Id = record.ArtistMusicBrainzRemoteId.ToString(),
                     SortName = record.ArtistSortName
                 }
                 
@@ -233,7 +233,7 @@ public class MusicBrainzArtistRepository
             .Select(record => record.First())
             .Select(record => new MusicBrainzArtistReleaseModel
             {
-                Id = record.ReleaseMusicBrainzRemoteReleaseId,
+                Id = record.ReleaseMusicBrainzRemoteReleaseId.ToString(),
                 Title = record.ReleaseTitle,
                 Status = record.ReleaseStatus,
                 StatusId = record.ReleaseStatusId,
@@ -255,14 +255,14 @@ public class MusicBrainzArtistRepository
             .Select(record => record.First())
             .Select(record => new MusicBrainzReleaseMediaTrackModel
             {
-                Id = record.ReleaseTrackMusicBrainzRemoteReleaseTrackId,
+                Id = record.ReleaseTrackMusicBrainzRemoteReleaseTrackId.ToString(),
                 Title = record.ReleaseTrackTitle,
                 Position = record.ReleaseTrackPosition,
                 Length = record.ReleaseTrackLength,
                 Number = record.ReleaseTrackNumber,
                 Recording = new MusicBrainzReleaseMediaTrackRecordingModel
                 {
-                    Id = record.ReleaseTrackRecordingId,
+                    Id = record.ReleaseTrackRecordingId.ToString(),
                     Title = record.ReleaseTrackTitle,
                     Length = record.ReleaseTrackLength,
                     Video = record.ReleaseTrackRecordingVideo
@@ -275,18 +275,18 @@ public class MusicBrainzArtistRepository
         return null;
     }
 
-    public string? GetMusicBrainzRecordingIdByName(string artistName, string albumName, string trackName)
+    public Guid? GetMusicBrainzRecordingIdByName(string artistName, string albumName, string trackName)
     {
-        const string query = @"SELECT  rt.recordingid
+        const string query = @"SELECT rt.recordingid
                                FROM musicbrainzreleasetrack rt
                                join musicbrainzrelease r on r.musicbrainzremotereleaseid = rt.musicbrainzremotereleaseid
-                               join musicbrainzartist a on cast(a.musicbrainzartistid as text) = r.musicbrainzartistid 
+                               join musicbrainzartist a on a.musicbrainzartistid = r.musicbrainzartistid 
                                WHERE lower(a.name) = lower(@artistName)
                                      AND lower(r.title) = lower(@albumName)
                                      AND lower(rt.title) = lower(@trackName)";
 
         using var conn = new NpgsqlConnection(_connectionString);
-        var records = conn.Query<string>(query, 
+        var records = conn.Query<Guid>(query, 
             param: new
             {
                 artistName,
@@ -299,7 +299,7 @@ public class MusicBrainzArtistRepository
     {
         const string query = @"
                                 SELECT 
-                                    cast(a.musicbrainzremoteid as text) AS ArtistMusicBrainzRemoteId,
+                                    a.musicbrainzremoteid AS ArtistMusicBrainzRemoteId,
                                     a.releasecount AS ArtistReleaseCount,
                                     a.disambiguation AS ArtistDisambiguation,
                                     a.name AS ArtistName,
@@ -326,7 +326,7 @@ public class MusicBrainzArtistRepository
                                     rt.recordingvideo AS ReleaseTrackRecordingVideo
                                 FROM musicbrainzreleasetrack rt
                                  join musicbrainzrelease r on r.musicbrainzremotereleaseid = rt.musicbrainzremotereleaseid
-                                 join musicbrainzartist a on cast(a.musicbrainzartistid as text) = r.musicbrainzartistid 
+                                 join musicbrainzartist a on a.musicbrainzartistid = r.musicbrainzartistid 
                                 WHERE lower(a.name) = lower(@artistName)
                                       AND lower(r.status) = 'official'
                                       AND lower(r.title) = lower(@albumName)
@@ -361,7 +361,7 @@ public class MusicBrainzArtistRepository
                     Disambiguation = record.ArtistDisambiguation,
                     Name = record.ArtistName,
                     Type = record.ArtistType,
-                    Id = record.ArtistMusicBrainzRemoteId,
+                    Id = record.ArtistMusicBrainzRemoteId.ToString(),
                     SortName = record.ArtistSortName
                 }
                 
@@ -375,7 +375,7 @@ public class MusicBrainzArtistRepository
             .Select(record => record.First())
             .Select(record => new MusicBrainzArtistReleaseModel
             {
-                Id = record.ReleaseMusicBrainzRemoteReleaseId,
+                Id = record.ReleaseMusicBrainzRemoteReleaseId.ToString(),
                 Title = record.ReleaseTitle,
                 Status = record.ReleaseStatus,
                 StatusId = record.ReleaseStatusId,
@@ -398,14 +398,14 @@ public class MusicBrainzArtistRepository
             .Select(record => record.First())
             .Select(record => new MusicBrainzReleaseMediaTrackModel
             {
-                Id = record.ReleaseTrackMusicBrainzRemoteReleaseTrackId,
+                Id = record.ReleaseTrackMusicBrainzRemoteReleaseTrackId.ToString(),
                 Title = record.ReleaseTrackTitle,
                 Position = record.ReleaseTrackPosition,
                 Length = record.ReleaseTrackLength,
                 Number = record.ReleaseTrackNumber,
                 Recording = new MusicBrainzReleaseMediaTrackRecordingModel
                 {
-                    Id = record.ReleaseTrackRecordingId,
+                    Id = record.ReleaseTrackRecordingId.ToString(),
                     Title = record.ReleaseTrackTitle,
                     Length = record.ReleaseTrackLength,
                     Video = record.ReleaseTrackRecordingVideo

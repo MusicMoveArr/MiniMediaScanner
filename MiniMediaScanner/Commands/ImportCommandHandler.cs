@@ -10,6 +10,7 @@ public class ImportCommandHandler
     private readonly FileMetaDataService _fileMetaDataService;
     private readonly ArtistRepository _artistRepository;
     private readonly MetadataRepository _metadataRepository;
+    private readonly MetadataTagRepository _metadataTagRepository;
     private readonly AlbumRepository _albumRepository;
 
     public static string[] MediaFileExtensions = new string[]
@@ -29,6 +30,7 @@ public class ImportCommandHandler
         _artistRepository = new ArtistRepository(connectionString);
         _metadataRepository =  new MetadataRepository(connectionString);
         _albumRepository =  new AlbumRepository(connectionString);
+        _metadataTagRepository = new MetadataTagRepository(connectionString);
     }
     
     public void ProcessDirectory(string directoryPath)
@@ -113,5 +115,6 @@ public class ImportCommandHandler
 
         // 3. Insert/Update Metadata
         _metadataRepository.InsertOrUpdateMetadata(metadata, albumId);
+        _metadataTagRepository.InsertOrUpdateMetadataTag(metadata);
     }
 }

@@ -11,8 +11,8 @@ public class MusicBrainzReleaseRepository
         _connectionString = connectionString;
     }
 
-    public Guid InsertMusicBrainzRelease(string musicBrainzArtistId, 
-        string musicBrainzRemoteReleaseId, 
+    public Guid InsertMusicBrainzRelease(Guid musicBrainzArtistId, 
+        Guid musicBrainzRemoteReleaseId, 
         string title, 
         string status, 
         string statusId,

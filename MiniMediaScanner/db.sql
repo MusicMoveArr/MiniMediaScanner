@@ -68,9 +68,19 @@ CREATE INDEX metadata_musicbrainztrackid_idx ON public.metadata USING btree (mus
 CREATE INDEX metadata_title_idx ON public.metadata USING btree (title, albumid);
 
 
+CREATE TABLE public.metadata_tag (
+    metadataid uuid NOT NULL,
+    name text,
+    value text null,
+    CONSTRAINT metadata_tag_key UNIQUE (metadataid, name),
+    CONSTRAINT metadata_tag_pkey PRIMARY KEY (metadataid, name)
+);
+CREATE INDEX metadata_tag_name_idx ON public.metadata_tag USING btree (name);
+CREATE INDEX metadata_tag_lower_name_idx ON public.metadata_tag USING btree (lower(name));
+
 CREATE TABLE public.musicbrainzartist (
     musicbrainzartistid uuid NOT NULL,
-    musicbrainzremoteid text NULL,
+    musicbrainzremoteid uuid NULL,
     releasecount int4 NULL,
     "name" text NULL,
     "type" text NULL,
@@ -86,8 +96,8 @@ CREATE INDEX musicbrainzartist_name_lowercase_idx ON public.musicbrainzartist US
 
 CREATE TABLE public.musicbrainzrelease (
     musicbrainzreleaseid uuid NOT NULL,
-    musicbrainzartistid text NULL,
-    musicbrainzremotereleaseid text NULL,
+    musicbrainzartistid uuid NULL,
+    musicbrainzremotereleaseid uuid NULL,
     title text NULL,
     status text NULL,
     statusid text NULL,
@@ -105,12 +115,12 @@ CREATE INDEX musicbrainzrelease_title_idx ON public.musicbrainzrelease USING btr
 
 CREATE TABLE public.musicbrainzreleasetrack (
     musicbrainzreleasetrackid uuid NOT NULL,
-    musicbrainzremotereleasetrackid text NULL,
-    musicbrainzremoterecordingtrackid text NULL,
+    musicbrainzremotereleasetrackid uuid NULL,
+    musicbrainzremoterecordingtrackid uuid NULL,
     title text NULL,
     status text NULL,
     statusid text NULL,
-    musicbrainzremotereleaseid text NULL,
+    musicbrainzremotereleaseid uuid NULL,
     CONSTRAINT musicbrainzrelease_musicbrainzremotereleaseid_key UNIQUE (musicbrainzremotereleasetrackid),
     CONSTRAINT musicbrainzrelease_pkey PRIMARY KEY (musicbrainzreleasetrackid)
 );
@@ -121,7 +131,7 @@ CREATE INDEX musicbrainzreleasetrack_musicbrainzremotereleaseid_idx ON public.mu
 alter table musicbrainzreleasetrack add column length int default 0;
 alter table musicbrainzreleasetrack add column number int default 0;
 alter table musicbrainzreleasetrack add column position int default 0;
-alter table musicbrainzreleasetrack add column recordingid text null;
+alter table musicbrainzreleasetrack add column recordingid uuid null;
 alter table musicbrainzreleasetrack add column recordinglength int default 0;
 alter table musicbrainzreleasetrack add column recordingtitle text null;
 alter table musicbrainzreleasetrack add column recordingvideo bool default false;

@@ -12,15 +12,15 @@ public class MusicBrainzReleaseTrackRepository
     }
 
     public Guid InsertMusicBrainzReleaseTrack(
-        string musicBrainzRemoteReleaseTrackId, 
-        string musicBrainzRemoteRecordingTrackId, 
+        Guid musicBrainzRemoteReleaseTrackId, 
+        Guid musicBrainzRemoteRecordingTrackId, 
         string title, 
         string status,
-        string musicBrainzRemoteReleaseId,
+        Guid musicBrainzRemoteReleaseId,
         int length,
         int number,
         int position,
-        string recordingId,
+        Guid recordingId,
         int recordingLength,
         string recordingTitle,
         bool recordingVideo,

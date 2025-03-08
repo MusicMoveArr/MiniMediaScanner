@@ -81,7 +81,7 @@ public class MetadataRepository
                                     
                                FROM musicbrainzartist ar
                                  JOIN musicbrainzrelease re 
-                                     ON re.musicbrainzartistid = CAST(ar.musicbrainzartistid AS TEXT)
+                                     ON re.musicbrainzartistid = ar.musicbrainzartistid
                                      --AND lower(re.country) = lower(ar.country)
                                       AND (lower(re.status) = 'official' OR LENGTH(re.status) = 0)
                                  JOIN musicbrainzreleasetrack track 
@@ -224,7 +224,8 @@ public class MetadataRepository
                                   m.Tag_AcoustIdFingerPrint, 
                                   m.Tag_AcoustId,
                                   m.Tag_AcoustIdFingerPrint_Duration,
-                                  album.title AS Album
+                                  album.title AS Album,
+                                  artist.artistid AS ArtistId
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
@@ -246,6 +247,68 @@ public class MetadataRepository
             }).ToList();
     }
     
+    public List<MetadataInfo> GetMissingSpotifyMetadataRecords(string artistName)
+    {
+        string query = @$"SELECT m.MetadataId, 
+                                  m.Path, 
+                                  m.Title, 
+                                  m.AlbumId, 
+                                  m.MusicBrainzArtistId, 
+                                  m.MusicBrainzDiscId, 
+                                  m.MusicBrainzReleaseCountry, 
+                                  m.MusicBrainzReleaseId, 
+                                  m.MusicBrainzTrackId, 
+                                  m.MusicBrainzReleaseStatus, 
+                                  m.MusicBrainzReleaseType,
+                                  m.MusicBrainzReleaseArtistId,
+                                  m.MusicBrainzReleaseGroupId,
+                                  m.Tag_Subtitle, 
+                                  m.Tag_AlbumSort, 
+                                  m.Tag_Comment, 
+                                  m.Tag_Year, 
+                                  m.Tag_Track, 
+                                  m.Tag_TrackCount, 
+                                  m.Tag_Disc, 
+                                  m.Tag_DiscCount, 
+                                  m.Tag_Lyrics, 
+                                  m.Tag_Grouping, 
+                                  m.Tag_BeatsPerMinute, 
+                                  m.Tag_Conductor, 
+                                  m.Tag_Copyright, 
+                                  m.Tag_DateTagged, 
+                                  m.Tag_AmazonId,
+                                  m.Tag_ReplayGainTrackGain, 
+                                  m.Tag_ReplayGainTrackPeak, 
+                                  m.Tag_ReplayGainAlbumGain, 
+                                  m.Tag_ReplayGainAlbumPeak, 
+                                  m.Tag_InitialKey, 
+                                  m.Tag_RemixedBy, 
+                                  m.Tag_Publisher, 
+                                  m.Tag_ISRC, 
+                                  m.Tag_Length, 
+                                  m.Tag_AcoustIdFingerPrint, 
+                                  m.Tag_AcoustId,
+                                  m.Tag_AcoustIdFingerPrint_Duration,
+                                  album.title AS Album,
+                                  artist.name AS Artist,
+                                  artist.artistid AS ArtistId
+                        FROM metadata m
+                        JOIN albums album ON album.albumid = m.albumid
+                        JOIN artists artist ON artist.artistid = album.artistid
+                        where lower(artist.name) = lower(@artistName)
+                        and (tag_alljsontags->>'Spotify Track Id' is null or 
+                             tag_alljsontags->>'Spotify Album Id' is null or
+                             tag_alljsontags->>'Spotify Track Type Id' is null or
+                              tag_alljsontags->>'ARTISTS' is null)";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+
+        return conn
+            .Query<MetadataInfo>(query, new
+            {
+                artistName
+            }).ToList();
+    }
     
     public List<MetadataInfo> GetMetadataByTagRecords(string artistName, List<String> tagNames)
     {
@@ -364,7 +427,8 @@ public class MetadataRepository
                                  tag_disccount,
                                  artist.name AS ArtistName,
                                  m.MusicBrainzArtistId,
-                                 m.tag_acoustid
+                                 m.tag_acoustid,
+                                 m.Tag_AllJsonTags
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
@@ -613,7 +677,8 @@ public class MetadataRepository
                 MusicBrainzReleaseStatus = EXCLUDED.MusicBrainzReleaseStatus, 
                 MusicBrainzReleaseType = EXCLUDED.MusicBrainzReleaseType,
                 MusicBrainzReleaseArtistId = EXCLUDED.MusicBrainzReleaseArtistId,
-                MusicBrainzReleaseGroupId = EXCLUDED.MusicBrainzReleaseGroupId";
+                MusicBrainzReleaseGroupId = EXCLUDED.MusicBrainzReleaseGroupId
+            RETURNING MetadataId";
 
         if (metadata.MetadataId.Equals(Guid.Empty))
         {
@@ -625,6 +690,7 @@ public class MetadataRepository
         metadata.NonNullableValues();
         using var conn = new NpgsqlConnection(_connectionString);
         
-        conn.Execute(query, metadata);
+        metadata.MetadataId = conn.Query<Guid>(query, metadata).FirstOrDefault();
+        
     }
 }

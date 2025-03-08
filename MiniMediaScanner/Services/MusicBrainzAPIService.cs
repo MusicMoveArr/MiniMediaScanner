@@ -10,7 +10,7 @@ public class MusicBrainzAPIService
 {
     private static Stopwatch _stopwatch = Stopwatch.StartNew();
     
-    public MusicBrainzArtistModel? GetArtist(string musicBrainzArtistId)
+    public MusicBrainzArtistModel? GetArtist(Guid musicBrainzArtistId)
     {
         RetryPolicy retryPolicy = GetRetryPolicy();
         Console.WriteLine($"Requesting MusicBrainz GetArtist '{musicBrainzArtistId}'");
@@ -26,7 +26,7 @@ public class MusicBrainzAPIService
             return response;
         });
     }
-    public MusicBrainzArtistInfoModel? GetArtistInfo(string musicBrainzArtistId)
+    public MusicBrainzArtistInfoModel? GetArtistInfo(Guid musicBrainzArtistId)
     {
         RetryPolicy retryPolicy = GetRetryPolicy();
         Console.WriteLine($"Requesting MusicBrainz GetArtistInfo '{musicBrainzArtistId}'");
@@ -42,7 +42,7 @@ public class MusicBrainzAPIService
             return response;
         });
     }
-    public MusicBrainzReleaseModel? GetTracks(string musicBrainzAlbumId)
+    public MusicBrainzReleaseModel? GetTracks(Guid musicBrainzAlbumId)
     {
         RetryPolicy retryPolicy = GetRetryPolicy();
         Console.WriteLine($"Requesting MusicBrainz Tracks '{musicBrainzAlbumId}'");
@@ -59,7 +59,7 @@ public class MusicBrainzAPIService
         });
             
     }
-    public MusicBrainzArtistReleaseModel? GetReleaseWithLabel(string musicBrainzReleaseId)
+    public MusicBrainzArtistReleaseModel? GetReleaseWithLabel(Guid musicBrainzReleaseId)
     {
         RetryPolicy retryPolicy = GetRetryPolicy();
         //ServiceUnavailable
@@ -78,7 +78,7 @@ public class MusicBrainzAPIService
         });
     }
     
-    public MusicBrainzArtistRelationModel? GetExternalLinks(string musicBrainzArtistId)
+    public MusicBrainzArtistRelationModel? GetExternalLinks(Guid musicBrainzArtistId)
     {
         RetryPolicy retryPolicy = GetRetryPolicy();
         Console.WriteLine("Requesting MusicBrainz external links");
@@ -96,7 +96,7 @@ public class MusicBrainzAPIService
         });
     }
     
-    public MusicBrainzArtistModel? GetRecordingById(string recordingId)
+    public MusicBrainzArtistModel? GetRecordingById(Guid recordingId)
     {
         RetryPolicy retryPolicy = GetRetryPolicy();
         //ServiceUnavailable
@@ -116,7 +116,7 @@ public class MusicBrainzAPIService
         });
     }
     
-    public MusicBrainzArtistModel? GetReleasesForArtist(string artistId, int limit, int offset)
+    public MusicBrainzArtistModel? GetReleasesForArtist(Guid artistId, int limit, int offset)
     {
         RetryPolicy retryPolicy = GetRetryPolicy();
         var url = $"https://musicbrainz.org/ws/2/release?artist={artistId}&inc=recordings&fmt=json&limit={limit}&offset={offset}";

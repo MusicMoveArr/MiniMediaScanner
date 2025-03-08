@@ -57,7 +57,12 @@ public class MusicBrainzService
                 return;
             }
 
-            DateTime lastSyncTime = _musicBrainzArtistRepository.GetBrainzArtistLastSyncTime(musicBrainzArtistId);
+            if (!Guid.TryParse(musicBrainzArtistId, out var musicBrainzArtistGuid))
+            {
+                return;
+            }
+            
+            DateTime lastSyncTime = _musicBrainzArtistRepository.GetBrainzArtistLastSyncTime(musicBrainzArtistGuid);
 
             if (DateTime.Now.Subtract(lastSyncTime).TotalDays < 7)
             {
@@ -65,14 +70,14 @@ public class MusicBrainzService
                 return;
             }
             
-            var musicBrainzArtistInfo = _musicBrainzApiService.GetArtistInfo(musicBrainzArtistId);
+            var musicBrainzArtistInfo = _musicBrainzApiService.GetArtistInfo(musicBrainzArtistGuid);
 
             if (musicBrainzArtistInfo == null)
             {
                 return;
             }
             
-            Guid? artistDbId = _musicBrainzArtistRepository.InsertMusicBrainzArtist(musicBrainzArtistId, 
+            Guid? artistDbId = _musicBrainzArtistRepository.InsertMusicBrainzArtist(musicBrainzArtistGuid, 
                 musicBrainzArtistInfo.Name, 
                 musicBrainzArtistInfo.Type,
                 musicBrainzArtistInfo.Country,
@@ -82,7 +87,7 @@ public class MusicBrainzService
             int offset = 0;
             while (true)
             {
-                var releases = _musicBrainzApiService.GetReleasesForArtist(musicBrainzArtistId, BulkRequestLimit, offset);
+                var releases = _musicBrainzApiService.GetReleasesForArtist(musicBrainzArtistGuid, BulkRequestLimit, offset);
 
                 if (releases?.Releases?.Count == 0)
                 {
@@ -93,23 +98,32 @@ public class MusicBrainzService
             
                 foreach (var release in releases.Releases)
                 {
-                    _musicBrainzReleaseRepository.InsertMusicBrainzRelease(artistDbId.Value.ToString(), release.Id, release.Title, release.Status, 
+                    if (!Guid.TryParse(release.Id, out var releaseId))
+                    {
+                        continue;
+                    }
+                    _musicBrainzReleaseRepository.InsertMusicBrainzRelease(artistDbId.Value, releaseId, release.Title, release.Status, 
                         release.StatusId, release.Date, release.Barcode, release.Country, release.Disambiguation, release.Quality);
 
                     foreach (var media in release.Media)
                     {
                         foreach (var track in media.Tracks)
                         {
+                            if (!Guid.TryParse(track.Id, out var trackId) ||
+                                !Guid.TryParse(track.Recording.Id, out var trackRecordingId))
+                            {
+                                continue;
+                            }
                             
-                            _musicBrainzReleaseTrackRepository.InsertMusicBrainzReleaseTrack(track.Id, 
-                                                                                             track.Recording.Id ?? string.Empty, 
+                            _musicBrainzReleaseTrackRepository.InsertMusicBrainzReleaseTrack(trackId, 
+                                                                                             trackRecordingId, 
                                                                                              track.Title ?? string.Empty, 
                                                                                              release.Status, 
-                                                                                             release.Id,
+                                                                                             releaseId,
                                                                                              track.Length ?? 0,
                                                                                              track.Number ?? 0,
                                                                                              track.Position ?? 0,
-                                                                                             track.Recording.Id ?? string.Empty,
+                                                                                             trackRecordingId,
                                                                                              track.Recording.Length ?? 0,
                                                                                              track.Recording.Title ?? string.Empty,
                                                                                              track.Recording.Video,

@@ -20,7 +20,7 @@ public class MissingRepository
                                 lower(re.status) as Status, 
                                 track.recordingid
                          FROM musicbrainzartist ar
-                         JOIN musicbrainzrelease re ON re.musicbrainzartistid = CAST(ar.musicbrainzartistid AS TEXT)
+                         JOIN musicbrainzrelease re ON re.musicbrainzartistid = ar.musicbrainzartistid
                                                     --AND lower(re.country) = lower(ar.country)
                          AND (lower(re.status) = 'official' OR LENGTH(re.status) = 0)
                          JOIN musicbrainzreleasetrack track ON track.musicbrainzremotereleaseid = re.musicbrainzremotereleaseid
@@ -103,7 +103,7 @@ public class MissingRepository
                                     
                                FROM musicbrainzartist ar
                                  JOIN musicbrainzrelease re 
-                                     ON re.musicbrainzartistid = CAST(ar.musicbrainzartistid AS TEXT)
+                                     ON re.musicbrainzartistid = ar.musicbrainzartistid
                                      --AND lower(re.country) = lower(ar.country)
                                       AND (lower(re.status) = 'official' OR LENGTH(re.status) = 0)
                                  JOIN musicbrainzreleasetrack track 
@@ -169,17 +169,15 @@ public class MissingRepository
 						        mrt.title AS track_name 
 						    FROM musicbrainzreleasetrack mrt
 						    JOIN musicbrainzrelease mr ON mrt.musicbrainzremotereleaseid = mr.musicbrainzremotereleaseid
-						    JOIN musicbrainzartist ma ON mr.musicbrainzartistid = ma.musicbrainzartistid::text
+						    JOIN musicbrainzartist ma ON mr.musicbrainzartistid = ma.musicbrainzartistid
 						    where lower(ma.name) = lower(@artistName)
 						)
 						SELECT distinct mb.artist_name || ' - ' || mb.album_name || ' - ' || mb.track_name
 						FROM MusicBrainzData mb
 						LEFT JOIN MusicLibrary ml 
-						    ON (lower(mb.artist_name) = lower(ml.artist_name)
-						    AND lower(mb.album_name) = lower(ml.album_name)
-						    --AND lower(mb.track_name) = lower(ml.track_name)
-						    and similarity(mb.track_name, ml.track_name) >= 0.8)
-						    or (similarity(mb.track_name, ml.track_name) >= 0.8 and lower(mb.artist_name) = lower(ml.artist_name))
+						    ON (lower(mb.album_name) = lower(ml.album_name)
+						    and similarity(mb.track_name, ml.track_name) >= 0.5)
+						    or (similarity(mb.track_name, ml.track_name) >= 0.5)
 							
 						WHERE ml.track_name IS NULL";
 
@@ -201,12 +199,13 @@ public class MissingRepository
 						        a.name AS artist_name, 
 						        al.albumid, 
 						        al.title AS album_name, 
-						        m.title AS track_name, 
-						        tag_alljsontags->>'ARTISTS' as Artists
+						        m.title AS track_name
 						    FROM metadata m
 						    JOIN albums al ON m.albumid = al.albumid
 						    JOIN artists a ON al.artistid = a.artistid
-						    where lower(a.name) = lower(@artistName)
+					    join metadata_tag tag on tag.metadataid = m.metadataid
+    											 and ((tag.name in ('ALBUM ARTIST', 'ALBUMARTIST', 'ALBUM_ARTIST', 'artist', 'album_artist', 'AlbumArtist', 'Artists') and tag.value ilike '%' || @artistName || '%')
+    											    or (tag.name in ('ARTISTS', 'ALBUMARTISTS', 'Artists', 'artists', 'album_artists', 'albumartists') and tag.value ilike '%' || @artistName || '%'))
 						),
 						MusicBrainzData AS (
 							select artist.id as artist_id, 
@@ -224,12 +223,9 @@ public class MissingRepository
 						SELECT distinct mb.artist_name || ' - ' || mb.album_name || ' - ' || mb.track_name
 						FROM MusicBrainzData mb
 						LEFT JOIN MusicLibrary ml 
-						    ON (lower(mb.artist_name) = lower(ml.artist_name)
-						    AND lower(mb.album_name) = lower(ml.album_name)
-						    --AND lower(mb.track_name) = lower(ml.track_name)
-						    and similarity(mb.track_name, ml.track_name) >= 0.8)
-						    or (similarity(mb.track_name, ml.track_name) >= 0.8 and lower(mb.artist_name) = lower(ml.artist_name))
-						    or (similarity(mb.track_name, ml.track_name) >= 0.8 and ml.Artists ilike '%' || ml.artist_name || '%')
+						    ON (lower(mb.album_name) = lower(ml.album_name)
+						    and similarity(lower(mb.track_name), lower(ml.track_name)) >= 0.5)
+						    or (similarity(lower(mb.track_name), lower(ml.track_name)) >= 0.5)
 						WHERE ml.track_name IS null ";
 
 	    using var conn = new NpgsqlConnection(_connectionString);

@@ -7,6 +7,7 @@ public class MetadataInfo
     public Guid MetadataId { get; set; }
     public string? Path { get; set; }
     public Guid AlbumId { get; set; }
+    public Guid ArtistId { get; set; }
     public string? Album { get; set; }
     public string? Artist { get; set; }
     public string? Title { get; set; }
