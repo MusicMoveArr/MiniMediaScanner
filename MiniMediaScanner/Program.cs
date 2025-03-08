@@ -23,6 +23,7 @@ public class Program
         AppBuilder.Add("convert", ConvertMediaCommand.ConvertMedia);
         AppBuilder.Add("fingerprint", FingerPrintMediaCommand.FingerPrintMedia);
         AppBuilder.Add("tagmissingmetadata", TagMissingMetadataCommand.TagMissingMetadata);
+        AppBuilder.Add("tagmissingspotifymetadata", TagMissingSpotifyMetadataCommand.TagMissingMetadata);
         AppBuilder.Add("deduplicate", DeDuplicateFileCommand.DeDuplicate);
         AppBuilder.Add("normalizefile", NormalizeFileCommand.NormalizeFile);
         AppBuilder.Add("equalizemediatag", EqualizeMediaTagCommand.EqualizeMediaTag);

@@ -255,6 +255,61 @@ public class MediaTagWriteService
                 track.AdditionalFields[GetFieldName(track, "LABEL")] = value;
                 updated = IsDictionaryUpdated(track, oldValues, "LABEL");
                 return true;
+            case "spotify track id":
+                orgValue = GetDictionaryValue(track, "Spotify Track Id");
+                track.AdditionalFields[GetFieldName(track, "Spotify Track Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Spotify Track Id");
+                return true;
+            case "spotify track explicit":
+                orgValue = GetDictionaryValue(track, "Spotify Track Explicit");
+                track.AdditionalFields[GetFieldName(track, "Spotify Track Explicit")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Spotify Track Explicit");
+                return true;
+            case "spotify track uri":
+                orgValue = GetDictionaryValue(track, "Spotify Track Uri");
+                track.AdditionalFields[GetFieldName(track, "Spotify Track Uri")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Spotify Track Uri");
+                return true;
+            case "spotify track href":
+                orgValue = GetDictionaryValue(track, "Spotify Track Href");
+                track.AdditionalFields[GetFieldName(track, "Spotify Track Href")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Spotify Track Href");
+                return true;
+            case "spotify album id":
+                orgValue = GetDictionaryValue(track, "Spotify Album Id");
+                track.AdditionalFields[GetFieldName(track, "Spotify Album Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Spotify Album Id");
+                return true;
+            case "spotify album group":
+                orgValue = GetDictionaryValue(track, "Spotify Album Group");
+                track.AdditionalFields[GetFieldName(track, "Spotify Album Group")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Spotify Album Group");
+                return true;
+            case "spotify album release date":
+                orgValue = GetDictionaryValue(track, "Spotify Album Release Date");
+                track.AdditionalFields[GetFieldName(track, "Spotify Album Release Date")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Spotify Album Release Date");
+                return true;
+            case "spotify artist href":
+                orgValue = GetDictionaryValue(track, "Spotify Artist Href");
+                track.AdditionalFields[GetFieldName(track, "Spotify Artist Href")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Spotify Artist Href");
+                return true;
+            case "spotify artist genres":
+                orgValue = GetDictionaryValue(track, "Spotify Artist Genres");
+                track.AdditionalFields[GetFieldName(track, "Spotify Artist Genres")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Spotify Artist Genres");
+                return true;
+            case "spotify artist id":
+                orgValue = GetDictionaryValue(track, "Spotify Artist Id");
+                track.AdditionalFields[GetFieldName(track, "Spotify Artist Id")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Spotify Artist Id");
+                return true;
+            case "upc":
+                orgValue = GetDictionaryValue(track, "UPC");
+                track.AdditionalFields[GetFieldName(track, "UPC")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "UPC");
+                return true;
         }
 
         return false;

@@ -1,4 +1,5 @@
 using Dapper;
+using MiniMediaScanner.Models.Spotify;
 using Npgsql;
 using SpotifyAPI.Web;
 
@@ -335,6 +336,107 @@ public class SpotifyRepository
         
         return conn
             .Query<string>(query)
+            .ToList();
+    }
+
+    public List<SpotifyTrackModel> GetTrackByArtistId(string artistId, string albumName, string trackName)
+    {
+        string query = @"select
+                             track.name As TrackName,
+	                         track.TrackId,
+	                         track.AlbumId,
+	                         track.DiscNumber,
+	                         (track.durationms / 1000.0) * interval '1 second' as Duration,
+	                         track.Explicit,
+	                         track.Href as TrackHref,
+	                         track.TrackNumber,
+	                         track.Uri,
+	                         album.AlbumGroup,
+	                         album.AlbumType,
+	                         album.ReleaseDate,
+	                         album.TotalTracks,
+	                         album.Label,
+	                         album.name as AlbumName,
+	                         artist.Href as ArtistHref,
+	                         artist.Genres,
+	                         artist.name as ArtistName,
+	                         artist.id as ArtistId
+                         from spotify_track track
+                         join spotify_album album on album.albumid = track.albumid
+                         join spotify_track_artist track_artist on track_artist.trackid = track.trackid
+                         join spotify_album_artist album_artist on album_artist.albumid = album.albumid 
+                         join spotify_artist artist on artist.id = track_artist.artistid or 
+						 	                           artist.id = album_artist.artistid
+                         where artist.id = @artistId
+	                         and lower(album.name) = lower(@albumName)
+	                         and lower(track.name) = lower(@trackName)";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn
+            .Query<SpotifyTrackModel>(query,
+                param: new
+                {
+                    artistId,
+                    albumName,
+                    trackName
+                })
+            .ToList();
+    }
+
+    public List<SpotifyExternalValue> GetTrackExternalValues(string trackId)
+    {
+        string query = @"select
+	                         trackid as Id,
+	                         Name,
+	                         Value
+                         from spotify_track_externalid externalvalue
+                         where externalvalue.trackid = @trackId";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn
+            .Query<SpotifyExternalValue>(query,
+                param: new
+                {
+                    trackId
+                })
+            .ToList();
+    }
+    public List<SpotifyExternalValue> GetAlbumExternalValues(string albumId)
+    {
+        string query = @"select
+	                         albumid as Id,
+	                         Name,
+	                         Value
+                         from spotify_album_externalid externalvalue
+                         where externalvalue.albumid = @albumId";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn
+            .Query<SpotifyExternalValue>(query,
+                param: new
+                {
+                    albumId
+                })
+            .ToList();
+    }
+    public List<string> GetTrackArtists(string trackId)
+    {
+        string query = @"SELECT artist.name
+                         FROM spotify_track_artist sta
+                         join spotify_artist artist on artist.id = sta.artistid
+                         where sta.trackid = @trackId";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn
+            .Query<string>(query,
+                param: new
+                {
+                    trackId
+                })
             .ToList();
     }
 }
