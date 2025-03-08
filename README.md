@@ -32,18 +32,19 @@ Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
    
    Seperators between words are kept: : - _ / ,
 10. TagMissingMetadata - Add missing tags to your media files from AcoustId/MusicBrainz from fingerprints
-11. EqualizeMetadata - Equalize (set the same) tag value for the entire album of an artist (mostly to fix issues with albums showing weird/duplicated in Plex/Navidrome etc)
-12. FixVersioning - Find media that are using the same track/disc numbering, usually normal version and (AlbumVersion), (Live) etc
+11. TagMissingSpotifyMetadata - Add missing tags to your media files from Spotify
+12. EqualizeMetadata - Equalize (set the same) tag value for the entire album of an artist (mostly to fix issues with albums showing weird/duplicated in Plex/Navidrome etc)
+13. FixVersioning - Find media that are using the same track/disc numbering, usually normal version and (AlbumVersion), (Live) etc
     The media with the longest file name and contains TrackFilters will get incremented disc number
     This will make it so the normal version of the album stays at disc 1 but remix(etc) gets disc number 1001+
-13. Cover ArtArchive - Grab covers from the CoverArtArchive and save them as cover.jpg
-14. Cover Extract - Extract the covers directly from the media files and save them as cover.jpg
-15. RemoveTag - Remove specific tags from Artist/Albums
-16. RefreshMetadata - Simply do a quick refresh of the metadata for an artist/album
-17. SplitArtist - Split Artist is kind of experimental, it will try to split the 2 artist's that have the same name apart into 2 seperate artists
-18. Stats - Show basic stats of your database
-19. UpdateSpotify - Update/Add artists into the database from Spotify's API
-20. SplitTag - Split specific tag's into single value fields by specific seperator like ';'
+14. Cover ArtArchive - Grab covers from the CoverArtArchive and save them as cover.jpg
+15. Cover Extract - Extract the covers directly from the media files and save them as cover.jpg
+16. RemoveTag - Remove specific tags from Artist/Albums
+17. RefreshMetadata - Simply do a quick refresh of the metadata for an artist/album
+18. SplitArtist - Split Artist is kind of experimental, it will try to split the 2 artist's that have the same name apart into 2 seperate artists
+19. Stats - Show basic stats of your database
+20. UpdateSpotify - Update/Add artists into the database from Spotify's API
+21. SplitTag - Split specific tag's into single value fields by specific seperator like ';'
 
 # Examples
 ```
@@ -121,6 +122,7 @@ dotnet MiniMediaScanner.dll deletedmedia -a deadmau5
 dotnet MiniMediaScanner.dll deduplicate -d -a deadmau5
 dotnet MiniMediaScanner.dll fingerprint -a deadmau5
 dotnet MiniMediaScanner.dll tagmissingmetadata --accoustid xxxxx -w -a deadmau5
+dotnet MiniMediaScanner.dll tagmissingspotifymetadata -w -a deadmau5
 dotnet MiniMediaScanner.dll removetag --tag artistsort -a deadmau5
 dotnet MiniMediaScanner.dll removetag --tags ["artistsort", "albumartistsortorder"] --artist deadmau5
 dotnet MiniMediaScanner.dll coverextract --artist deadmau5
