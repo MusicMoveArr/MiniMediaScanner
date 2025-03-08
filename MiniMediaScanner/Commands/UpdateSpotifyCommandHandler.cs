@@ -1,5 +1,6 @@
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
+using SpotifyAPI.Web;
 
 namespace MiniMediaScanner.Commands;
 
@@ -38,6 +39,11 @@ public class UpdateSpotifyCommandHandler
         {
             _spotifyService.UpdateArtistByName(artist);
         }
+        catch (APITooManyRequestsException ex)
+        {
+            Console.WriteLine($"Too many requests to synced artist, waiting {ex.RetryAfter}...");
+            Thread.Sleep(ex.RetryAfter.Add(TimeSpan.FromSeconds(10)));
+        }
         catch (Exception e)
         {
             Console.WriteLine(e);
@@ -54,6 +60,11 @@ public class UpdateSpotifyCommandHandler
             {
                 UpdateSpotifyArtistsByName(artist);
             }
+            catch (APITooManyRequestsException ex)
+            {
+                Console.WriteLine($"Too many requests to synced artist, waiting {ex.RetryAfter}...");
+                Thread.Sleep(ex.RetryAfter.Add(TimeSpan.FromSeconds(10)));
+            }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
@@ -67,6 +78,11 @@ public class UpdateSpotifyCommandHandler
         {
             Console.WriteLine($"Updating Music Spotify Artist Id '{artistId}'");
             _spotifyService.UpdateArtistById(artistId);
+        }
+        catch (APITooManyRequestsException ex)
+        {
+            Console.WriteLine($"Too many requests to synced artist, waiting {ex.RetryAfter}...");
+            Thread.Sleep(ex.RetryAfter.Add(TimeSpan.FromSeconds(10)));
         }
         catch (Exception e)
         {
