@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ATL;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models.MusicBrainz;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -59,9 +60,10 @@ public class SplitArtistCommandHandler
                 continue;
             }
             
-            string musicBrainzArtistId = album.First().MusicBrainzArtistId;
+            Guid.TryParse(album.First().MusicBrainzArtistId, out var musicBrainzArtistId);
+            
             var musicBrainzArtist = musicBrainzArtists
-                .Where(m => !string.IsNullOrWhiteSpace(m.MusicBrainzRemoteId))
+                .Where(m => GuidHelper.GuidHasValue(m.MusicBrainzRemoteId))
                 .FirstOrDefault(artist => artist.MusicBrainzRemoteId == musicBrainzArtistId);
             
             if (musicBrainzArtist == null)

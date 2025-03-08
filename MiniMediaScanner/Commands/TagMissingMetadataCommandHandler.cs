@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ATL;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models.MusicBrainz;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -66,20 +67,21 @@ public class TagMissingMetadataCommandHandler
         JObject? acoustIdLookup = _acoustIdService.LookupAcoustId(accoustId,
             metadata.Tag_AcoustIdFingerPrint, (int)metadata.Tag_AcoustIdFingerPrint_Duration);
         
-        var recordingId = acoustIdLookup?["results"]?.FirstOrDefault()?["recordings"]?.FirstOrDefault()?["id"]?.ToString();
+        Guid.TryParse(acoustIdLookup?["results"]?.FirstOrDefault()?["recordings"]?.FirstOrDefault()?["id"]?.ToString(), out var recordingId);
+        
         var acoustId = acoustIdLookup?["results"]?.FirstOrDefault()?["id"]?.ToString();
 
         Track track = null;
         MusicBrainzArtistModel? artistModel = null;
         
-        if (string.IsNullOrWhiteSpace(recordingId))
+        if (!GuidHelper.GuidHasValue(recordingId))
         {
             Console.WriteLine($"No recording ID found from AcoustID for '{metadata.Path}'");
             
             track = new Track(metadata.Path);
-            recordingId = _musicBrainzArtistRepository.GetMusicBrainzRecordingIdByName(track.Artist, track.Album, track.Title);
+            recordingId = _musicBrainzArtistRepository.GetMusicBrainzRecordingIdByName(track.Artist, track.Album, track.Title).Value;
 
-            if (!string.IsNullOrWhiteSpace(recordingId))
+            if (!GuidHelper.GuidHasValue(recordingId))
             {
                 artistModel = _musicBrainzAPIService.GetRecordingById(recordingId);
                 if (artistModel != null)
@@ -112,10 +114,12 @@ public class TagMissingMetadataCommandHandler
             track = new Track(metadata.Path);
         }
 
-        if (string.IsNullOrWhiteSpace(recordingId))
+        if (!GuidHelper.GuidHasValue(recordingId))
         {
-            recordingId = release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Recording?.Id;
+            Guid.TryParse(release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Recording?.Id, out recordingId);
         }
+        
+        
         
         bool trackInfoUpdated = false;
         string? musicBrainzTrackId = release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Id;
@@ -127,20 +131,22 @@ public class TagMissingMetadataCommandHandler
         string musicBrainzArtistIds = string.Join(';', artistModel?.ArtistCredit.Select(artist => artist.Artist.Id));
         string isrcs = artistModel?.ISRCS != null ? string.Join(';', artistModel?.ISRCS) : string.Empty;
 
-        MusicBrainzArtistReleaseModel withLabeLInfo = _musicBrainzAPIService.GetReleaseWithLabel(release.Id);
-        var label = withLabeLInfo?.LabeLInfo?.FirstOrDefault(label => label?.Label?.Type?.ToLower().Contains("production") == true);
-
-        if (label == null && withLabeLInfo?.LabeLInfo?.Count == 1)
+        if (Guid.TryParse(release.Id, out var releaseId))
         {
-            label = withLabeLInfo?.LabeLInfo?.FirstOrDefault();
-        }
+            MusicBrainzArtistReleaseModel? withLabeLInfo = _musicBrainzAPIService.GetReleaseWithLabel(releaseId);
+            var label = withLabeLInfo?.LabeLInfo?.FirstOrDefault(label => label?.Label?.Type?.ToLower().Contains("production") == true);
 
-        if (!string.IsNullOrWhiteSpace(label?.Label?.Name))
-        {
-            UpdateTag(track, "LABEL", label?.Label.Name, ref trackInfoUpdated, overwriteTagValue);
-            UpdateTag(track, "CATALOGNUMBER", label?.CataLogNumber, ref trackInfoUpdated, overwriteTagValue);
+            if (label == null && withLabeLInfo?.LabeLInfo?.Count == 1)
+            {
+                label = withLabeLInfo?.LabeLInfo?.FirstOrDefault();
+            }
+            if (!string.IsNullOrWhiteSpace(label?.Label?.Name))
+            {
+                UpdateTag(track, "LABEL", label?.Label.Name, ref trackInfoUpdated, overwriteTagValue);
+                UpdateTag(track, "CATALOGNUMBER", label?.CataLogNumber, ref trackInfoUpdated, overwriteTagValue);
+            }
         }
-
+        
         if ((!track.Date.HasValue ||
              track.Date.Value.ToString("yyyy-MM-dd") != release.Date))
         {
@@ -178,7 +184,12 @@ public class TagMissingMetadataCommandHandler
         UpdateTag(track, "barcode", release.Barcode, ref trackInfoUpdated, overwriteTagValue);
 
         UpdateTag(track, "MusicBrainz Artist Id", musicBrainzArtistIds, ref trackInfoUpdated, overwriteTagValue);
-        UpdateTag(track, "MusicBrainz Track Id", recordingId, ref trackInfoUpdated, overwriteTagValue);
+
+        if (GuidHelper.GuidHasValue(recordingId))
+        {
+            UpdateTag(track, "MusicBrainz Track Id", recordingId.ToString(), ref trackInfoUpdated, overwriteTagValue);
+        }
+        
         UpdateTag(track, "MusicBrainz Release Track Id", musicBrainzTrackId, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MusicBrainz Release Artist Id", musicBrainzReleaseArtistId, ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MusicBrainz Release Group Id", musicBrainzReleaseGroupId, ref trackInfoUpdated, overwriteTagValue);
