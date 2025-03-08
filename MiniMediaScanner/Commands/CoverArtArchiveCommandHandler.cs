@@ -79,7 +79,7 @@ public class CoverArtArchiveCommandHandler
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An error occurred: {ex.Message}");
+            //Console.WriteLine($"An error occurred: {ex.Message}");
         }
 
         return string.Empty;
