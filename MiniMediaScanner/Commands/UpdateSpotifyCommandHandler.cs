@@ -24,11 +24,12 @@ public class UpdateSpotifyCommandHandler
         Console.WriteLine($"Updating artist, {artist}");
 
         var artistIds = _spotifyRepository.GetSpotifyArtistIdsByName(artist);
+        
         foreach (var artistId in artistIds)
         {
             DateTime? lastSyncTime = _spotifyRepository.GetArtistLastSyncTime(artistId);
 
-            if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < 2)
+            if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < 7)
             {
                 Console.WriteLine($"Skipped synchronizing for Spotify '{artist}' synced already within 7days");
                 return;
