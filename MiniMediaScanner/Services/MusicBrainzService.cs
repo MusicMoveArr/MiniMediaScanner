@@ -34,7 +34,7 @@ public class MusicBrainzService
             {
                 return;
             }
-            
+
             string[] musicBrainzArtistIds = musicBrainzArtistId.Split(';', StringSplitOptions.RemoveEmptyEntries);
 
             foreach (string artistId in musicBrainzArtistIds)

@@ -10,6 +10,22 @@ public class MusicBrainzAPIService
 {
     private static Stopwatch _stopwatch = Stopwatch.StartNew();
     
+    public MusicBrainzArtistSearchModel? SearchArtist(string artistName)
+    {
+        RetryPolicy retryPolicy = GetRetryPolicy();
+        Console.WriteLine($"Requesting MusicBrainz SearchArtist '{artistName}'");
+        string url = $"https://musicbrainz.org/ws/2/artist/?query=artist:'{artistName}' AND (type:person or type:group)&fmt=json";
+
+        return retryPolicy.Execute(() =>
+        {
+            using RestClient client = new RestClient(url);
+            RestRequest request = new RestRequest();
+            var response =  client.Get<MusicBrainzArtistSearchModel>(request);
+            
+            _stopwatch.Restart();
+            return response;
+        });
+    }
     public MusicBrainzArtistModel? GetArtist(Guid musicBrainzArtistId)
     {
         RetryPolicy retryPolicy = GetRetryPolicy();
@@ -62,7 +78,6 @@ public class MusicBrainzAPIService
     public MusicBrainzArtistReleaseModel? GetReleaseWithLabel(Guid musicBrainzReleaseId)
     {
         RetryPolicy retryPolicy = GetRetryPolicy();
-        //ServiceUnavailable
         
         Console.WriteLine($"Requesting MusicBrainz GetReleaseWithLabel '{musicBrainzReleaseId}'");
         string url = $"https://musicbrainz.org/ws/2/release/{musicBrainzReleaseId}?inc=labels&fmt=json";
@@ -99,7 +114,6 @@ public class MusicBrainzAPIService
     public MusicBrainzArtistModel? GetRecordingById(Guid recordingId)
     {
         RetryPolicy retryPolicy = GetRetryPolicy();
-        //ServiceUnavailable
         
         Console.WriteLine($"Requesting MusicBrainz GetRecordingById, {recordingId}");
         string url = $"https://musicbrainz.org/ws/2/recording/{recordingId}?fmt=json&inc=isrcs+artists+releases+release-groups+url-rels+media";
