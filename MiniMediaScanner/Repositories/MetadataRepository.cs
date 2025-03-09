@@ -447,7 +447,8 @@ public class MetadataRepository
         string query = @$"SELECT distinct regexp_replace(path, '[^/]+$', '') AS FolderPath, 
                                  m.MusicBrainzReleaseId,
                                  artist.name as ArtistName,
-                                 album.title AS AlbumName
+                                 album.title AS AlbumName,
+                                 artist.ArtistId AS ArtistId
                           FROM artists artist
                           JOIN albums album ON album.artistid = artist.artistid
                           JOIN metadata m ON m.albumid = album.albumid

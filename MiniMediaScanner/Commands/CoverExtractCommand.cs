@@ -5,7 +5,7 @@ namespace MiniMediaScanner.Commands;
 public class CoverExtractCommand
 {
     /// <summary>
-    /// Extract Cover art from the media files
+    /// Extract Cover art from the media files (only Album cover supported)
     /// </summary>
     /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
     /// <param name="artist">-a, Artistname.</param>

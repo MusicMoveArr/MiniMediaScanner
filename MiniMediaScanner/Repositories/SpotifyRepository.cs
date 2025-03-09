@@ -439,4 +439,44 @@ public class SpotifyRepository
                 })
             .ToList();
     }
+    
+    public string? GetHighestQualityAlbumCoverUrl(string artistId, string albumName)
+    {
+        string query = @"SELECT sai.url
+                         FROM spotify_album_image sai
+                         join spotify_album album on album.albumid = sai.albumid and lower(album.name) = lower(@albumName)
+                         join spotify_album_artist saa on saa.artistid = @artistId and saa.albumid = sai.albumid
+                         order by sai.height desc, sai.width desc
+                         limit 1";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn
+            .Query<string>(query,
+                param: new
+                {
+                    artistId,
+                    albumName
+                })
+            .FirstOrDefault();
+    }
+    
+    public string? GetHighestQualityArtistCoverUrl(string artistId)
+    {
+        string query = @"SELECT url
+                         FROM spotify_artist_image sai
+                         where sai.artistid = @artistId
+                         order by height desc, width desc
+                         limit 1";
+
+        using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn
+            .Query<string>(query,
+                param: new
+                {
+                    artistId
+                })
+            .FirstOrDefault();
+    }
 }

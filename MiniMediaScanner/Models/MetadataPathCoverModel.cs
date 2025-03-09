@@ -6,4 +6,5 @@ public class MetadataPathCoverModel
     public string MusicBrainzReleaseId { get; set; }
     public string ArtistName { get; set; }
     public string AlbumName { get; set; }
+    public Guid ArtistId { get; set; }
 }

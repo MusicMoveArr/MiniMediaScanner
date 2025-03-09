@@ -5,7 +5,7 @@ namespace MiniMediaScanner.Commands;
 public class CoverArtArchiveCommand
 {
     /// <summary>
-    /// Download Cover art from the Cover Art Archive
+    /// Download Cover art from the Cover Art Archive (only Album cover supported)
     /// </summary>
     /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
     /// <param name="artist">-a, Artistname.</param>

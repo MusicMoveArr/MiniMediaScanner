@@ -37,6 +37,7 @@ public class Program
         AppBuilder.Add("stats", StatsCommand.Stats);
         AppBuilder.Add("updatespotify", UpdateSpotifyCommand.UpdateSpotify);
         AppBuilder.Add("splittag", SplitTagCommand.SplitTag);
+        AppBuilder.Add("coverartspotify", CoverArtSpotifyCommand.CoverArtSpotify);
         
         string? importPath = Environment.GetEnvironmentVariable("IMPORT_PATH");
         string? cronExpression = Environment.GetEnvironmentVariable("CRON");
