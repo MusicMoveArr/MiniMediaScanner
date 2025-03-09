@@ -2,6 +2,7 @@ using MiniMediaScanner.Models.Spotify;
 using MiniMediaScanner.Repositories;
 using RestSharp;
 using SpotifyAPI.Web;
+using Swan;
 
 namespace MiniMediaScanner.Services;
 
@@ -83,7 +84,7 @@ public class SpotifyService
         foreach (var album in fullAlbums.Albums)
         {
             Console.WriteLine($"Grabbing album {album.Name}, Artist: {artist.Name}");
-            var simpleAlbum = albums.Items.FirstOrDefault(album => album.Id == album.Id);
+            var simpleAlbum = albums.Items.FirstOrDefault(a => a.Id == album.Id);
             _spotifyRepository.InsertOrUpdateAlbum(album, simpleAlbum?.AlbumGroup ?? string.Empty);
             _spotifyRepository.InsertOrUpdateAlbumArtist(album);
             _spotifyRepository.InsertOrUpdateAlbumImage(album);
