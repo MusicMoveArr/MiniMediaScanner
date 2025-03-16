@@ -189,4 +189,5 @@ dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t asin -w asin -y
 |-----:|---------------|
 |IMPORT_PATH| ~/Music |
 |CRON (Quartz)|0 0 * * * ? *|
+|COMMAND|import|
 |CONNECTIONSTRING|Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia|
