@@ -54,9 +54,6 @@ dotnet MiniMediaScanner.dll import --connection-string "Host=192.168.1.2;Usernam
 dotnet MiniMediaScanner.dll updatemb --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia"
 ```
 ```
-dotnet MiniMediaScanner.dll updatemb --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a "["\Slayer\"]"
-```
-```
 dotnet MiniMediaScanner.dll missing --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a Slayer
 ```
 ```
@@ -96,7 +93,7 @@ Total Tracks
 MEDIA
 ```
 ```
-dotnet MiniMediaScanner.dll equalizemediatag --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia"  -a Pendulum -t asin -wt asin -y
+dotnet MiniMediaScanner.dll equalizemediatag --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" -a Pendulum -t asin -w asin -y
 Tags available: date, originaldate, originalyear, year, disc, asin, catalognumber
 ```
 ```
@@ -117,24 +114,24 @@ dotnet MiniMediaScanner.dll normalizefile --connection-string "Host=192.168.1.2;
 ## more Example
 ```
 export CONNECTIONSTRING="Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia"
-dotnet MiniMediaScanner.dll import -p ~/Music/
+dotnet MiniMediaScanner.dll import --path "~/Music/"
 dotnet MiniMediaScanner.dll deletedmedia -a deadmau5
 dotnet MiniMediaScanner.dll deduplicate -d -a deadmau5
 dotnet MiniMediaScanner.dll fingerprint -a deadmau5
 dotnet MiniMediaScanner.dll tagmissingmetadata --accoustid xxxxx -w -a deadmau5
 dotnet MiniMediaScanner.dll tagmissingspotifymetadata -w -a deadmau5
-dotnet MiniMediaScanner.dll removetag --tag artistsort -a deadmau5
-dotnet MiniMediaScanner.dll removetag --tags ["artistsort", "albumartistsortorder"] --artist deadmau5
+dotnet MiniMediaScanner.dll removetag --tag "artistsort" -a deadmau5
+dotnet MiniMediaScanner.dll removetag --tags "artistsort" "albumartistsortorder" --artist deadmau5
 dotnet MiniMediaScanner.dll coverextract --artist deadmau5
 dotnet MiniMediaScanner.dll coverartarchive --artist deadmau5
-dotnet MiniMediaScanner.dll equalizemediatag -t date -wt date -y --artist deadmau5
-dotnet MiniMediaScanner.dll equalizemediatag -t originalyear -wt originalyear -y --artist deadmau5
-dotnet MiniMediaScanner.dll equalizemediatag -t originaldate -wt originaldate -y --artist deadmau5
-dotnet MiniMediaScanner.dll equalizemediatag -t year -wt year -y --artist deadmau5
-dotnet MiniMediaScanner.dll fixversioning -f ["("] --confirm --artist deadmau5
-dotnet MiniMediaScanner.dll updatespotify -SID "xxxxx" -SIS "xxxxxx" --artist deadmau5
+dotnet MiniMediaScanner.dll equalizemediatag -t date -w date -y --artist deadmau5
+dotnet MiniMediaScanner.dll equalizemediatag -t originalyear -w originalyear -y --artist deadmau5
+dotnet MiniMediaScanner.dll equalizemediatag -t originaldate -w originaldate -y --artist deadmau5
+dotnet MiniMediaScanner.dll equalizemediatag -t year -w year -y --artist deadmau5
+dotnet MiniMediaScanner.dll fixversioning -f "(" --confirm --artist deadmau5
+dotnet MiniMediaScanner.dll updatespotify --spotify-client-id "xxxxx" --spotify-secret-id "xxxxxx" --artist deadmau5
 dotnet MiniMediaScanner.dll stats
-dotnet MiniMediaScanner.dll splittag -t AlbumArtist -wt ARTISTS -s ; -ow -rt -wto -y -a deadmau5
+dotnet MiniMediaScanner.dll splittag --tag AlbumArtist ----write-tag ARTISTS -s ; ----overwrite-tag ----update-read-tag --update-write-tag-original-value -y -a deadmau5
 ```
 
 # Split Tag explained
@@ -142,16 +139,16 @@ The SplitTag command will split multi-value tags as a single value into the same
 
 Some media like the "abuse" the wrong tags for another purpose like filling AlbumArtist/Artist tag with the value of ARTISTS
 
-To fix this problem easy, we can tell it to read the tag AlbumArtist (-t AlbumArtist) and use it's original value (-rto) to write to ARTISTS (-wt ARTISTS)
+To fix this problem easy, we can tell it to read the tag AlbumArtist (-t/--tag AlbumArtist) and use it's original value (-R/--update-read-tag-original-value) to write to ARTISTS (-w/--write-tag ARTISTS)
 
-We used in this example as well (-wto) (updateWriteTagOriginalValue) to write the original value to ARTISTS from AlbumArtist, otherwise ARTISTS will become as well a single value field
+We used in this example as well (-W/--update-write-tag-original-value)to write the original value to ARTISTS from AlbumArtist, otherwise ARTISTS will become as well a single value field
 
 To automate this process you can tell it to automatically confirm with (-y)
 
-(-s) or --seperator, is used to tell how to seperate the values, in most cases it's ';'
+-s/--seperator, is used to tell how to seperate the values, in most cases it's ';'
 
 ```
-dotnet MiniMediaScanner.dll splittag -t AlbumArtist -wt ARTISTS -s ; -ow -rt -wto -y -a deadmau5
+dotnet MiniMediaScanner.dll splittag --tag AlbumArtist --write-tag ARTISTS -s ; --overwrite-tag --update-read-tag --update-write-tag-original-value -y --artist deadmau5
 ```
 
 Output example,
@@ -178,12 +175,12 @@ dotnet MiniMediaScanner.dll import --path "~/nfs_share_music/Pendulum"
 dotnet MiniMediaScanner.dll deletedmedia -a Pendulum
 dotnet MiniMediaScanner.dll fingerprint -a Pendulum
 dotnet MiniMediaScanner.dll tagmissingmetadata -a Pendulum --accoustid xxxxxxxx -w
-dotnet MiniMediaScanner.dll fixversioning -a Pendulum -f "["("]" -y
-dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t date -wt date -y
-dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t originalyear -wt originalyear -y
-dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t originaldate -wt originaldate -y
-dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t catalognumber -wt catalognumber -y
-dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t asin -wt asin -y
+dotnet MiniMediaScanner.dll fixversioning -a Pendulum -f "(" -y
+dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t date -w date -y
+dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t originalyear -w originalyear -y
+dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t originaldate -w originaldate -y
+dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t catalognumber -w catalognumber -y
+dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t asin -w asin -y
 
 ```
 
