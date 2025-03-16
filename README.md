@@ -6,6 +6,21 @@ Inspired of beets and other tools to manage media
 
 Loving the work I do? buy me a coffee https://buymeacoffee.com/musicmovearr
 
+# Roadmap
+This roadmap will be ongoing as the project keeps going
+- [x] All commands are Asynchronous
+- [x] All commands support Environment Variables
+- [x] Docker support
+- [ ] Generate BPM
+- [ ] Generate Replay gain
+- [ ] Generate Waveforms (maybe? need to see how/which servers can benefit from this)
+- [x] Implement Spotify's API for Tags (ongoing)
+- [ ] Implement Discogs's API for Tags
+- [ ] Implement Beatport's API for Tags
+- [ ] Implement Deezer's API for Tags
+- [ ] Improve Missing songs command
+- [ ] Command to cleanup/merge tags (e.g. AlbumArtist, album_artist...)
+
 # Features
 1. Postgres support
 2. Import Full/Partially your entire library multi-threaded
