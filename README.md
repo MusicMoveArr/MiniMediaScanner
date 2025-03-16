@@ -184,16 +184,10 @@ dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t asin -w asin -y
 
 ```
 
-# Docker
-| Environment Name | Value Example |
-|-----:|---------------|
-|IMPORT_PATH| ~/Music |
-|CRON (Quartz)|0 0 * * * ? *|
-|COMMAND|import|
-|CONNECTIONSTRING|Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia|
-
 # Docker Compose example
 Refresh the metadata every 6 hours, change the volume(s), connectionstring accordingly to your environment
+
+Look below specifically for Environment variables per command to see which options are available to you
 ```
 services:
   minimediascanner:
