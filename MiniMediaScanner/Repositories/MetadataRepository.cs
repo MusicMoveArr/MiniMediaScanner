@@ -13,7 +13,7 @@ public class MetadataRepository
         _connectionString = connectionString;
     }
     
-    public void UpdateMetadataFingerprint(string metadataId, string fingerprint, float duration,
+    public async Task UpdateMetadataFingerprintAsync(string metadataId, string fingerprint, float duration,
         DateTime File_LastWriteTime, DateTime File_CreationTime)
     {
         string query = @"UPDATE metadata SET 
@@ -23,9 +23,9 @@ public class MetadataRepository
                                 file_creationtime = @File_CreationTime
                          WHERE MetadataId = cast(@id as uuid)";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        conn.Execute(query, new
+        await conn.ExecuteAsync(query, new
         {
             id = metadataId,
             fingerprint,
@@ -35,13 +35,13 @@ public class MetadataRepository
         });
     }
     
-    public void UpdateMetadataPath(string metadataId, string path)
+    public async Task UpdateMetadataPathAsync(string metadataId, string path)
     {
         string query = @"UPDATE metadata SET Path = @path WHERE MetadataId = cast(@id as uuid)";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        conn.Execute(query, new
+        await conn.ExecuteAsync(query, new
         {
             id = metadataId,
             path
@@ -50,7 +50,7 @@ public class MetadataRepository
     
     
     
-    public List<string> GetMissingTracksByArtist(List<string> artistNames)
+    public async Task<List<string>> GetMissingTracksByArtistAsync(List<string> artistNames)
     {
         StringBuilder filter = new StringBuilder();
 
@@ -97,15 +97,14 @@ public class MetadataRepository
                      where ut.artist_name = lower(@artistName)
                      and m.metadataid is null";
 
-        using var conn = new NpgsqlConnection(_connectionString);
-        
+        await using var conn = new NpgsqlConnection(_connectionString);
         
         return conn
             .Query<string>(query, param: new {artistName = artistNames.First()}, commandTimeout: 9999)
             .ToList();
     }
     
-    public List<MetadataModel> GetDuplicateFileVersions(string artistName)
+    public async Task<List<MetadataModel>> GetDuplicateFileVersionsAsync(string artistName)
     {
         string query = @"select m.MetadataId, m.Path, m.Title, album.albumId
                          from artists artist
@@ -115,7 +114,7 @@ public class MetadataRepository
                          artist.""name"" = @artistName
                          and m.""path"" ~ '\([0-9]*\)\.([a-zA-Z0-9]{2,5})'";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
         return conn.Query<MetadataModel>(query, 
                 new
@@ -124,7 +123,7 @@ public class MetadataRepository
                 })
             .ToList();
     }
-    public List<DuplicateFileExtensionModel> GetDuplicateFileExtensions(string artistName)
+    public async Task<List<DuplicateFileExtensionModel>> GetDuplicateFileExtensionsAsync(string artistName)
     {
         string query = @"WITH duplicates AS (
                               SELECT 
@@ -143,7 +142,7 @@ public class MetadataRepository
                           FROM duplicates
                           WHERE duplicate_count > 1";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
         return conn.Query<DuplicateFileExtensionModel>(query, 
                 new
@@ -152,7 +151,7 @@ public class MetadataRepository
                 })
             .ToList();
     }
-    public List<DuplicateAlbumFileNameModel> GetDuplicateAlbumFileNames(string artistName)
+    public async Task<List<DuplicateAlbumFileNameModel>> GetDuplicateAlbumFileNamesAsync(string artistName)
     {
         string query = @"WITH duplicates AS (
                              SELECT 
@@ -172,7 +171,7 @@ public class MetadataRepository
                          WHERE duplicate_count > 1
                          ORDER BY albumId, FileName, Path";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
         return conn.Query<DuplicateAlbumFileNameModel>(query, 
                 new
@@ -182,7 +181,7 @@ public class MetadataRepository
             .ToList();
     }
     
-    public List<MetadataInfo> GetMissingMusicBrainzMetadataRecords(string artistName)
+    public async Task<List<MetadataInfo>> GetMissingMusicBrainzMetadataRecordsAsync(string artistName)
     {
         string query = @$"SELECT m.MetadataId, 
                                   m.Path, 
@@ -238,7 +237,7 @@ public class MetadataRepository
                               and length(m.tag_acoustidfingerprint) > 0
                               and m.Tag_AcoustIdFingerPrint_Duration > 0";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         return conn
             .Query<MetadataInfo>(query, new
@@ -247,7 +246,7 @@ public class MetadataRepository
             }).ToList();
     }
     
-    public List<MetadataInfo> GetMissingSpotifyMetadataRecords(string artistName)
+    public async Task<List<MetadataInfo>> GetMissingSpotifyMetadataRecordsAsync(string artistName)
     {
         string query = @$"SELECT m.MetadataId, 
                                   m.Path, 
@@ -301,7 +300,7 @@ public class MetadataRepository
                              tag_alljsontags->>'Spotify Track Type Id' is null or
                               tag_alljsontags->>'ARTISTS' is null)";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         return conn
             .Query<MetadataInfo>(query, new
@@ -310,7 +309,7 @@ public class MetadataRepository
             }).ToList();
     }
     
-    public List<MetadataInfo> GetMetadataByTagRecords(string artistName, List<String> tagNames)
+    public async Task<List<MetadataInfo>> GetMetadataByTagRecordsAsync(string artistName, List<String> tagNames)
     {
         string query = @$"SELECT m.MetadataId, 
                                   m.Path, 
@@ -359,7 +358,7 @@ public class MetadataRepository
                         where lower(artist.name) = lower(@artistName)
                               and m.tag_alljsontags ?| array[@tagNames]";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         return conn
             .Query<MetadataInfo>(query, new
@@ -370,7 +369,7 @@ public class MetadataRepository
     }
     
     
-    public List<MetadataInfo> GetMetadataByTagValueRecords(string artistName, string tagName, string value)
+    public async Task<List<MetadataInfo>> GetMetadataByTagValueRecordsAsync(string artistName, string tagName, string value)
     {
         string query = @$"SELECT m.MetadataId, 
                                   m.Path, 
@@ -384,7 +383,7 @@ public class MetadataRepository
                         where lower(artist.name) = lower(@artistName)
                               and m.tag_alljsontags->>@tagName like '%' || @value ||'%'";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         return conn
             .Query<MetadataInfo>(query, new
@@ -395,7 +394,7 @@ public class MetadataRepository
             }, commandTimeout: 120).ToList();
     }
     
-    public List<MetadataModel> GetAllMetadataPathsByMissingFingerprint(string artistName)
+    public async Task<List<MetadataModel>> GetAllMetadataPathsByMissingFingerprintAsync(string artistName)
     {
         string query = @$"SELECT m.MetadataId, m.Path
                         FROM metadata m
@@ -405,7 +404,7 @@ public class MetadataRepository
                         and (length( m.tag_acoustidfingerprint) = 0
                             or m.tag_acoustidfingerprint_duration = 0)";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
         return conn.Query<MetadataModel>(query, new
         {
@@ -413,7 +412,7 @@ public class MetadataRepository
         }).ToList();
     }
     
-    public List<MetadataModel> GetMetadataByArtist(string artistName)
+    public async Task<List<MetadataModel>> GetMetadataByArtistAsync(string artistName)
     {
         string query = @$"SELECT m.MetadataId, 
                                  m.Path, 
@@ -434,7 +433,7 @@ public class MetadataRepository
                         JOIN artists artist ON artist.artistid = album.artistid
                         where lower(artist.name) = lower(@artistName)";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
         return conn.Query<MetadataModel>(query, new
         {
@@ -442,7 +441,7 @@ public class MetadataRepository
         }).ToList();
     }
     
-    public List<MetadataPathCoverModel> GetFolderPathsByArtistForCovers(string artistName, string album)
+    public async Task<List<MetadataPathCoverModel>> GetFolderPathsByArtistForCoversAsync(string artistName, string album)
     {
         string query = @$"SELECT distinct regexp_replace(path, '[^/]+$', '') AS FolderPath, 
                                  m.MusicBrainzReleaseId,
@@ -456,7 +455,7 @@ public class MetadataRepository
                                 and length(m.MusicBrainzReleaseId) > 0
                                 and (length(@album) = 0 or @album is null or lower(album.title) = lower(@album))";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
         return conn.Query<MetadataPathCoverModel>(query, new
         {
@@ -465,7 +464,7 @@ public class MetadataRepository
         }).ToList();
     }
     
-    public List<MetadataModel> GetMetadataByPath(string targetPath)
+    public async Task<List<MetadataModel>> GetMetadataByPathAsync(string targetPath)
     {
         string query = @$"SELECT m.MetadataId, 
                                  m.Path, 
@@ -475,7 +474,7 @@ public class MetadataRepository
                         FROM metadata m
                         where m.path = @path";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         return conn
             .Query<MetadataModel>(query, new
@@ -484,13 +483,13 @@ public class MetadataRepository
             }).ToList();
     }
     
-    public List<string> GetPathByLikePath(string path)
+    public async Task<List<string>> GetPathByLikePathAsync(string path)
     {
         string query = @$"SELECT m.Path
                         FROM metadata m
                         where m.path like @path || '%'";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         return conn
             .Query<string>(query, new
@@ -499,7 +498,7 @@ public class MetadataRepository
             }).ToList();
     }
     
-    public List<MetadataModel> GetMetadataByFileExtension(string fileExtension)
+    public async Task<List<MetadataModel>> GetMetadataByFileExtensionAsync(string fileExtension)
     {
         string query = @$"SELECT m.MetadataId, 
                                  m.Path, 
@@ -508,41 +507,41 @@ public class MetadataRepository
                         FROM metadata m
                         where m.path like '%.' || @fileExtension";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn
-            .Query<MetadataModel>(query, new
+        return (await conn
+            .QueryAsync<MetadataModel>(query, new
             {
                 fileExtension
-            }).ToList();
+            })).ToList();
     }
     
-    public void DeleteMetadataRecords(List<string> metadataIds)
+    public async Task DeleteMetadataRecordsAsync(List<string> metadataIds)
     {
         string query = @"DELETE FROM metadata WHERE metadataid = ANY(@id)";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        conn.Execute(query, new
+        await conn.ExecuteAsync(query, new
         {
             id = metadataIds.Select(id => Guid.Parse(id)).ToList()
         });
     }
     
-    public bool MetadataCanUpdate(string path, DateTime lastWriteTime, DateTime creationTime)
+    public async Task<bool> MetadataCanUpdateAsync(string path, DateTime lastWriteTime, DateTime creationTime)
     {
         string query = @"SELECT MetadataId, File_LastWriteTime, File_CreationTime 
                          FROM metadata 
                          WHERE path = @path
                          LIMIT 1";
         
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        CanUpdateMetadataModel? canUpdateMetadataModel = conn
-            .Query<CanUpdateMetadataModel>(query, new
+        CanUpdateMetadataModel? canUpdateMetadataModel = await conn
+            .QueryFirstOrDefaultAsync<CanUpdateMetadataModel>(query, new
             {
                 path
-            }).FirstOrDefault();
+            });
 
         bool canUpdate = true;
         if (canUpdateMetadataModel != null)
@@ -554,7 +553,7 @@ public class MetadataRepository
         return canUpdate;
     }
     
-    public void InsertOrUpdateMetadata(MetadataInfo metadata, Guid albumId)
+    public async Task InsertOrUpdateMetadataAsync(MetadataInfo metadata, Guid albumId)
     {
         string query = @"
             INSERT INTO Metadata (MetadataId, 
@@ -689,9 +688,9 @@ public class MetadataRepository
         metadata.AlbumId = albumId;
         
         metadata.NonNullableValues();
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        metadata.MetadataId = conn.Query<Guid>(query, metadata).FirstOrDefault();
+        metadata.MetadataId = await conn.QueryFirstOrDefaultAsync<Guid>(query, metadata);
         
     }
 }

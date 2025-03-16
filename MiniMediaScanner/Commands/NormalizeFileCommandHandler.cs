@@ -5,6 +5,7 @@ using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 using SmartFormat;
+using SmartFormat.Utilities;
 
 namespace MiniMediaScanner.Commands;
 
@@ -33,7 +34,7 @@ public class NormalizeFileCommandHandler
     
     
 
-    public void NormalizeFiles(string album,
+    public async Task NormalizeFilesAsync(string album,
         bool normalizeArtistName,
         bool normalizeAlbumName,
         bool normalizeTitleName,
@@ -44,8 +45,9 @@ public class NormalizeFileCommandHandler
         string directoryFormat = "",
         string directorySeperator = "_")
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => NormalizeFiles(artist, album,
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await NormalizeFilesAsync(artist, album,
                 normalizeArtistName, 
                 normalizeAlbumName, 
                 normalizeTitleName, 
@@ -54,10 +56,11 @@ public class NormalizeFileCommandHandler
                 rename, 
                 fileFormat, 
                 directoryFormat, 
-                directorySeperator));
+                directorySeperator);
+        }
     }
     
-    public void NormalizeFiles(
+    public async Task NormalizeFilesAsync(
         string artist,
         string album,
         bool normalizeArtistName,
@@ -70,37 +73,35 @@ public class NormalizeFileCommandHandler
         string directoryFormat = "",
         string directorySeperator = "_")
     {
-        var metadata = _metadataRepository.GetMetadataByArtist(artist)
+        var metadatas = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         //due to I/O limitations max 4 threads is probably the best for now
         //making more threads won't make anything faster but rather make it slooow
-        metadata
-            .AsParallel()
-            .WithDegreeOfParallelism(4)
-            .ForAll(file =>
+        foreach (var metadata in metadatas
+                     .AsParallel()
+                     .WithDegreeOfParallelism(4))
+        {
+            try
             {
-                try
-                {
-                    bool success = ProcessFile(file, normalizeArtistName, normalizeAlbumName, normalizeTitleName, overwrite,
-                        subDirectoryDepth, rename, fileFormat, directoryFormat, directorySeperator);
+                bool success = await ProcessFileAsync(metadata, normalizeArtistName, normalizeAlbumName, normalizeTitleName, overwrite,
+                    subDirectoryDepth, rename, fileFormat, directoryFormat, directorySeperator);
 
-                    if (success)
-                    {
-                        _updateFiles++;
-                    }
-                }
-                catch (Exception e)
+                if (success)
                 {
-                    Console.WriteLine(e.Message);
+                    _updateFiles++;
                 }
-                
-            });
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
         Console.WriteLine($"Can update files: {_updateFiles}, artist names {_updateArtistNames}, album names {_updateAlbumNames}, title names {_updateTitleNames}");
     }
 
-    private bool ProcessFile(MetadataModel file,
+    private async Task<bool> ProcessFileAsync(MetadataModel file,
         bool normalizeArtistName,
         bool normalizeAlbumName,
         bool normalizeTitleName,
@@ -188,7 +189,7 @@ public class NormalizeFileCommandHandler
         }
         
         //write new tag values to old filename first
-        bool success = _tagWriteService.Save(fileInfo, artistNormalized, albumNormalized, titleNormalized);
+        bool success = await _tagWriteService.SaveAsync(fileInfo, artistNormalized, albumNormalized, titleNormalized);
 
         if (!success)
         {
@@ -208,11 +209,11 @@ public class NormalizeFileCommandHandler
                 newFileInfo.Directory.Create();
             }
             fileInfo.MoveTo(newFullPath, true);
-            _importCommandHandler.ProcessFile(newFullPath); //updata database
+            await _importCommandHandler.ProcessFileAsync(newFullPath);
         }
         else
         {
-            _importCommandHandler.ProcessFile(fileInfo.FullName); //update database
+            await _importCommandHandler.ProcessFileAsync(fileInfo.FullName);
         }
 
         lock (_consoleLock)
@@ -254,8 +255,12 @@ public class NormalizeFileCommandHandler
         return format;
     }
 
-    private string ReplaceDirectorySeparators(string input, string seperator)
+    private string ReplaceDirectorySeparators(string? input, string seperator)
     {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return string.Empty;
+        }
         if (input.Contains('/'))
         {
             input = input.Replace("/", seperator);

@@ -18,7 +18,7 @@ public class MissingCommandHandler
         _missingRepository = new MissingRepository(connectionString);
     }
     
-    public void CheckMissingTracksByArtist(string artistName, string provider)
+    public async Task CheckMissingTracksByArtistAsync(string artistName, string provider)
     {
         /*var musicBrainzRecords = _missingRepository.GetMusicBrainzRecords(artistName);
         var metadata = _missingRepository.GetMetadataByArtist(artistName);
@@ -47,24 +47,34 @@ public class MissingCommandHandler
             {
                 Console.WriteLine(track);
             });*/
-        
-        var missingTracks = provider.ToLower() == "spotify" ? _missingRepository.GetMissingTracksByArtistSpotify2(artistName) :
-                                                                        _missingRepository.GetMissingTracksByArtistMusicBrainz2(artistName);
 
-        missingTracks.ForEach(track =>
+        try
         {
-            Console.WriteLine(track);
-        });
+            var missingTracks = provider.ToLower() == "spotify" ? 
+                await _missingRepository.GetMissingTracksByArtistSpotify2Async(artistName) :
+                await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(artistName);
+        
+            missingTracks.ForEach(track =>
+            {
+                Console.WriteLine(track);
+            });
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;  
+        }
     }
     
-    public void CheckAllMissingTracks(string provider)
+    public async Task CheckAllMissingTracksAsync(string provider)
     {
-        var filteredNames = _artistRepository.GetAllArtistNames();
+        var filteredNames = await _artistRepository.GetAllArtistNamesAsync();
 
         foreach (string artistName in filteredNames)
         {
-            var missingTracks = provider.ToLower() == "spotify" ? _missingRepository.GetMissingTracksByArtistSpotify2(artistName) :
-                                                                            _missingRepository.GetMissingTracksByArtistMusicBrainz2(artistName);
+            var missingTracks = provider.ToLower() == "spotify" ? 
+                await _missingRepository.GetMissingTracksByArtistSpotify2Async(artistName) :
+                await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(artistName);
 
             missingTracks.ForEach(track =>
             {

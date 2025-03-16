@@ -22,37 +22,38 @@ public class FingerPrintMediaCommandHandler
         _mediaTagWriteService = new MediaTagWriteService();
     }
     
-    public void FingerPrintMedia(string album)
+    public async Task FingerPrintMediaAsync(string album)
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => FingerPrintMedia(artist, album));
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await FingerPrintMediaAsync(artist, album);
+        }
     }
     
-    public void FingerPrintMedia(string artist, string album)
+    public async Task FingerPrintMediaAsync(string artist, string album)
     {
         Console.WriteLine($"Processing artist '{artist}'");
-        var metadata = _metadataRepository.GetAllMetadataPathsByMissingFingerprint(artist)
+        var metadatas = (await _metadataRepository.GetAllMetadataPathsByMissingFingerprintAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
             .Where(metadata => new FileInfo(metadata.Path).Exists)
             .ToList();
-        
-        metadata
-            .AsParallel()
-            .WithDegreeOfParallelism(4)
-            .ForAll(metadata =>
+
+        foreach (var metadata in metadatas
+                     .AsParallel()
+                     .WithDegreeOfParallelism(4))
+        {
+            try
             {
-                try
-                {
-                    FingerPrintFile(metadata);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                }
-            });
+                await FingerPrintFileAsync(metadata);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
     }
 
-    private void FingerPrintFile(MetadataModel metadata)
+    private async Task FingerPrintFileAsync(MetadataModel metadata)
     {
         if (sw.Elapsed.Seconds >= 5)
         {
@@ -60,13 +61,13 @@ public class FingerPrintMediaCommandHandler
             sw.Restart();
         }
         
-        FpcalcOutput? fingerprint = _fingerPrintService.GetFingerprint(metadata.Path);
+        FpcalcOutput? fingerprint = await _fingerPrintService.GetFingerprintAsync(metadata.Path);
         if (!string.IsNullOrWhiteSpace(fingerprint?.Fingerprint))
         {
             generatedFingers++;
-            _mediaTagWriteService.SaveTag(new FileInfo(metadata.Path), "acoustid fingerprint", fingerprint.Fingerprint);
+            await _mediaTagWriteService.SaveTagAsync(new FileInfo(metadata.Path), "acoustid fingerprint", fingerprint.Fingerprint);
             FileInfo fileInfo = new FileInfo(metadata.Path);
-            _metadataRepository.UpdateMetadataFingerprint(metadata.MetadataId.ToString(), fingerprint.Fingerprint, fingerprint.Duration, fileInfo.LastWriteTime, fileInfo.CreationTime);
+            await _metadataRepository.UpdateMetadataFingerprintAsync(metadata.MetadataId.ToString(), fingerprint.Fingerprint, fingerprint.Duration, fileInfo.LastWriteTime, fileInfo.CreationTime);
         }
     }
 }

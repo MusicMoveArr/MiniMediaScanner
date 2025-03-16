@@ -11,7 +11,7 @@ public class MusicBrainzReleaseTrackRepository
         _connectionString = connectionString;
     }
 
-    public Guid InsertMusicBrainzReleaseTrack(
+    public async Task<Guid> InsertMusicBrainzReleaseTrackAsync(
         Guid musicBrainzRemoteReleaseTrackId, 
         Guid musicBrainzRemoteRecordingTrackId, 
         string title, 
@@ -64,9 +64,9 @@ public class MusicBrainzReleaseTrackRepository
         
         Guid releaseId = Guid.NewGuid();
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn.ExecuteScalar<Guid>(query, new
+        return await conn.ExecuteScalarAsync<Guid>(query, new
             {
                 Id = releaseId,
                 MusicBrainzRemoteReleaseTrackId = musicBrainzRemoteReleaseTrackId,

@@ -31,43 +31,41 @@ public class SplitTagCommandHandler
         _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
     }
     
-    public void SplitTags(string album, string tag, bool confirm, string writetag, 
+    public async Task SplitTagsAsync(string album, string tag, bool confirm, string writetag, 
         bool overwriteTag, string seperator, bool updateReadTag, bool updateReadTagOriginalValue,
         bool updateWriteTagOriginalValue)
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => SplitTags(artist, album, tag, confirm, writetag, overwriteTag, seperator, updateReadTag, updateReadTagOriginalValue, updateWriteTagOriginalValue));
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await SplitTagsAsync(artist, album, tag, confirm, writetag, overwriteTag, seperator, updateReadTag, updateReadTagOriginalValue, updateWriteTagOriginalValue);
+        }
     }
 
-    public void SplitTags(string artist, string album, string tag, bool confirm, string writetag, 
+    public async Task SplitTagsAsync(string artist, string album, string tag, bool confirm, string writetag, 
         bool overwriteTag, string seperator, bool updateReadTag, bool updateReadTagOriginalValue,
         bool updateWriteTagOriginalValue)
     {
-        var metadata = _metadataRepository.GetMetadataByTagValueRecords(artist, tag, seperator)
+        var metadata = (await _metadataRepository.GetMetadataByTagValueRecordsAsync(artist, tag, seperator))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || 
                                string.Equals(metadata.Album, album, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         Console.WriteLine($"Checking artist '{artist}', found {metadata.Count} tracks to process");
 
-        metadata
-            .Where(metadata => new FileInfo(metadata.Path).Exists)
-            .ToList()
-            .ForEach(metadata =>
+        foreach (var record in metadata.Where(r => new FileInfo(r.Path).Exists))
+        {
+            try
             {
-                try
-                {
-                    ProcessFile(metadata, tag, confirm, writetag, overwriteTag, seperator, updateReadTag, updateReadTagOriginalValue, updateWriteTagOriginalValue);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                    Console.WriteLine(e.StackTrace);
-                }
-            });
+                await ProcessFileAsync(record, tag, confirm, writetag, overwriteTag, seperator, updateReadTag, updateReadTagOriginalValue, updateWriteTagOriginalValue);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
     }
                 
-    private void ProcessFile(MetadataInfo metadata, string tag, bool autoConfirm, string writetag, 
+    private async Task ProcessFileAsync(MetadataInfo metadata, string tag, bool autoConfirm, string writetag, 
         bool overwriteTagValue, string seperator, bool updateReadTag, bool updateReadTagOriginalValue,
         bool updateWriteTagOriginalValue)
     {
@@ -111,9 +109,9 @@ public class SplitTagCommandHandler
 
         try
         {
-            if (confirm && _mediaTagWriteService.SafeSave(track))
+            if (confirm && await _mediaTagWriteService.SafeSaveAsync(track))
             {
-                _importCommandHandler.ProcessFile(metadata.Path);
+                await _importCommandHandler.ProcessFileAsync(metadata.Path);
             }
         }
         catch (Exception e)

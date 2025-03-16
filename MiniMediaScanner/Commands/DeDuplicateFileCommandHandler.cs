@@ -17,20 +17,22 @@ public class DeDuplicateFileCommandHandler
         _metadataRepository = new MetadataRepository(connectionString);
     }
 
-    public void CheckDuplicateFiles(bool delete)
+    public async Task CheckDuplicateFilesAsync(bool delete)
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => CheckDuplicateFiles(artist, delete));
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await CheckDuplicateFilesAsync(artist, delete);
+        }
     }
     
-    public void CheckDuplicateFiles(string artistName, bool delete)
+    public async Task CheckDuplicateFilesAsync(string artistName, bool delete)
     {
         Console.WriteLine($"Checking artist '{artistName}'");
         try
         {
-            FindDuplicateAlbumFileNames(artistName, delete);
-            FindDuplicateFileExtensions(artistName, delete);
-            FindDuplicateFileVersions(artistName, delete);
+            await FindDuplicateAlbumFileNamesAsync(artistName, delete);
+            await FindDuplicateFileExtensionsAsync(artistName, delete);
+            await FindDuplicateFileVersionsAsync(artistName, delete);
         }
         catch (Exception e)
         {
@@ -38,9 +40,9 @@ public class DeDuplicateFileCommandHandler
         }
     }
 
-    private void FindDuplicateAlbumFileNames(string artistName, bool delete)
+    private async Task FindDuplicateAlbumFileNamesAsync(string artistName, bool delete)
     {
-        var duplicateFiles = _metadataRepository.GetDuplicateAlbumFileNames(artistName)
+        var duplicateFiles = (await _metadataRepository.GetDuplicateAlbumFileNamesAsync(artistName))
             .GroupBy(group => new { group.AlbumId, group.FileName });
 
         foreach (var duplicateFileVersions in duplicateFiles)
@@ -70,7 +72,7 @@ public class DeDuplicateFileCommandHandler
                 {
                     Console.WriteLine($"Delete duplicate file {file.Path}");
                     new FileInfo(file.Path).Delete();
-                    _metadataRepository.DeleteMetadataRecords(new List<string>(new string[] { file.MetadataId.ToString() }));
+                    await _metadataRepository.DeleteMetadataRecordsAsync(new List<string>(new string[] { file.MetadataId.ToString() }));
                 }
                 else
                 {
@@ -81,23 +83,23 @@ public class DeDuplicateFileCommandHandler
         }
     }
     
-    private void FindDuplicateFileExtensions(string artistName, bool delete)
+    private async Task FindDuplicateFileExtensionsAsync(string artistName, bool delete)
     {
-        var duplicateFiles = _metadataRepository.GetDuplicateFileExtensions(artistName)
+        var duplicateFiles = (await _metadataRepository.GetDuplicateFileExtensionsAsync(artistName))
             .GroupBy(group => group.FilePathWithoutExtension);
 
         foreach (var duplicateFileVersions in duplicateFiles)
         {
             var fileWithoutExtension = duplicateFileVersions.First().FilePathWithoutExtension;
-            var recordToKeep = ImportCommandHandler.MediaFileExtensions
-                .Select(ext => fileWithoutExtension + "." + ext)
-                .Select(path => _metadataRepository
-                    .GetMetadataByPath(path)
-                    .FirstOrDefault())
-                .Where(path => path != null)
-                .Where(path => new FileInfo(path.Path).Exists)
-                .FirstOrDefault(nonRecord => nonRecord != null);
-
+            var recordToKeep = (await Task.WhenAll(
+                    ImportCommandHandler.MediaFileExtensions
+                        .Select(async ext =>
+                            (await _metadataRepository.GetMetadataByPathAsync(fileWithoutExtension + "." + ext))
+                            .FirstOrDefault())
+                ))
+                .Where(metadata => metadata != null)
+                .FirstOrDefault(metadata => new FileInfo(metadata.Path).Exists);
+            
             if (recordToKeep == null)
             {
                 continue;
@@ -120,7 +122,7 @@ public class DeDuplicateFileCommandHandler
                 {
                     Console.WriteLine($"Delete duplicate file {file.Path}");
                     new FileInfo(file.Path).Delete();
-                    _metadataRepository.DeleteMetadataRecords(new List<string>(new string[] { file.MetadataId.ToString() }));
+                    await _metadataRepository.DeleteMetadataRecordsAsync(new List<string>(new string[] { file.MetadataId.ToString() }));
                 }
                 else
                 {
@@ -131,17 +133,17 @@ public class DeDuplicateFileCommandHandler
         }
     }
     
-    private void FindDuplicateFileVersions(string artistName, bool delete)
+    private async Task FindDuplicateFileVersionsAsync(string artistName, bool delete)
     {
         //regex for files ending with (1).flac, (2).mp3 etc
         string regexFilter = @" \([0-9]*\)(?=\.([a-zA-Z0-9]{2,5})$)";
-        List<MetadataModel> possibleDuplicateFiles = _metadataRepository.GetDuplicateFileVersions(artistName);
+        List<MetadataModel> possibleDuplicateFiles = await _metadataRepository.GetDuplicateFileVersionsAsync(artistName);
 
         foreach (MetadataModel possibleDuplicateFile in possibleDuplicateFiles)
         {
             string nonDuplicateFile = Regex.Replace(possibleDuplicateFile.Path, regexFilter, string.Empty);
-            MetadataModel? nonDuplicateRecord = _metadataRepository
-                .GetMetadataByPath(nonDuplicateFile)
+            MetadataModel? nonDuplicateRecord = (await _metadataRepository
+                .GetMetadataByPathAsync(nonDuplicateFile))
                 .FirstOrDefault();
 
             //try to find another non-duplicate version, different media extension
@@ -150,15 +152,17 @@ public class DeDuplicateFileCommandHandler
                 string extension = Path.GetExtension(nonDuplicateFile).ToLower().Replace(".", "");
                 string fileWithoutExtension = Path.ChangeExtension(nonDuplicateFile, "");
                 
-                nonDuplicateRecord = ImportCommandHandler.MediaFileExtensions
-                    .Where(ext => ext != extension)
-                    .Select(ext => fileWithoutExtension + ext)
-                    .Select(path => _metadataRepository
-                        .GetMetadataByPath(path)
-                        .FirstOrDefault())
-                    .FirstOrDefault(nonRecord => nonRecord != null);
+                nonDuplicateRecord = (await Task.WhenAll(
+                        ImportCommandHandler.MediaFileExtensions
+                            .Where(ext => ext != extension)
+                            .Select(ext => fileWithoutExtension + ext)
+                            .Select(async path =>
+                                (await _metadataRepository.GetMetadataByPathAsync(path))
+                                .FirstOrDefault())
+                    ))
+                    .FirstOrDefault(metadata => metadata != null);
 
-                if (nonDuplicateRecord != null)
+                if (!string.IsNullOrWhiteSpace(nonDuplicateRecord?.Path))
                 {
                     nonDuplicateFile = nonDuplicateRecord.Path;
                 }

@@ -15,21 +15,21 @@ public class StatsCommandHandler
         _statsRepository = new StatsRepository(connectionString);
     }
 
-    public void ShowStats()
+    public async Task ShowStatsAsync()
     {
-        Console.WriteLine($"Artists: {_statsRepository.GetGenericCount("artists")}");
-        Console.WriteLine($"Albums: {_statsRepository.GetGenericCount("albums")}");
-        Console.WriteLine($"Tracks: {_statsRepository.GetGenericCount("metadata")}");
-        Console.WriteLine($"Tracks added last 1day: {_statsRepository.GetTracksAddedCount(1)}");
-        Console.WriteLine($"Tracks added last 7days: {_statsRepository.GetTracksAddedCount(7)}");
+        Console.WriteLine($"Artists: {await _statsRepository.GetGenericCountAsync("artists")}");
+        Console.WriteLine($"Albums: {await _statsRepository.GetGenericCountAsync("albums")}");
+        Console.WriteLine($"Tracks: {await _statsRepository.GetGenericCountAsync("metadata")}");
+        Console.WriteLine($"Tracks added last 1day: {await _statsRepository.GetTracksAddedCountAsync(1)}");
+        Console.WriteLine($"Tracks added last 7days: {await _statsRepository.GetTracksAddedCountAsync(7)}");
         
-        Console.WriteLine($"Cached MusicBrainz Artists: {_statsRepository.GetGenericCount("musicbrainzartist")}");
-        Console.WriteLine($"Cached MusicBrainz Albums: {_statsRepository.GetGenericCount("musicbrainzrelease")}");
-        Console.WriteLine($"Cached MusicBrainz Tracks: {_statsRepository.GetGenericCount("musicbrainzreleasetrack")}");
+        Console.WriteLine($"Cached MusicBrainz Artists: {await _statsRepository.GetGenericCountAsync("musicbrainzartist")}");
+        Console.WriteLine($"Cached MusicBrainz Albums: {await _statsRepository.GetGenericCountAsync("musicbrainzrelease")}");
+        Console.WriteLine($"Cached MusicBrainz Tracks: {await _statsRepository.GetGenericCountAsync("musicbrainzreleasetrack")}");
         
-        Console.WriteLine($"Cached Spotify Artists: {_statsRepository.GetGenericCount("spotify_artist")}");
-        Console.WriteLine($"Cached Spotify Albums: {_statsRepository.GetGenericCount("spotify_album")}");
-        Console.WriteLine($"Cached Spotify Tracks: {_statsRepository.GetGenericCount("spotify_track")}");
+        Console.WriteLine($"Cached Spotify Artists: {await _statsRepository.GetGenericCountAsync("spotify_artist")}");
+        Console.WriteLine($"Cached Spotify Albums: {await _statsRepository.GetGenericCountAsync("spotify_album")}");
+        Console.WriteLine($"Cached Spotify Tracks: {await _statsRepository.GetGenericCountAsync("spotify_track")}");
         
     }
 }

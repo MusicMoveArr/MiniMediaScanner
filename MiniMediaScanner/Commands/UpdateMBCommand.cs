@@ -1,26 +1,33 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class UpdateMBCommand
+[Command("updatemb", Description = "Update MusicBrainz metadata")]
+public class UpdateMBCommand : ICommand
 {
-    /// <summary>
-    /// Update MusicBrainz metadata
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artist filter to update.</param>
-    [Command("updatemb")]
-    public static void UpdateMB(string connectionString, string artist = "")
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artist filter to update.", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new UpdateMBCommandHandler(connectionString);
+        var handler = new UpdateMBCommandHandler(ConnectionString);
 
-        if (!string.IsNullOrWhiteSpace(artist))
+        if (!string.IsNullOrWhiteSpace(Artist))
         {
-            handler.UpdateMusicBrainzArtistsByName(artist);
+            await handler.UpdateMusicBrainzArtistsByNameAsync(Artist);
         }
         else
         {
-            handler.UpdateAllMusicBrainzArtists();
+            await handler.UpdateAllMusicBrainzArtistsAsync();
         }
         
     }

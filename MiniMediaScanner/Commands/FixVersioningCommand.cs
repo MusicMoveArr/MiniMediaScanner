@@ -1,42 +1,52 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class FixVersioningCommand
+[Command("fixversioning", Description = @"Find media that are using the same track/disc numbering, usually normal version and (AlbumVersion), (Live) etc. 
+The media with the longest file name and contains TrackFilters will get incremented disc number. 
+This will make it so the normal version of the album stays at disc 1 but remix(etc) gets disc number 1001+")]
+public class FixVersioningCommand : ICommand
 {
-    /// <summary>
-    /// Find media that are using the same track/disc numbering, usually normal version and (AlbumVersion), (Live) etc
-    /// The media with the longest file name and contains TrackFilters will get incremented disc number
-    /// This will make it so the normal version of the album stays at disc 1 but remix(etc) gets disc number 1001+
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="album">-b, target Album.</param>
-    /// <param name="discincrement">-d, Disc increment for remixes (+1000 recommended).</param>
-    /// <param name="trackFilters">-f, Filter names to apply to tracks, .e.g. (remixed by ...).</param>
-    /// <param name="confirm">-y, Always confirm automatically.</param>
-    [Command("equalizemediatag")]
-    public static void FixVersioning(string connectionString, 
-        string artist = "", 
-        string album = "", 
-        int discincrement = 1000,
-        List<string> trackFilters = null, 
-        bool confirm = false)
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    public string Album { get; set; }
+
+    [CommandOption("disc-increment", 'd', Description = "Disc increment for remixes (+1000 recommended).", IsRequired = false)]
+    public int DiscIncrement { get; set; } = 1000;
+    
+    [CommandOption("track-filters", 'f', Description = "Filter names to apply to tracks, .e.g. (remixed by ...).", IsRequired = false)]
+    public List<string> TrackFilters { get; set; }
+    
+    [CommandOption("confirm", 'y', Description = "Always confirm automatically.", IsRequired = false)]
+    public bool Confirm { get; set; } = false;
+    
+    public async ValueTask ExecuteAsync(IConsole console)
     {
-        if (trackFilters == null)
+        if (TrackFilters == null)
         {
-            trackFilters = new List<string>();
+            TrackFilters = new List<string>();
         }
         
-        var handler = new FixVersioningCommandHandler(connectionString);
+        var handler = new FixVersioningCommandHandler(ConnectionString);
 
-        if (string.IsNullOrWhiteSpace(artist))
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.FixDiscVersioning(album, discincrement, trackFilters, confirm);
+            await handler.FixDiscVersioningAsync(Album, DiscIncrement, TrackFilters, Confirm);
         }
         else
         {
-            handler.FixDiscVersioning(artist, album, discincrement, trackFilters, confirm);
+            await handler.FixDiscVersioningAsync(Artist, Album, DiscIncrement, TrackFilters, Confirm);
         }
     }
 }

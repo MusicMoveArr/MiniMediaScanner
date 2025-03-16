@@ -15,17 +15,19 @@ public class CoverArtArchiveCommandHandler
         _artistRepository = new ArtistRepository(connectionString);
     }
 
-    public void CheckAllMissingCovers(string album, string coverFileName)
+    public async Task CheckAllMissingCoversAsync(string album, string coverFileName)
     {
-        _artistRepository.GetAllArtistNames()
-            .AsParallel()
-            .WithDegreeOfParallelism(4)
-            .ForAll(artist => CheckAllMissingCovers(artist, album, coverFileName));
+        foreach (var artist in (await _artistRepository.GetAllArtistNamesAsync())
+                 .AsParallel()
+                 .WithDegreeOfParallelism(4))
+        {
+            await CheckAllMissingCoversAsync(artist, album, coverFileName);
+        }
     }
     
-    public void CheckAllMissingCovers(string artist, string album, string coverFileName)
+    public async Task CheckAllMissingCoversAsync(string artist, string album, string coverFileName)
     {
-        var coverModels = _metadataRepository.GetFolderPathsByArtistForCovers(artist, album)
+        var coverModels = (await _metadataRepository.GetFolderPathsByArtistForCoversAsync(artist, album))
             .ToList();
 
         string coverFileNameWithoutExtension = Path.GetFileNameWithoutExtension(coverFileName);
@@ -46,7 +48,7 @@ public class CoverArtArchiveCommandHandler
                 continue;
             }
 
-            string coverArtLink = GetCoverArtLink(coverModel.MusicBrainzReleaseId);
+            string coverArtLink = await GetCoverArtLinkAsync(coverModel.MusicBrainzReleaseId);
 
             if (string.IsNullOrEmpty(coverArtLink))
             {
@@ -57,11 +59,11 @@ public class CoverArtArchiveCommandHandler
             string coverArtPath = Path.Join(coverModel.FolderPath, coverFileName);
             
             Console.WriteLine($"Downloading cover art for {coverModel.ArtistName}, {coverModel.AlbumName}");
-            DownloadImage(coverArtLink, coverArtPath);
+            await DownloadImageAsync(coverArtLink, coverArtPath);
         }
     }
     
-    private string? GetCoverArtLink(string releaseId)
+    private async Task<string?> GetCoverArtLinkAsync(string releaseId)
     {
         string baseUrl = $"https://coverartarchive.org/release/{releaseId}";
 
@@ -69,7 +71,7 @@ public class CoverArtArchiveCommandHandler
         {
             using RestClient client = new RestClient(baseUrl);
             RestRequest request = new RestRequest();
-            var response = client.Get<CoverArtArchiveModel>(request);
+            var response = await client.GetAsync<CoverArtArchiveModel>(request);
 
             return response?.Images
                 .Where(image => image.Approved)
@@ -85,16 +87,16 @@ public class CoverArtArchiveCommandHandler
         return string.Empty;
     }
     
-    private void DownloadImage(string imageUrl, string fileName)
+    private async Task DownloadImageAsync(string imageUrl, string fileName)
     {
         try
         {
             using HttpClient client = new HttpClient();
-            HttpResponseMessage response = client.GetAsync(imageUrl).GetAwaiter().GetResult();
+            HttpResponseMessage response = await client.GetAsync(imageUrl);
 
             if (response.IsSuccessStatusCode)
             {
-                byte[] imageBytes = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
                 File.WriteAllBytes(fileName, imageBytes);
                 Console.WriteLine($"Cover art downloaded and saved as: {fileName}");
             }

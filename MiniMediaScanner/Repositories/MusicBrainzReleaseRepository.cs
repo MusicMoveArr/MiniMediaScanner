@@ -11,16 +11,16 @@ public class MusicBrainzReleaseRepository
         _connectionString = connectionString;
     }
 
-    public Guid InsertMusicBrainzRelease(Guid musicBrainzArtistId, 
+    public async Task<Guid> InsertMusicBrainzReleaseAsync(Guid musicBrainzArtistId, 
         Guid musicBrainzRemoteReleaseId, 
         string title, 
-        string status, 
-        string statusId,
-        string date,
-        string barcode,
-        string country,
-        string disambiguation,
-        string quality)
+        string? status, 
+        string? statusId,
+        string? date,
+        string? barcode,
+        string? country,
+        string? disambiguation,
+        string? quality)
     {
         if (string.IsNullOrWhiteSpace(status))
         {
@@ -73,9 +73,9 @@ public class MusicBrainzReleaseRepository
         
         Guid releaseId = Guid.NewGuid();
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn.ExecuteScalar<Guid>(query, new
+        return await conn.ExecuteScalarAsync<Guid>(query, new
             {
                 id = releaseId,
                 MusicBrainzArtistId = musicBrainzArtistId,

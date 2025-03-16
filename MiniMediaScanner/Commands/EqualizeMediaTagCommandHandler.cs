@@ -22,15 +22,17 @@ public class EqualizeMediaTagCommandHandler
         _mediaTagWriteService = new MediaTagWriteService();
     }
 
-    public void EqualizeTags(string album, string tag, string writetag, bool autoConfirm)
+    public async Task EqualizeTagsAsync(string album, string tag, string writetag, bool autoConfirm)
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => EqualizeTags(artist, album, tag, writetag, autoConfirm));
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await EqualizeTagsAsync(artist, album, tag, writetag, autoConfirm);
+        }
     }
     
-    public void EqualizeTags(string artist, string album, string tag, string writetag, bool autoConfirm)
+    public async Task EqualizeTagsAsync(string artist, string album, string tag, string writetag, bool autoConfirm)
     {
-        var metadata = _metadataRepository.GetMetadataByArtist(artist)
+        var metadata = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
             .Where(metadata => File.Exists(metadata.Path))
             .ToList();
@@ -42,11 +44,11 @@ public class EqualizeMediaTagCommandHandler
         foreach (var group in groupedByAlbumId)
         {
             string albumName = group.First().AlbumName;
-            success = ProcessGenericTag(group.ToList(), artist, albumName, autoConfirm, tag, writetag);
+            success = await ProcessGenericTagAsync(group.ToList(), artist, albumName, autoConfirm, tag, writetag);
         }
     }
 
-    private bool ProcessGenericTag(List<MetadataModel> metadataFiles, string artist, string album, bool autoConfirm, string tagName, string writeTagName)
+    private async Task<bool> ProcessGenericTagAsync(List<MetadataModel> metadataFiles, string artist, string album, bool autoConfirm, string tagName, string writeTagName)
     {
         if (metadataFiles.Any(m => string.IsNullOrWhiteSpace(m.Tag_AllJsonTags)))
         {
@@ -114,9 +116,9 @@ public class EqualizeMediaTagCommandHandler
         
         foreach (var metadata in fileDifferences)
         {
-            if (_mediaTagWriteService.SaveTag(new FileInfo(metadata.Metadata.Path), writeTagName, tagValue.Date))
+            if (await _mediaTagWriteService.SaveTagAsync(new FileInfo(metadata.Metadata.Path), writeTagName, tagValue.Date))
             {
-                _importCommandHandler.ProcessFile(metadata.Metadata.Path);
+                await _importCommandHandler.ProcessFileAsync(metadata.Metadata.Path);
                 Console.WriteLine($"Written {writeTagName} '{tagValue.Date}' to '{metadata.Metadata.Path}'");
             }
             else

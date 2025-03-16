@@ -19,30 +19,33 @@ public class ConvertMediaCommandHandler
         _metadataRepository = new MetadataRepository(connectionString);
     }
 
-    public void ConvertAllArtists(string fromExtension, string toExtension, string codec,  string bitrate)
+    public async Task ConvertAllArtistsAsync(string fromExtension, string toExtension, string codec,  string bitrate)
     {
-        var metadataFiles = _metadataRepository.GetMetadataByFileExtension(fromExtension);
-        
-        metadataFiles  
-            .AsParallel()
-            .WithDegreeOfParallelism(4)
-            .ForAll(metadata => ProcessFile(metadata, toExtension, codec, bitrate));
+        var metadataFiles = (await _metadataRepository.GetMetadataByFileExtensionAsync(fromExtension));
+
+        foreach (var metadata in metadataFiles  
+                     .AsParallel()
+                     .WithDegreeOfParallelism(4))
+        {
+            await ProcessFileAsync(metadata, toExtension, codec, bitrate);
+        }
     }
     
-    public void ConvertByArtist(string fromExtension, string toExtension, string artist, string codec,  string bitrate)
+    public async Task ConvertByArtistAsync(string fromExtension, string toExtension, string artist, string codec,  string bitrate)
     {
-        var metadataFiles = _metadataRepository.GetMetadataByArtist(artist)
+        var metadataFiles = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .Where(metadata => metadata.Path.EndsWith(fromExtension))
             .ToList();
 
-        metadataFiles  
-            .AsParallel()
-            .WithDegreeOfParallelism(4)
-            .ForAll(metadata => ProcessFile(metadata, toExtension, codec, bitrate));
-        
+        foreach (var metadata in metadataFiles
+                     .AsParallel()
+                     .WithDegreeOfParallelism(4))
+        {
+            await ProcessFileAsync(metadata, toExtension, codec, bitrate);
+        }
     }
 
-    private void ProcessFile(MetadataModel metadata, string toExtension, string codec,  string bitrate)
+    private async Task ProcessFileAsync(MetadataModel metadata, string toExtension, string codec,  string bitrate)
     {
         FileInfo file = new FileInfo(metadata.Path);
 
@@ -57,9 +60,12 @@ public class ConvertMediaCommandHandler
 
         if (outputFile.Exists)
         {
-            var existingMetadata = _metadataRepository.GetMetadataByPath(outputFile.FullName);
+            var existingMetadata = await _metadataRepository.GetMetadataByPathAsync(outputFile.FullName);
 
-            existingMetadata.ForEach(metadata =>  _metadataRepository.DeleteMetadataRecords(new List<string>() { metadata.MetadataId.ToString() }));
+            foreach (var record in existingMetadata)
+            {
+                await _metadataRepository.DeleteMetadataRecordsAsync(new List<string>() { record.MetadataId.ToString() });
+            }
             outputFile.Delete();
             Console.WriteLine($"Deleted target, records deleted '{existingMetadata.Count}', file already exists, '{outputFile.FullName}'");
         }
@@ -68,14 +74,14 @@ public class ConvertMediaCommandHandler
         if(success)
         {
             Console.WriteLine($"Successfully converted '{file.FullName}' to '{outputFile.FullName}'");
-            _metadataRepository.UpdateMetadataPath(metadata.MetadataId.ToString(), outputFile.FullName); 
+            await _metadataRepository.UpdateMetadataPathAsync(metadata.MetadataId.ToString(), outputFile.FullName); 
 
-            FpcalcOutput? fingerprint = _fingerPrintService.GetFingerprint(outputFile.FullName);
+            FpcalcOutput? fingerprint = await _fingerPrintService.GetFingerprintAsync(outputFile.FullName);
 
             if (fingerprint != null)
             {
                 FileInfo fileInfo = new FileInfo(outputFile.FullName);
-                _metadataRepository.UpdateMetadataFingerprint(metadata.MetadataId.ToString(), fingerprint.Fingerprint, fingerprint.Duration, fileInfo.LastWriteTime, fileInfo.CreationTime);
+                await _metadataRepository.UpdateMetadataFingerprintAsync(metadata.MetadataId.ToString(), fingerprint.Fingerprint, fingerprint.Duration, fileInfo.LastWriteTime, fileInfo.CreationTime);
             }
             
             file.Delete();

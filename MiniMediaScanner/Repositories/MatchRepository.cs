@@ -11,7 +11,7 @@ public class MatchRepository
         _connectionString = connectionString;
     }
     
-    public string? GetBestSpotifyMatch(Guid artistId, string artistName)
+    public async Task<string?> GetBestSpotifyMatchAsync(Guid artistId, string artistName)
     {
         string query = @"WITH MusicLibrary AS (
                              SELECT distinct
@@ -48,15 +48,14 @@ public class MatchRepository
                          ORDER BY match_percentage desc
                          limit 1";
         
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn
-            .Query<string>(query, param: new 
+        return await conn
+            .QueryFirstOrDefaultAsync<string>(query, param: new
             {
                 artistId,
                 artistName
-            })
-            .FirstOrDefault();
+            });
     }
     
     

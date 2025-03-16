@@ -1,27 +1,36 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class DeDuplicateSinglesCommand
+[Command("deduplicatesingles", Description = "Check for duplicated music, specifically Singles, and delete if the same song already exists in an album optionally")]
+public class DeDuplicateSinglesCommand : ICommand
 {
-    /// <summary>
-    /// Check for duplicated music, specifically Singles, and delete if the same song already exists in an album optionally
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="delete">-d, Delete duplicate file.</param>
-    [Command("deduplicatesingles")]
-    public static void DeDuplicateSingles(string connectionString, string artist = "", bool delete = false)
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("delete", 'd', Description = "Delete duplicate file", IsRequired = false)]
+    public bool Delete { get; set; }
+    
+    public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new DeDuplicateSinglesCommandHandler(connectionString);
+        var handler = new DeDuplicateSinglesCommandHandler(ConnectionString);
 
-        if (string.IsNullOrWhiteSpace(artist))
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.CheckDuplicateFiles(delete);
+            await handler.CheckDuplicateFilesAsync(Delete);
         }
         else
         {
-            handler.CheckDuplicateFiles(artist, delete);
+            await handler.CheckDuplicateFilesAsync(Artist, Delete);
         }
     }
 }

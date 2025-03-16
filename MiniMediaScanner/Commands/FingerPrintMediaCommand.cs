@@ -1,29 +1,36 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class FingerPrintMediaCommand
+[Command("fingerprint", Description = "Re-fingerprint media")]
+public class FingerPrintMediaCommand : ICommand
 {
-    /// <summary>
-    /// Re-fingerprint media
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="album">-b, target Album.</param>
-    [Command("fingerprint")]
-    public static void FingerPrintMedia(string connectionString,
-        string artist = "", 
-        string album = "")
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    public string Album { get; set; }
+    
+    public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new FingerPrintMediaCommandHandler(connectionString);
+        var handler = new FingerPrintMediaCommandHandler(ConnectionString);
 
-        if (string.IsNullOrWhiteSpace(artist))
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.FingerPrintMedia(album);
+            await handler.FingerPrintMediaAsync(Album);
         }
         else
         {
-            handler.FingerPrintMedia(artist, album);
+            await handler.FingerPrintMediaAsync(Artist, Album);
         }
     }
 }

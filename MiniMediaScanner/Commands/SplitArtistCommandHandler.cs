@@ -26,12 +26,12 @@ public class SplitArtistCommandHandler
         _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
     }
     
-    public void SplitArtist(string artist, string artistFormat, bool autoConfirm)
+    public async Task SplitArtistAsync(string artist, string artistFormat, bool autoConfirm)
     {
-        var metadata = _metadataRepository.GetMetadataByArtist(artist)
+        var metadata = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .ToList();
 
-        var musicBrainzArtists = _musicBrainzArtistRepository.GetSplitBrainzArtist(artist);
+        var musicBrainzArtists = await _musicBrainzArtistRepository.GetSplitBrainzArtistAsync(artist);
         
         Console.WriteLine($"Checking artist '{artist}' ");
 
@@ -107,9 +107,9 @@ public class SplitArtistCommandHandler
                     UpdateTag(track, "SortAlbumArtist", newArtistName, ref trackInfoUpdated, true);
                 }
                 
-                if (trackInfoUpdated && _mediaTagWriteService.SafeSave(track))
+                if (trackInfoUpdated && await _mediaTagWriteService.SafeSaveAsync(track))
                 {
-                    _importCommandHandler.ProcessFile(metadataAlbum.Path);
+                    await _importCommandHandler.ProcessFileAsync(metadataAlbum.Path);
                 }
             }
         }

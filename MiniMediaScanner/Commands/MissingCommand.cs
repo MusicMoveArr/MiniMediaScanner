@@ -1,33 +1,42 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class MissingCommand
+[Command("missing", Description = "Check for missing music")]
+public class MissingCommand : ICommand
 {
-    /// <summary>
-    /// Check for missing music
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="provider">-p, Provider can be either MusicBrainz or Spotify.</param>
-    [Command("missing")]
-    public static void Missing(string connectionString, string artist = "", string provider = "musicbrainz")
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+
+    [CommandOption("provider", 'p', Description = "Provider can be either MusicBrainz or Spotify.", IsRequired = false)]
+    public string Provider { get; set; } = "musicbrainz";
+    
+    public async ValueTask ExecuteAsync(IConsole console)
     {
-        if (string.IsNullOrWhiteSpace(provider) ||
-            (provider.ToLower() != "musicbrainz" && provider.ToLower() != "spotify"))
+        if (string.IsNullOrWhiteSpace(Provider) ||
+            (Provider.ToLower() != "musicbrainz" && Provider.ToLower() != "spotify"))
         {
             Console.WriteLine("Provider must be either 'musicbrainz' or 'spotify'");
             return;
         }
-        var handler = new MissingCommandHandler(connectionString);
+        var handler = new MissingCommandHandler(ConnectionString);
 
-        if (string.IsNullOrWhiteSpace(artist))
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.CheckAllMissingTracks(provider);
+            await handler.CheckAllMissingTracksAsync(Provider);
         }
         else
         {
-            handler.CheckMissingTracksByArtist(artist, provider);
+            await handler.CheckMissingTracksByArtistAsync(Artist, Provider);
         }
     }
 }

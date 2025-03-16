@@ -31,40 +31,39 @@ public class TagMissingMetadataCommandHandler
         _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
     }
     
-    public void FingerPrintMedia(string accoustId, bool write, string album, bool overwriteTagValue)
+    public async Task FingerPrintMediaAsync(string accoustId, bool write, string album, bool overwriteTagValue)
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => FingerPrintMedia(accoustId, write, artist, album, overwriteTagValue));
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await FingerPrintMediaAsync(accoustId, write, artist, album, overwriteTagValue);
+        }
     }
 
-    public void FingerPrintMedia(string accoustId, bool write, string artist, string album, bool overwriteTagValue)
+    public async Task FingerPrintMediaAsync(string accoustId, bool write, string artist, string album, bool overwriteTagValue)
     {
-        var metadata = _metadataRepository.GetMissingMusicBrainzMetadataRecords(artist)
+        var metadata = (await _metadataRepository.GetMissingMusicBrainzMetadataRecordsAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || 
                                string.Equals(metadata.Album, album, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         Console.WriteLine($"Checking artist '{artist}', found {metadata.Count} tracks to process");
 
-        metadata
-            .Where(metadata => new FileInfo(metadata.Path).Exists)
-            .ToList()
-            .ForEach(metadata =>
+        foreach (var record in metadata.Where(r => new FileInfo(r.Path).Exists))
+        {
+            try
             {
-                try
-                {
-                    ProcessFile(metadata, write, accoustId, overwriteTagValue);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                }
-            });
+                await ProcessFileAsync(record, write, accoustId, overwriteTagValue);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
     }
                 
-    private void ProcessFile(MetadataInfo metadata, bool write, string accoustId, bool overwriteTagValue)
+    private async Task ProcessFileAsync(MetadataInfo metadata, bool write, string accoustId, bool overwriteTagValue)
     {
-        JObject? acoustIdLookup = _acoustIdService.LookupAcoustId(accoustId,
+        JObject? acoustIdLookup = await _acoustIdService.LookupAcoustIdAsync(accoustId,
             metadata.Tag_AcoustIdFingerPrint, (int)metadata.Tag_AcoustIdFingerPrint_Duration);
         
         Guid.TryParse(acoustIdLookup?["results"]?.FirstOrDefault()?["recordings"]?.FirstOrDefault()?["id"]?.ToString(), out var recordingId);
@@ -79,11 +78,11 @@ public class TagMissingMetadataCommandHandler
             Console.WriteLine($"No recording ID found from AcoustID for '{metadata.Path}'");
             
             track = new Track(metadata.Path);
-            recordingId = _musicBrainzArtistRepository.GetMusicBrainzRecordingIdByName(track.Artist, track.Album, track.Title).Value;
+            recordingId = (await _musicBrainzArtistRepository.GetMusicBrainzRecordingIdByNameAsync(track.Artist, track.Album, track.Title)).Value;
 
-            if (!GuidHelper.GuidHasValue(recordingId))
+            if (GuidHelper.GuidHasValue(recordingId))
             {
-                artistModel = _musicBrainzAPIService.GetRecordingById(recordingId);
+                artistModel = await _musicBrainzAPIService.GetRecordingByIdAsync(recordingId);
                 if (artistModel != null)
                 {
                     Console.WriteLine($"Found MusicBrainz data from the database, '{metadata.Path}'");
@@ -92,7 +91,7 @@ public class TagMissingMetadataCommandHandler
         }
         else
         {
-            artistModel = _musicBrainzAPIService.GetRecordingById(recordingId);
+            artistModel = await _musicBrainzAPIService.GetRecordingByIdAsync(recordingId);
         }
         
         MusicBrainzArtistReleaseModel? release = artistModel?.Releases?.FirstOrDefault();
@@ -133,7 +132,7 @@ public class TagMissingMetadataCommandHandler
 
         if (Guid.TryParse(release.Id, out var releaseId))
         {
-            MusicBrainzArtistReleaseModel? withLabeLInfo = _musicBrainzAPIService.GetReleaseWithLabel(releaseId);
+            MusicBrainzArtistReleaseModel? withLabeLInfo = await _musicBrainzAPIService.GetReleaseWithLabelAsync(releaseId);
             var label = withLabeLInfo?.LabeLInfo?.FirstOrDefault(label => label?.Label?.Type?.ToLower().Contains("production") == true);
 
             if (label == null && withLabeLInfo?.LabeLInfo?.Count == 1)
@@ -216,9 +215,9 @@ public class TagMissingMetadataCommandHandler
         UpdateTag(track, "Total Tracks", release.Media?.FirstOrDefault()?.TrackCount.ToString(), ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "MEDIA", release.Media?.FirstOrDefault()?.Format, ref trackInfoUpdated, overwriteTagValue);
 
-        if (trackInfoUpdated && _mediaTagWriteService.SafeSave(track))
+        if (trackInfoUpdated && await _mediaTagWriteService.SafeSaveAsync(track))
         {
-            _importCommandHandler.ProcessFile(metadata.Path);
+            await _importCommandHandler.ProcessFileAsync(metadata.Path);
         }
     }
 

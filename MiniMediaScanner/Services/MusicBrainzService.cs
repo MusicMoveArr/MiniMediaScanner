@@ -18,15 +18,19 @@ public class MusicBrainzService
         _musicBrainzReleaseTrackRepository = new MusicBrainzReleaseTrackRepository(connectionString);
     }
 
-    public void InsertMissingMusicBrainzArtist(MetadataInfo metadataInfo)
+    public async Task InsertMissingMusicBrainzArtistAsync(MetadataInfo metadataInfo)
     {
-        metadataInfo.MusicBrainzArtistId
-            .Split('/', StringSplitOptions.RemoveEmptyEntries)
-            .ToList()
-            .ForEach(artistId => UpdateMusicBrainzArtist(artistId, true));
+        if (!string.IsNullOrWhiteSpace(metadataInfo.MusicBrainzArtistId))
+        {
+            foreach (var artistId in metadataInfo.MusicBrainzArtistId
+                         .Split('/', StringSplitOptions.RemoveEmptyEntries))
+            {
+                await UpdateMusicBrainzArtistAsync(artistId, true);
+            }
+        }
     }
     
-    public void UpdateMusicBrainzArtist(string musicBrainzArtistId, bool updateExisting = false)
+    public async Task UpdateMusicBrainzArtistAsync(string musicBrainzArtistId, bool updateExisting = false)
     {
         try
         {
@@ -39,7 +43,7 @@ public class MusicBrainzService
 
             foreach (string artistId in musicBrainzArtistIds)
             {
-                ProcessMusicBrainzArtist(artistId, updateExisting);
+                await ProcessMusicBrainzArtistAsync(artistId, updateExisting);
             }
         }
         catch (Exception ex)
@@ -48,11 +52,11 @@ public class MusicBrainzService
         }
     }
 
-    private void ProcessMusicBrainzArtist(string musicBrainzArtistId, bool updateExisting = false)
+    private async Task ProcessMusicBrainzArtistAsync(string musicBrainzArtistId, bool updateExisting = false)
     {
         try
         {
-            if (!updateExisting && _musicBrainzArtistRepository.GetRemoteMusicBrainzArtistId(musicBrainzArtistId).HasValue)
+            if (!updateExisting && (await _musicBrainzArtistRepository.GetRemoteMusicBrainzArtistIdAsync(musicBrainzArtistId)).HasValue)
             {
                 return;
             }
@@ -62,7 +66,7 @@ public class MusicBrainzService
                 return;
             }
             
-            DateTime lastSyncTime = _musicBrainzArtistRepository.GetBrainzArtistLastSyncTime(musicBrainzArtistGuid);
+            DateTime lastSyncTime = await _musicBrainzArtistRepository.GetBrainzArtistLastSyncTimeAsync(musicBrainzArtistGuid);
 
             if (DateTime.Now.Subtract(lastSyncTime).TotalDays < 7)
             {
@@ -70,14 +74,19 @@ public class MusicBrainzService
                 return;
             }
             
-            var musicBrainzArtistInfo = _musicBrainzApiService.GetArtistInfo(musicBrainzArtistGuid);
+            var musicBrainzArtistInfo = await _musicBrainzApiService.GetArtistInfoAsync(musicBrainzArtistGuid);
 
             if (musicBrainzArtistInfo == null)
             {
                 return;
             }
+
+            if (string.IsNullOrWhiteSpace(musicBrainzArtistInfo.Name))
+            {
+                return;
+            }
             
-            Guid? artistDbId = _musicBrainzArtistRepository.InsertMusicBrainzArtist(musicBrainzArtistGuid, 
+            Guid? artistDbId = await _musicBrainzArtistRepository.InsertMusicBrainzArtistAsync(musicBrainzArtistGuid, 
                 musicBrainzArtistInfo.Name, 
                 musicBrainzArtistInfo.Type,
                 musicBrainzArtistInfo.Country,
@@ -87,7 +96,7 @@ public class MusicBrainzService
             int offset = 0;
             while (true)
             {
-                var releases = _musicBrainzApiService.GetReleasesForArtist(musicBrainzArtistGuid, BulkRequestLimit, offset);
+                var releases = await _musicBrainzApiService.GetReleasesForArtistAsync(musicBrainzArtistGuid, BulkRequestLimit, offset);
 
                 if (releases?.Releases?.Count == 0)
                 {
@@ -98,11 +107,13 @@ public class MusicBrainzService
             
                 foreach (var release in releases.Releases)
                 {
-                    if (!Guid.TryParse(release.Id, out var releaseId))
+                    if (!Guid.TryParse(release.Id, out var releaseId) ||
+                        string.IsNullOrWhiteSpace(release.Title))
                     {
                         continue;
                     }
-                    _musicBrainzReleaseRepository.InsertMusicBrainzRelease(artistDbId.Value, releaseId, release.Title, release.Status, 
+                    
+                    await _musicBrainzReleaseRepository.InsertMusicBrainzReleaseAsync(artistDbId.Value, releaseId, release.Title, release.Status, 
                         release.StatusId, release.Date, release.Barcode, release.Country, release.Disambiguation, release.Quality);
 
                     foreach (var media in release.Media)
@@ -110,12 +121,12 @@ public class MusicBrainzService
                         foreach (var track in media.Tracks)
                         {
                             if (!Guid.TryParse(track.Id, out var trackId) ||
-                                !Guid.TryParse(track.Recording.Id, out var trackRecordingId))
+                                !Guid.TryParse(track?.Recording?.Id, out var trackRecordingId))
                             {
                                 continue;
                             }
                             
-                            _musicBrainzReleaseTrackRepository.InsertMusicBrainzReleaseTrack(trackId, 
+                            await _musicBrainzReleaseTrackRepository.InsertMusicBrainzReleaseTrackAsync(trackId, 
                                                                                              trackRecordingId, 
                                                                                              track.Title ?? string.Empty, 
                                                                                              release.Status, 

@@ -19,30 +19,34 @@ public class CoverArtSpotifyCommandHandler
         _spotifyRepository = new SpotifyRepository(connectionString);
     }
 
-    public void CheckAllMissingCovers(string album, string coverAlbumFileName, string coverArtistFileName)
+    public async Task CheckAllMissingCoversAsync(string album, string coverAlbumFileName, string coverArtistFileName)
     {
-        _artistRepository.GetAllArtistNames()
-            .AsParallel()
-            .WithDegreeOfParallelism(4)
-            .ForAll(artist => CheckAllMissingCovers(artist, album, coverAlbumFileName, coverArtistFileName));
+        foreach (var artist in (await _artistRepository.GetAllArtistNamesAsync())
+                 .AsParallel()
+                 .WithDegreeOfParallelism(4))
+        {
+            await CheckAllMissingCoversAsync(artist, album, coverAlbumFileName, coverArtistFileName);
+        }
     }
     
-    public void CheckAllMissingCovers(string artist, string album, string coverAlbumFileName, string coverArtistFileName)
+    public async Task CheckAllMissingCoversAsync(string artist, string album, string coverAlbumFileName, string coverArtistFileName)
     {
         Console.WriteLine($"Checking artist '{artist}'");
-        var coverModels = _metadataRepository.GetFolderPathsByArtistForCovers(artist, album)
+        var coverModels = (await _metadataRepository.GetFolderPathsByArtistForCoversAsync(artist, album))
             .ToList();
         
-        Dictionary<Guid, string> spotifyArtistIds = coverModels
-            .DistinctBy(cover => cover.ArtistId)
-            .Select(cover => new
-            {
-                SpotifyArtistId = _matchRepository.GetBestSpotifyMatch(cover.ArtistId, cover.ArtistName),
-                CoverArtistId = cover.ArtistId,
-            })
+        Dictionary<Guid, string> spotifyArtistIds = (await Task.WhenAll(
+                coverModels
+                    .DistinctBy(cover => cover.ArtistId)
+                    .Select(async cover => new
+                    {
+                        SpotifyArtistId = await _matchRepository.GetBestSpotifyMatchAsync(cover.ArtistId, cover.ArtistName),
+                        CoverArtistId = cover.ArtistId
+                    })
+            ))
             .Where(cover => !string.IsNullOrWhiteSpace(cover.SpotifyArtistId))
-            .ToDictionary(key => key.CoverArtistId, key => key.SpotifyArtistId!);
-
+            .ToDictionary(cover => cover.CoverArtistId, cover => cover.SpotifyArtistId!);
+        
         if (spotifyArtistIds.Count == 0)
         {
             Console.WriteLine($"No spotify artist found in the database for '{artist}'");
@@ -51,13 +55,13 @@ public class CoverArtSpotifyCommandHandler
 
         foreach (MetadataPathCoverModel coverModel in coverModels)
         {
-            CheckAlbumCover(coverModel, coverAlbumFileName, spotifyArtistIds);
+            await CheckAlbumCoverAsync(coverModel, coverAlbumFileName, spotifyArtistIds);
         }
 
-        CheckArtistCover(coverModels, coverArtistFileName, spotifyArtistIds);
+        await CheckArtistCoverAsync(coverModels, coverArtistFileName, spotifyArtistIds);
     }
 
-    private void CheckArtistCover(List<MetadataPathCoverModel> coverModels, 
+    private async Task CheckArtistCoverAsync(List<MetadataPathCoverModel> coverModels, 
         string coverArtistFileName,
         Dictionary<Guid, string> spotifyArtistIds)
     {
@@ -95,7 +99,7 @@ public class CoverArtSpotifyCommandHandler
             return;
         }
 
-        string? coverUrl = _spotifyRepository.GetHighestQualityArtistCoverUrl(spotifyArtistId);
+        string? coverUrl = await _spotifyRepository.GetHighestQualityArtistCoverUrlAsync(spotifyArtistId);
 
         if (string.IsNullOrEmpty(coverUrl))
         {
@@ -106,10 +110,10 @@ public class CoverArtSpotifyCommandHandler
         string coverArtPath = Path.Join(artistMusicFolder.FullName, coverArtistFileName);
     
         Console.WriteLine($"Downloading cover art for {coverModel.ArtistName}");
-        DownloadImage(coverUrl, coverArtPath);
+        await DownloadImageAsync(coverUrl, coverArtPath);
     }
 
-    private void CheckAlbumCover(MetadataPathCoverModel coverModel, string coverAlbumFileName, Dictionary<Guid, string> spotifyArtistIds)
+    private async Task CheckAlbumCoverAsync(MetadataPathCoverModel coverModel, string coverAlbumFileName, Dictionary<Guid, string> spotifyArtistIds)
     {
         string coverAlbumFileNameWithoutExtension = Path.GetFileNameWithoutExtension(coverAlbumFileName);
         DirectoryInfo di = new DirectoryInfo(coverModel.FolderPath);
@@ -135,7 +139,7 @@ public class CoverArtSpotifyCommandHandler
             return;
         }
 
-        string? coverUrl = _spotifyRepository.GetHighestQualityAlbumCoverUrl(spotifyArtistId, coverModel.AlbumName);
+        string? coverUrl = await _spotifyRepository.GetHighestQualityAlbumCoverUrlAsync(spotifyArtistId, coverModel.AlbumName);
 
         if (string.IsNullOrEmpty(coverUrl))
         {
@@ -146,19 +150,19 @@ public class CoverArtSpotifyCommandHandler
         string coverArtPath = Path.Join(coverModel.FolderPath, coverAlbumFileName);
             
         Console.WriteLine($"Downloading cover art for {coverModel.ArtistName}, {coverModel.AlbumName}");
-        DownloadImage(coverUrl, coverArtPath);
+        await DownloadImageAsync(coverUrl, coverArtPath);
     }
     
-    private void DownloadImage(string imageUrl, string fileName)
+    private async Task DownloadImageAsync(string imageUrl, string fileName)
     {
         try
         {
             using HttpClient client = new HttpClient();
-            HttpResponseMessage response = client.GetAsync(imageUrl).GetAwaiter().GetResult();
+            HttpResponseMessage response = await client.GetAsync(imageUrl);
 
             if (response.IsSuccessStatusCode)
             {
-                byte[] imageBytes = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
                 File.WriteAllBytes(fileName, imageBytes);
                 Console.WriteLine($"Cover art downloaded and saved as: {fileName}");
             }

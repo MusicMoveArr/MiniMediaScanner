@@ -14,61 +14,61 @@ public class MusicBrainzArtistRepository
         _connectionString = connectionString;
     }
     
-    public List<string> GetMusicBrainzArtistRemoteIdsByName(string artist)
+    public async Task<List<string>> GetMusicBrainzArtistRemoteIdsByNameAsync(string artist)
     {
         string query = @"SELECT cast(MusicBrainzRemoteId as text) FROM MusicBrainzArtist where lower(name) = lower(@artist)";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn
-            .Query<string>(query, new
+        return (await conn
+            .QueryAsync<string>(query, new
             {
                 artist
-            })
+            }))
             .ToList();
     }
     
-    public List<string> GetAllMusicBrainzArtistRemoteIds()
+    public async Task<List<string>> GetAllMusicBrainzArtistRemoteIdsAsync()
     {
         string query = @"SELECT cast(MusicBrainzRemoteId as text) FROM MusicBrainzArtist order by name asc";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn
-            .Query<string>(query)
+        return (await conn
+            .QueryAsync<string>(query))
             .ToList();
     }
     
-    public List<Guid> GetMusicBrainzArtistIdsByName(string artistName)
+    public async Task<List<Guid>> GetMusicBrainzArtistIdsByNameAsync(string artistName)
     {
         string query = @"SELECT MusicBrainzArtistId FROM MusicBrainzArtist where lower(name) = lower(@artistName)";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn
-            .Query<Guid>(query, new
+        return (await conn
+            .QueryAsync<Guid>(query, new
             {
                 artistName
-            }).ToList();
+            })).ToList();
     }
     
-    public List<Guid> GetAllMusicBrainzArtistIds()
+    public async Task<List<Guid>> GetAllMusicBrainzArtistIdsAsync()
     {
         string query = @"SELECT MusicBrainzArtistId FROM MusicBrainzArtist";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn
-            .Query<Guid>(query)
+        return (await conn
+            .QueryAsync<Guid>(query))
             .ToList();
     }
 
-    public Guid InsertMusicBrainzArtist(Guid remoteMusicBrainzArtistId, 
+    public async Task<Guid> InsertMusicBrainzArtistAsync(Guid remoteMusicBrainzArtistId, 
         string artistName, 
-        string artistType,
-        string country,
-        string sortName,
-        string disambiguation)
+        string? artistType,
+        string? country,
+        string? sortName,
+        string? disambiguation)
     {
         if (string.IsNullOrWhiteSpace(artistType))
         {
@@ -100,9 +100,9 @@ public class MusicBrainzArtistRepository
                              lastsynctime = current_timestamp
                          RETURNING MusicBrainzArtistId";
         Guid artistId = Guid.NewGuid();
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn.ExecuteScalar<Guid>(query, new
+        return await conn.ExecuteScalarAsync<Guid>(query, new
             {
                 id = artistId,
                 MusicBrainzRemoteId = remoteMusicBrainzArtistId,
@@ -114,30 +114,30 @@ public class MusicBrainzArtistRepository
             });
     }
     
-    public Guid? GetRemoteMusicBrainzArtistId(string remoteMusicBrainzArtistId)
+    public async Task<Guid?> GetRemoteMusicBrainzArtistIdAsync(string remoteMusicBrainzArtistId)
     {
         string query = @"SELECT MusicBrainzArtistId FROM MusicBrainzArtist WHERE MusicBrainzRemoteId = @id";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn.ExecuteScalar<Guid?>(query, new
+        return await conn.ExecuteScalarAsync<Guid?>(query, new
             {
                 id = remoteMusicBrainzArtistId
             });
     }
-    public DateTime GetBrainzArtistLastSyncTime(Guid remoteMusicBrainzArtistId)
+    public async Task<DateTime> GetBrainzArtistLastSyncTimeAsync(Guid remoteMusicBrainzArtistId)
     {
         string query = @"SELECT lastsynctime FROM MusicBrainzArtist WHERE MusicBrainzRemoteId = @id";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn.ExecuteScalar<DateTime>(query, new
+        return await conn.ExecuteScalarAsync<DateTime>(query, new
         {
             id = remoteMusicBrainzArtistId
         });
     }
 
-    public List<MusicBrainzSplitArtistModel> GetSplitBrainzArtist(string artistName)
+    public async Task<List<MusicBrainzSplitArtistModel>> GetSplitBrainzArtistAsync(string artistName)
     {
         string query = @"SELECT 
                              a.musicbrainzremoteid,
@@ -157,15 +157,15 @@ public class MusicBrainzArtistRepository
                          where lower(a.name) = lower(@artistName)
                          GROUP BY a.musicbrainzremoteid, a.name, coalesce(a.country, re.country), a.type, re.date, re.country";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn.Query<MusicBrainzSplitArtistModel>(query, new
+        return (await conn.QueryAsync<MusicBrainzSplitArtistModel>(query, new
         {
             artistName
-        }).ToList();
+        })).ToList();
     }
 
-    public MusicBrainzArtistModel? GetMusicBrainzArtistByRecordingId(string recordingId)
+    public async Task<MusicBrainzArtistModel?> GetMusicBrainzArtistByRecordingIdAsync(string recordingId)
     {
         const string query = @"
                                 SELECT 
@@ -201,8 +201,8 @@ public class MusicBrainzArtistRepository
 
         var lookup = new Dictionary<string, MusicBrainzArtistModel>();
 
-        using var conn = new NpgsqlConnection(_connectionString);
-        var records = conn.Query<MusicBrainzRecordingFlatModel>(query, 
+        await using var conn = new NpgsqlConnection(_connectionString);
+        var records = await conn.QueryAsync<MusicBrainzRecordingFlatModel>(query, 
             param: new
             {
                 recordingId = recordingId
@@ -275,7 +275,7 @@ public class MusicBrainzArtistRepository
         return null;
     }
 
-    public Guid? GetMusicBrainzRecordingIdByName(string artistName, string albumName, string trackName)
+    public async Task<Guid?> GetMusicBrainzRecordingIdByNameAsync(string artistName, string albumName, string trackName)
     {
         const string query = @"SELECT rt.recordingid
                                FROM musicbrainzreleasetrack rt
@@ -283,19 +283,19 @@ public class MusicBrainzArtistRepository
                                join musicbrainzartist a on a.musicbrainzartistid = r.musicbrainzartistid 
                                WHERE lower(a.name) = lower(@artistName)
                                      AND lower(r.title) = lower(@albumName)
-                                     AND lower(rt.title) = lower(@trackName)";
+                                     AND lower(rt.title) = lower(@trackName)
+                               limit 1";
 
-        using var conn = new NpgsqlConnection(_connectionString);
-        var records = conn.Query<Guid>(query, 
+        await using var conn = new NpgsqlConnection(_connectionString);
+        return await conn.QueryFirstOrDefaultAsync<Guid>(query, 
             param: new
             {
                 artistName,
                 albumName,
                 trackName
             });
-        return records.FirstOrDefault();
     }
-    public MusicBrainzArtistModel? GetMusicBrainzDataByName(string artistName, string albumName, string trackName)
+    public async Task<MusicBrainzArtistModel?> GetMusicBrainzDataByNameAsync(string artistName, string albumName, string trackName)
     {
         const string query = @"
                                 SELECT 
@@ -334,8 +334,8 @@ public class MusicBrainzArtistRepository
 
         var lookup = new Dictionary<string, MusicBrainzArtistModel>();
 
-        using var conn = new NpgsqlConnection(_connectionString);
-        var records = conn.Query<MusicBrainzRecordingFlatModel>(query, 
+        await using var conn = new NpgsqlConnection(_connectionString);
+        var records = await conn.QueryAsync<MusicBrainzRecordingFlatModel>(query, 
             param: new
             {
                 artistName,

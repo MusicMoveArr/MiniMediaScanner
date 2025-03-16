@@ -1,50 +1,60 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class RemoveTagCommand
+[Command("removetag", Description = "Remove tags")]
+public class RemoveTagCommand : ICommand
 {
-    /// <summary>
-    /// Remove tags 
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="album">-b, target Album.</param>
-    /// <param name="tag">-t, The tag to remove from media.</param>
-    /// <param name="tags">-T, The tags to remove from media.</param>
-    /// <param name="confirm">-y, Always confirm automatically.</param>
-    [Command("removetag")]
-    public static void RemoveTag(string connectionString, 
-        string tag = "", 
-        string artist = "", 
-        string album = "", 
-        bool confirm = false,
-        List<string> tags = null)
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    public string Album { get; set; }
+    
+    [CommandOption("tag", 't', Description = "The tag to remove from media.", IsRequired = false)]
+    public string Tag { get; set; }
+    
+    [CommandOption("tags", 'T', Description = "The tags to remove from media.", IsRequired = false)]
+    public List<string> Tags { get; set; }
+
+    [CommandOption("confirm", 'y', Description = "Always confirm automatically.", IsRequired = false)]
+    public bool Confirm { get; set; } = false;
+    
+    public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new RemoveTagCommandHandler(connectionString);
-        if (tags == null)
+        var handler = new RemoveTagCommandHandler(ConnectionString);
+        if (Tags == null)
         {
-            tags = new List<string>();
+            Tags = new List<string>();
         }
 
-        if (!string.IsNullOrWhiteSpace(tag))
+        if (!string.IsNullOrWhiteSpace(Tag))
         {
-            tags.Add(tag);
+            Tags.Add(Tag);
         }
 
-        if (!tags.Any())
+        if (!Tags.Any())
         {
             Console.WriteLine("No tags were specified.");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(artist))
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.RemoveTagFromMedia(album, tags, confirm);
+            await handler.RemoveTagFromMediaAsync(Album, Tags, Confirm);
         }
         else
         {
-            handler.RemoveTagFromMedia(artist, album, tags, confirm);
+            await handler.RemoveTagFromMediaAsync(Artist, Album, Tags, Confirm);
         }
     }
 }

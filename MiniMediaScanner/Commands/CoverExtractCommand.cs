@@ -1,31 +1,39 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class CoverExtractCommand
+[Command("coverextract", Description = "Extract Cover art from the media files (only Album cover supported)")]
+public class CoverExtractCommand : ICommand
 {
-    /// <summary>
-    /// Extract Cover art from the media files (only Album cover supported)
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="album">-b, target Album.</param>
-    /// <param name="filename">-f, File name e.g. cover.jpg.</param>
-    [Command("coverextract")]
-    public static void CoverExtract(string connectionString,
-        string artist = "",
-        string album = "",
-        string filename = "cover.jpg")
-    {
-        var handler = new CoverExtractCommandHandler(connectionString);
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    public string Album { get; set; }
 
-        if (string.IsNullOrWhiteSpace(artist))
+    [CommandOption("filename", 'f', Description = "File name e.g. cover.jpg.", IsRequired = false)]
+    public string Filename { get; set; } = "cover.jpg";
+    
+    public async ValueTask ExecuteAsync(IConsole console)
+    {
+        var handler = new CoverExtractCommandHandler(ConnectionString);
+
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.CheckAllMissingCovers(album, filename);
+            await handler.CheckAllMissingCoversAsync(Album, Filename);
         }
         else
         {
-            handler.CheckAllMissingCovers(artist, album, filename);
+            await handler.CheckAllMissingCoversAsync(Artist, Album, Filename);
         }
     }
 }

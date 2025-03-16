@@ -1,25 +1,36 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class SplitArtistCommand
+[Command("splitartist", Description = @"Split an artist the best we can based on MusicBrainzArtistId tag, if multiple artists use the same name.
+Tags available: MusicBrainzRemoteId, Name, Country, Type, Date")]
+public class SplitArtistCommand : ICommand
 {
-    /// <summary>
-    /// Split an artist the best we can based on MusicBrainzArtistId tag, if multiple artists use the same name
-    /// Tags available: MusicBrainzRemoteId, Name, Country, Type, Date
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="artistFormat">-af, artist format for splitting the 2 artists apart.</param>
-    /// <param name="confirm">-y, Always confirm automatically.</param>
-    [Command("splitartist")]
-    public static void SplitArtist(string connectionString, 
-        string artist, 
-        string artistFormat,
-        bool confirm = false)
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    public string Album { get; set; }
+    
+    [CommandOption("artist-format", 'f', Description = "artist format for splitting the 2 artists apart.", IsRequired = true)]
+    public required string ArtistFormat { get; init; }
+    
+    [CommandOption("confirm", 'y', Description = "Always confirm automatically.", IsRequired = false)]
+    public bool Confirm { get; set; }
+    
+    public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new SplitArtistCommandHandler(connectionString);
+        var handler = new SplitArtistCommandHandler(ConnectionString);
 
-        handler.SplitArtist(artist, artistFormat, confirm);
+        await handler.SplitArtistAsync(Artist, ArtistFormat, Confirm);
     }
 }

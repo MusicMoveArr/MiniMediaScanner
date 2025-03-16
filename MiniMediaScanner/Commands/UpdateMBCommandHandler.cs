@@ -16,36 +16,42 @@ public class UpdateMBCommandHandler
         _musicBrainzAPIService = new MusicBrainzAPIService();
     }
     
-    public void UpdateMusicBrainzArtistsByName(string artistName)
+    public async Task UpdateMusicBrainzArtistsByNameAsync(string artistName)
     {
         Console.WriteLine($"Updating artist, {artistName}");
-        var artistIds = _musicBrainzArtistRepository.GetMusicBrainzArtistRemoteIdsByName(artistName);
+        var artistIds = await _musicBrainzArtistRepository.GetMusicBrainzArtistRemoteIdsByNameAsync(artistName);
 
         if (artistIds?.Count == 0)
         {
-            artistIds = _musicBrainzAPIService
-                .SearchArtist(artistName)
+            artistIds = (await _musicBrainzAPIService
+                .SearchArtistAsync(artistName))
                 ?.Artists?
                 .Where(artist => artist.Name.ToLower().Contains(artistName))
                 .Select(artist => artist.Id)
                 .ToList();
         }
-        
-        artistIds.ForEach(id => UpdateMusicBrainzArtistId(id));
+
+        foreach (var artistId in artistIds)
+        {
+            await UpdateMusicBrainzArtistIdAsync(artistId);
+        }
     }
     
-    public void UpdateAllMusicBrainzArtists()
+    public async Task UpdateAllMusicBrainzArtistsAsync()
     {
-        var artistIds = _musicBrainzArtistRepository.GetAllMusicBrainzArtistRemoteIds();
-        artistIds.ForEach(id => UpdateMusicBrainzArtistId(id));
+        var artistIds = await _musicBrainzArtistRepository.GetAllMusicBrainzArtistRemoteIdsAsync();
+        foreach (var id in artistIds)
+        {
+            await UpdateMusicBrainzArtistIdAsync(id);
+        }
     }
     
-    public void UpdateMusicBrainzArtistId(string artistId)
+    public async Task UpdateMusicBrainzArtistIdAsync(string artistId)
     {
         try
         {
             Console.WriteLine($"Updating Music Brainz Artist ID '{artistId}'");
-            _musicBrainzService.UpdateMusicBrainzArtist(artistId, true);
+            await _musicBrainzService.UpdateMusicBrainzArtistAsync(artistId, true);
         }
         catch (Exception e)
         {

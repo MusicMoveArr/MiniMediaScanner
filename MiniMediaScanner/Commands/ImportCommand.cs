@@ -1,27 +1,39 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class ImportCommand
+[Command("import", Description = "Import music to your database")]
+public class ImportCommand : ICommand
 {
-    /// <summary>
-    /// Import music to your database
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="path">-p, From the directory.</param>
-    [Command("import")]
-    public static void Import(string connectionString, string path)
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("path", 'p', 
+        Description = "From the directory.",
+        EnvironmentVariable = "IMPORT_PATH",
+        IsRequired = true)]
+    public required string Path { get; init; }
+    
+    public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new ImportCommandHandler(connectionString);
+        var handler = new ImportCommandHandler(ConnectionString);
         
         var sortedTopDirectories = Directory
-            .EnumerateFileSystemEntries(path, "*.*", SearchOption.TopDirectoryOnly)
+            .EnumerateFileSystemEntries(Path, "*.*", SearchOption.TopDirectoryOnly)
             .OrderBy(dir => dir)
             .ToList();
         
-        sortedTopDirectories
-            .AsParallel()
-            .WithDegreeOfParallelism(8)
-            .ForAll(dir => handler.ProcessDirectory(dir));
+        await Task.WhenAll(
+            sortedTopDirectories
+                .AsParallel()
+                .WithDegreeOfParallelism(8)
+                .Select(dir => handler.ProcessDirectoryAsync(dir))
+        );
     }
 }

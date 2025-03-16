@@ -16,17 +16,19 @@ public class CoverExtractCommandHandler
         _artistRepository = new ArtistRepository(connectionString);
     }
 
-    public void CheckAllMissingCovers(string album, string coverFileName)
+    public async Task CheckAllMissingCoversAsync(string album, string coverFileName)
     {
-        _artistRepository.GetAllArtistNames()
-            .AsParallel()
-            .WithDegreeOfParallelism(4)
-            .ForAll(artist => CheckAllMissingCovers(artist, album, coverFileName));
+        foreach (var artist in (await _artistRepository.GetAllArtistNamesAsync())
+                 .AsParallel()
+                 .WithDegreeOfParallelism(4))
+        {
+            await CheckAllMissingCoversAsync(artist, album, coverFileName);
+        }
     }
     
-    public void CheckAllMissingCovers(string artist, string album, string coverFileName)
+    public async Task CheckAllMissingCoversAsync(string artist, string album, string coverFileName)
     {
-        var coverModels = _metadataRepository.GetFolderPathsByArtistForCovers(artist, album)
+        var coverModels = (await _metadataRepository.GetFolderPathsByArtistForCoversAsync(artist, album))
             .ToList();
 
         string coverFileNameWithoutExtension = Path.GetFileNameWithoutExtension(coverFileName);
@@ -47,8 +49,8 @@ public class CoverExtractCommandHandler
                 continue;
             }
 
-            var metadataPaths = _metadataRepository
-                .GetPathByLikePath(coverModel.FolderPath)
+            var metadataPaths = (await _metadataRepository
+                .GetPathByLikePathAsync(coverModel.FolderPath))
                 .Where(file => new FileInfo(file).Exists)
                 .ToList();
             
@@ -58,7 +60,7 @@ public class CoverExtractCommandHandler
             {
                 try
                 {
-                    if (ExtractCoverArt(path, coverFileName))
+                    if (await ExtractCoverArtAsync(path, coverFileName))
                     {
                         success = true;
                         Console.WriteLine($"Extracted cover art for {coverModel.ArtistName}, {coverModel.AlbumName}");
@@ -78,7 +80,7 @@ public class CoverExtractCommandHandler
         }
     }
 
-    private bool ExtractCoverArt(string filePath, string coverFileName)
+    private async Task<bool> ExtractCoverArtAsync(string filePath, string coverFileName)
     {
         FileInfo fileInfo = new FileInfo(filePath);
         Track track = new Track(fileInfo.FullName);
@@ -86,7 +88,7 @@ public class CoverExtractCommandHandler
         {
             var pictureInfo = track.EmbeddedPictures.FirstOrDefault();
             string coverFilePath = Path.Join(fileInfo.Directory.FullName, coverFileName);
-            File.WriteAllBytes(coverFilePath, pictureInfo.PictureData);
+            await File.WriteAllBytesAsync(coverFilePath, pictureInfo.PictureData);
             return true;
         }
 

@@ -6,7 +6,7 @@ namespace MiniMediaScanner.Services;
 
 public class FingerPrintService
 {
-    public FpcalcOutput? GetFingerprint(string filePath)
+    public async Task<FpcalcOutput?> GetFingerprintAsync(string filePath)
     {
         // Start a new process for fpcalc
         string escapedFilePath = filePath.Replace("\"", "\\\"");
@@ -25,14 +25,9 @@ public class FingerPrintService
 
         // Start the process and read the output
         process.Start();
-        process.WaitForExit();
-        string output = process.StandardOutput.ReadToEnd();
-        string err = process.StandardError.ReadToEnd();
-
-        if (string.IsNullOrEmpty(output))
-        {
-            
-        }
+        await process.WaitForExitAsync();
+        string output = await process.StandardOutput.ReadToEndAsync();
+        string err = await process.StandardError.ReadToEndAsync();
 
         return ParseFingerprint(output);
     }

@@ -13,7 +13,7 @@ public class SpotifyRepository
         _connectionString = connectionString;
     }
     
-    public void InsertOrUpdateArtist(FullArtist artist)
+    public async Task InsertOrUpdateArtistAsync(FullArtist artist)
     {
         string query = @"
             INSERT INTO spotify_artist (Id, 
@@ -42,9 +42,9 @@ public class SpotifyRepository
                 Genres = EXCLUDED.Genres,
                 lastsynctime = EXCLUDED.lastsynctime";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        conn.Execute(query, param: new
+        await conn.ExecuteAsync(query, param: new
         {
             Id = artist.Id,
             Name = artist.Name,
@@ -58,7 +58,7 @@ public class SpotifyRepository
         });
     }
     
-    public void InsertOrUpdateArtistImage(FullArtist artist)
+    public async Task InsertOrUpdateArtistImageAsync(FullArtist artist)
     {
         string query = @"
             INSERT INTO spotify_artist_image (ArtistId, 
@@ -70,11 +70,11 @@ public class SpotifyRepository
             DO UPDATE SET
                 Url = EXCLUDED.Url";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         foreach (var artistImage in artist.Images)
         {
-            conn.Execute(query, param: new
+            await conn.ExecuteAsync(query, param: new
             {
                 ArtistId = artist.Id,
                 Height = artistImage.Height,
@@ -84,7 +84,7 @@ public class SpotifyRepository
         }
     }
     
-    public void InsertOrUpdateAlbum(FullAlbum album, string albumGroup)
+    public async Task InsertOrUpdateAlbumAsync(FullAlbum album, string albumGroup)
     {
         string query = @"
             INSERT INTO spotify_album (AlbumId, 
@@ -114,9 +114,9 @@ public class SpotifyRepository
                 Label = EXCLUDED.Label,
                 Popularity = EXCLUDED.Popularity";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        conn.Execute(query, param: new
+        await conn.ExecuteAsync(query, param: new
         {
             AlbumId = album.Id,
             AlbumGroup = albumGroup,
@@ -132,7 +132,7 @@ public class SpotifyRepository
         });
     }
     
-    public void InsertOrUpdateAlbumImage(FullAlbum album)
+    public async Task InsertOrUpdateAlbumImageAsync(FullAlbum album)
     {
         string query = @"
             INSERT INTO spotify_album_image (AlbumId, 
@@ -144,11 +144,11 @@ public class SpotifyRepository
             DO UPDATE SET
                 Url = EXCLUDED.Url";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         foreach (var artistImage in album.Images)
         {
-            conn.Execute(query, param: new
+            await conn.ExecuteAsync(query, param: new
             {
                 AlbumId = album.Id,
                 Height = artistImage.Height,
@@ -158,7 +158,7 @@ public class SpotifyRepository
         }
     }
     
-    public void InsertOrUpdateAlbumArtist(FullAlbum album)
+    public async Task InsertOrUpdateAlbumArtistAsync(FullAlbum album)
     {
         string query = @"
             INSERT INTO spotify_album_artist (AlbumId, 
@@ -169,11 +169,11 @@ public class SpotifyRepository
             DO  nothing
                 ";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         foreach (var artist in album.Artists)
         {
-            conn.Execute(query, param: new
+            await conn.ExecuteAsync(query, param: new
             {
                 AlbumId = album.Id,
                 ArtistId = artist.Id,
@@ -182,7 +182,7 @@ public class SpotifyRepository
         }
     }
     
-    public void InsertOrUpdateAlbumExternalId(FullAlbum album)
+    public async Task InsertOrUpdateAlbumExternalIdAsync(FullAlbum album)
     {
         string query = @"
             INSERT INTO spotify_album_externalid (AlbumId, 
@@ -193,11 +193,11 @@ public class SpotifyRepository
             DO UPDATE SET
                 Value = EXCLUDED.Value";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         foreach (var externalId in album.ExternalIds)
         {
-            conn.Execute(query, param: new
+            await conn.ExecuteAsync(query, param: new
             {
                 AlbumId = album.Id,
                 Name = externalId.Key,
@@ -206,7 +206,7 @@ public class SpotifyRepository
         }
     }
     
-    public void InsertOrUpdateTrack(FullTrack track)
+    public async Task InsertOrUpdateTrackAsync(FullTrack track)
     {
         string query = @"
             INSERT INTO spotify_track (TrackId, 
@@ -237,9 +237,9 @@ public class SpotifyRepository
                 Type = EXCLUDED.Type,
                 Uri = EXCLUDED.Uri";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        conn.Execute(query, param: new
+        await conn.ExecuteAsync(query, param: new
         {
             TrackId = track.Id,
             AlbumId = track.Album.Id,
@@ -256,7 +256,7 @@ public class SpotifyRepository
         });
     }
     
-    public void InsertOrUpdateTrack_Artist(FullTrack track)
+    public async Task InsertOrUpdateTrack_ArtistAsync(FullTrack track)
     {
         string query = @"
             INSERT INTO spotify_track_artist (TrackId, 
@@ -266,11 +266,11 @@ public class SpotifyRepository
             DO  nothing
                 ";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         foreach (var artist in track.Artists)
         {
-            conn.Execute(query, param: new
+            await conn.ExecuteAsync(query, param: new
             {
                 TrackId = track.Id,
                 ArtistId = artist.Id
@@ -278,19 +278,19 @@ public class SpotifyRepository
         }
 
     }
-    public DateTime? GetArtistLastSyncTime(string artistId)
+    public async Task<DateTime?> GetArtistLastSyncTimeAsync(string artistId)
     {
         string query = @"SELECT lastsynctime FROM spotify_artist WHERE Id = @id";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn.ExecuteScalar<DateTime>(query, new
+        return await conn.ExecuteScalarAsync<DateTime>(query, new
         {
             id = artistId
         });
     }
     
-    public void InsertOrUpdateTrackExternalId(FullTrack track)
+    public async Task InsertOrUpdateTrackExternalIdAsync(FullTrack track)
     {
         string query = @"
             INSERT INTO spotify_track_externalid (TrackId, 
@@ -301,11 +301,11 @@ public class SpotifyRepository
             DO UPDATE SET
                 Value = EXCLUDED.Value";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
         foreach (var externalId in track.ExternalIds)
         {
-            conn.Execute(query, param: new
+            await conn.ExecuteAsync(query, param: new
             {
                 TrackId = track.Id,
                 Name = externalId.Key,
@@ -314,32 +314,32 @@ public class SpotifyRepository
         }
     }
     
-    public List<string> GetSpotifyArtistIdsByName(string artist)
+    public async Task<List<string>> GetSpotifyArtistIdsByNameAsync(string artist)
     {
         string query = @"SELECT Id FROM spotify_artist where lower(name) = lower(@artist)";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn
-            .Query<string>(query, new
+        return (await conn
+            .QueryAsync<string>(query, new
             {
                 artist
-            })
+            }))
             .ToList();
     }
     
-    public List<string> GetAllSpotifyArtistIds()
+    public async Task<List<string>> GetAllSpotifyArtistIdsAsync()
     {
         string query = @"SELECT Id FROM spotify_artist order by name asc";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn
-            .Query<string>(query)
+        return (await conn
+            .QueryAsync<string>(query))
             .ToList();
     }
 
-    public List<SpotifyTrackModel> GetTrackByArtistId(string artistId, string albumName, string trackName)
+    public async Task<List<SpotifyTrackModel>> GetTrackByArtistIdAsync(string artistId, string albumName, string trackName)
     {
         string query = @"select
                              track.name As TrackName,
@@ -371,20 +371,20 @@ public class SpotifyRepository
 	                         and lower(album.name) = lower(@albumName)
 	                         and lower(track.name) = lower(@trackName)";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn
-            .Query<SpotifyTrackModel>(query,
+        return (await conn
+            .QueryAsync<SpotifyTrackModel>(query,
                 param: new
                 {
                     artistId,
                     albumName,
                     trackName
-                })
+                }))
             .ToList();
     }
 
-    public List<SpotifyExternalValue> GetTrackExternalValues(string trackId)
+    public async Task<List<SpotifyExternalValue>> GetTrackExternalValuesAsync(string trackId)
     {
         string query = @"select
 	                         trackid as Id,
@@ -393,17 +393,17 @@ public class SpotifyRepository
                          from spotify_track_externalid externalvalue
                          where externalvalue.trackid = @trackId";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn
-            .Query<SpotifyExternalValue>(query,
+        return (await conn
+            .QueryAsync<SpotifyExternalValue>(query,
                 param: new
                 {
                     trackId
-                })
+                }))
             .ToList();
     }
-    public List<SpotifyExternalValue> GetAlbumExternalValues(string albumId)
+    public async Task<List<SpotifyExternalValue>> GetAlbumExternalValuesAsync(string albumId)
     {
         string query = @"select
 	                         albumid as Id,
@@ -412,35 +412,35 @@ public class SpotifyRepository
                          from spotify_album_externalid externalvalue
                          where externalvalue.albumid = @albumId";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn
-            .Query<SpotifyExternalValue>(query,
+        return (await conn
+            .QueryAsync<SpotifyExternalValue>(query,
                 param: new
                 {
                     albumId
-                })
+                }))
             .ToList();
     }
-    public List<string> GetTrackArtists(string trackId)
+    public async Task<List<string>> GetTrackArtistsAsync(string trackId)
     {
         string query = @"SELECT artist.name
                          FROM spotify_track_artist sta
                          join spotify_artist artist on artist.id = sta.artistid
                          where sta.trackid = @trackId";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn
-            .Query<string>(query,
+        return (await conn
+            .QueryAsync<string>(query,
                 param: new
                 {
                     trackId
-                })
+                }))
             .ToList();
     }
     
-    public string? GetHighestQualityAlbumCoverUrl(string artistId, string albumName)
+    public async Task<string?> GetHighestQualityAlbumCoverUrlAsync(string artistId, string albumName)
     {
         string query = @"SELECT sai.url
                          FROM spotify_album_image sai
@@ -449,19 +449,18 @@ public class SpotifyRepository
                          order by sai.height desc, sai.width desc
                          limit 1";
 
-        using var conn = new NpgsqlConnection(_connectionString);
-        
-        return conn
-            .Query<string>(query,
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .QueryFirstOrDefaultAsync<string>(query,
                 param: new
                 {
                     artistId,
                     albumName
-                })
-            .FirstOrDefault();
+                });
     }
     
-    public string? GetHighestQualityArtistCoverUrl(string artistId)
+    public async Task<string?> GetHighestQualityArtistCoverUrlAsync(string artistId)
     {
         string query = @"SELECT url
                          FROM spotify_artist_image sai
@@ -469,14 +468,13 @@ public class SpotifyRepository
                          order by height desc, width desc
                          limit 1";
 
-        using var conn = new NpgsqlConnection(_connectionString);
-        
-        return conn
-            .Query<string>(query,
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .QueryFirstOrDefaultAsync<string>(query,
                 param: new
                 {
                     artistId
-                })
-            .FirstOrDefault();
+                });
     }
 }

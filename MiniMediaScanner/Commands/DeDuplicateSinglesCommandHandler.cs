@@ -15,20 +15,22 @@ public class DeDuplicateSinglesCommandHandler
         _metadataRepository = new MetadataRepository(connectionString);
     }
 
-    public void CheckDuplicateFiles(bool delete)
+    public async Task CheckDuplicateFilesAsync(bool delete)
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => CheckDuplicateFiles(artist, delete));
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await CheckDuplicateFilesAsync(artist, delete);
+        }
     }
 
-    public void CheckDuplicateFiles(string artistName, bool delete)
+    public async Task CheckDuplicateFilesAsync(string artistName, bool delete)
     {
-        FindDuplicateSingles(artistName, delete);
+        await FindDuplicateSinglesAsync(artistName, delete);
     }
 
-    private void FindDuplicateSingles(string artistName, bool delete)
+    private async Task FindDuplicateSinglesAsync(string artistName, bool delete)
     {
-        var metadata = _metadataRepository.GetMetadataByArtist(artistName);
+        var metadata = await _metadataRepository.GetMetadataByArtistAsync(artistName);
         var singleAlbums = metadata
             .GroupBy(group => new { group.AlbumId })
             .Where(group => group.Count() == 1);

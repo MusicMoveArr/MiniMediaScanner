@@ -19,15 +19,15 @@ public class UpdateSpotifyCommandHandler
         _artistRepository = new ArtistRepository(connectionString);
     }
     
-    public void UpdateSpotifyArtistsByName(string artist)
+    public async Task UpdateSpotifyArtistsByNameAsync(string artist)
     {
         Console.WriteLine($"Updating artist, {artist}");
 
-        var artistIds = _spotifyRepository.GetSpotifyArtistIdsByName(artist);
+        var artistIds = await _spotifyRepository.GetSpotifyArtistIdsByNameAsync(artist);
         
         foreach (var artistId in artistIds)
         {
-            DateTime? lastSyncTime = _spotifyRepository.GetArtistLastSyncTime(artistId);
+            DateTime? lastSyncTime = await _spotifyRepository.GetArtistLastSyncTimeAsync(artistId);
 
             if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < 7)
             {
@@ -38,7 +38,7 @@ public class UpdateSpotifyCommandHandler
 
         try
         {
-            _spotifyService.UpdateArtistByName(artist);
+            await _spotifyService.UpdateArtistByNameAsync(artist);
         }
         catch (APITooManyRequestsException ex)
         {
@@ -52,14 +52,14 @@ public class UpdateSpotifyCommandHandler
         }
     }
     
-    public void UpdateAllSpotifyArtists()
+    public async Task UpdateAllSpotifyArtistsAsync()
     {
-        var artists = _artistRepository.GetAllArtistNames();
+        var artists = await _artistRepository.GetAllArtistNamesAsync();
         foreach (var artist in artists)
         {
             try
             {
-                UpdateSpotifyArtistsByName(artist);
+                await UpdateSpotifyArtistsByNameAsync(artist);
             }
             catch (APITooManyRequestsException ex)
             {
@@ -73,12 +73,12 @@ public class UpdateSpotifyCommandHandler
         }
     }
     
-    public void UpdateSpotifyArtistId(string artistId)
+    public async Task UpdateSpotifyArtistIdAsync(string artistId)
     {
         try
         {
             Console.WriteLine($"Updating Music Spotify Artist Id '{artistId}'");
-            _spotifyService.UpdateArtistById(artistId);
+            await _spotifyService.UpdateArtistByIdAsync(artistId);
         }
         catch (APITooManyRequestsException ex)
         {

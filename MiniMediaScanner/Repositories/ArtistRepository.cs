@@ -11,35 +11,35 @@ public class ArtistRepository
         _connectionString = connectionString;
     }
     
-    public List<string> GetAllArtistNames()
+    public async Task<List<string>> GetAllArtistNamesAsync()
     {
         string query = @"SELECT name FROM artists order by name asc";
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn
-            .Query<string>(query)
+        return (await conn
+            .QueryAsync<string>(query))
             .ToList();
     }
     
-    public List<string> GetArtistNamesCaseInsensitive(string artistName)
+    public async Task<List<string>> GetArtistNamesCaseInsensitiveAsync(string artistName)
     {
         string query = @"SELECT name FROM artists where LOWER(name) = lower(@artistName)";
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn
-            .Query<string>(query, param: new { artistName })
+        return (await conn
+            .QueryAsync<string>(query, param: new { artistName }))
             .ToList();
     }
     
-    public Guid InsertOrFindArtist(string artistName)
+    public async Task<Guid> InsertOrFindArtist(string artistName)
     {
         string query = @"INSERT INTO Artists (ArtistId, Name) VALUES (@id, @name) 
                         ON CONFLICT (Name) 
                         DO UPDATE SET Name=EXCLUDED.Name RETURNING ArtistId";
         Guid artistId = Guid.NewGuid();
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn.ExecuteScalar<Guid>(query, new
+        return await conn.ExecuteScalarAsync<Guid>(query, new
         {
             id = artistId,
             name = artistName

@@ -9,21 +9,21 @@ namespace MiniMediaScanner.Services;
 
 public class AcoustIdService
 {
-    public JObject? LookupAcoustId(string acoustIdApiKey, string fingerprint, int duration)
+    public async Task<JObject?> LookupAcoustIdAsync(string acoustIdApiKey, string fingerprint, int duration)
     {
         if (string.IsNullOrWhiteSpace(acoustIdApiKey) || duration <= 0)
         {
             return null;
         }
         
-        var client = new RestClient("https://api.acoustid.org/v2/lookup");
+        using var client = new RestClient("https://api.acoustid.org/v2/lookup");
         var request = new RestRequest();
         request.AddParameter("client", acoustIdApiKey);
         request.AddParameter("meta", "recordings");
         request.AddParameter("duration", duration);
         request.AddParameter("fingerprint", fingerprint);
 
-        var response = client.Execute(request);
+        var response = await client.ExecuteAsync(request);
 
         if (response.IsSuccessful)
         {

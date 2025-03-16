@@ -12,7 +12,7 @@ public class MissingRepository
         _connectionString = connectionString;
     }
     
-    public List<MissingMusicBrainzRecordModel> GetMusicBrainzRecords(string artistName)
+    public async Task<List<MissingMusicBrainzRecordModel>> GetMusicBrainzRecordsAsync(string artistName)
     {
         string query = @"select lower(re.title) as AlbumTitle, 
                                 lower(ar.name) as ArtistName, 
@@ -27,16 +27,16 @@ public class MissingRepository
                          where lower(ar.name) = lower(@artistName)
                          	and track.title not like '%(%'";
         
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn
-            .Query<MissingMusicBrainzRecordModel>(query, new
+        return (await conn
+            .QueryAsync<MissingMusicBrainzRecordModel>(query, new
             {
                 artistName
-            }, commandTimeout: 60)
+            }, commandTimeout: 60))
             .ToList();
     }
-    public List<string> GetAssociatedArtists(string artistName)
+    public async Task<List<string>> GetAssociatedArtists(string artistName)
     {
         string query = @"WITH RECURSIVE artist_names AS (
 						    SELECT DISTINCT unnest(string_to_array(
@@ -55,16 +55,16 @@ public class MissingRepository
 						FROM artist_names
 						WHERE artist IS NOT NULL AND artist <> ''";
         
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn
-            .Query<string>(query, new
+        return (await conn
+            .QueryAsync<string>(query, new
             {
                 artistName
-            }, commandTimeout: 60)
+            }, commandTimeout: 60))
             .ToList();
     }
-    public List<MetadataModel> GetMetadataByArtist(string artistName)
+    public async Task<List<MetadataModel>> GetMetadataByArtistAsync(string artistName)
     {
 	    string query = @$"SELECT m.MetadataId, 
 						        m.Path, 
@@ -80,18 +80,18 @@ public class MissingRepository
 						 or m.tag_alljsontags @> '{{""AlbumArtist"": ""{artistName}""}}'
 						 or m.tag_alljsontags->>'ARTISTS' ilike '%{artistName}%'";
         
-	    using var conn = new NpgsqlConnection(_connectionString);
+	    await using var conn = new NpgsqlConnection(_connectionString);
         
-	    return conn
-		    .Query<MetadataModel>(query, new
+	    return (await conn
+		    .QueryAsync<MetadataModel>(query, new
 		    {
 			    artistName
-		    }, commandTimeout: 60)
+		    }, commandTimeout: 60))
 		    .ToList();
     }
 	
 	
-    public List<string> GetMissingTracksByArtistMusicBrainz(string artistName)
+    public async Task<List<string>> GetMissingTracksByArtistMusicBrainzAsync(string artistName)
     {
         string query = @"WITH unique_tracks AS (
                          SELECT *
@@ -132,17 +132,17 @@ public class MissingRepository
                      where ut.artist_name = lower(@artistName)
                      and m.metadataid is null";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn
-            .Query<string>(query, new
+        return (await conn
+            .QueryAsync<string>(query, new
             {
                 artistName
-            }, commandTimeout: 60)
+            }, commandTimeout: 60))
             .ToList();
     }
 	
-	public List<string> GetMissingTracksByArtistMusicBrainz2(string artistName)
+	public async Task<List<string>> GetMissingTracksByArtistMusicBrainz2Async(string artistName)
     {
         string query = @"WITH MusicLibrary AS (
 						    SELECT 
@@ -181,17 +181,17 @@ public class MissingRepository
 							
 						WHERE ml.track_name IS NULL";
 
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         
-        return conn
-            .Query<string>(query, new
+        return (await conn
+            .QueryAsync<string>(query, new
             {
                 artistName
-            }, commandTimeout: 60)
+            }, commandTimeout: 60))
             .ToList();
     }
 	
-    public List<string> GetMissingTracksByArtistSpotify2(string artistName)
+    public async Task<List<string>> GetMissingTracksByArtistSpotify2Async(string artistName)
     {
 	    string query = @"WITH MusicLibrary AS (
 						    SELECT 
@@ -203,7 +203,7 @@ public class MissingRepository
 						    FROM metadata m
 						    JOIN albums al ON m.albumid = al.albumid
 						    JOIN artists a ON al.artistid = a.artistid
-					    join metadata_tag tag on tag.metadataid = m.metadataid
+							join metadata_tag tag on tag.metadataid = m.metadataid
     											 and ((tag.name in ('ALBUM ARTIST', 'ALBUMARTIST', 'ALBUM_ARTIST', 'artist', 'album_artist', 'AlbumArtist', 'Artists') and tag.value ilike '%' || @artistName || '%')
     											    or (tag.name in ('ARTISTS', 'ALBUMARTISTS', 'Artists', 'artists', 'album_artists', 'albumartists') and tag.value ilike '%' || @artistName || '%'))
 						),
@@ -228,13 +228,13 @@ public class MissingRepository
 						    or (similarity(lower(mb.track_name), lower(ml.track_name)) >= 0.5)
 						WHERE ml.track_name IS null ";
 
-	    using var conn = new NpgsqlConnection(_connectionString);
+	    await using var conn = new NpgsqlConnection(_connectionString);
         
-	    return conn
-		    .Query<string>(query, new
+	    return (await conn
+		    .QueryAsync<string>(query, new
 		    {
 			    artistName
-		    }, commandTimeout: 60)
+		    }, commandTimeout: 60))
 		    .ToList();
     }
 }

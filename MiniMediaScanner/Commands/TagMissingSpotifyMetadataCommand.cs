@@ -1,33 +1,42 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class TagMissingSpotifyMetadataCommand
+[Command("tagmissingspotifymetadata", Description = "Tag missing metadata using Spotify, optionally write to file")]
+public class TagMissingSpotifyMetadataCommand : ICommand
 {
-    /// <summary>
-    /// Tag missing metadata using Spotify, optionally write to file
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="write">-w, Write missing metadata to media on disk.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="album">-b, target Album.</param>
-    /// <param name="overwritetag">-ow, Overwrite existing tag values.</param>
-    [Command("tagmissingspotifymetadata")]
-    public static void TagMissingMetadata(string connectionString, 
-        bool write = false,
-        string artist = "", 
-        string album = "", 
-        bool overwritetag = true)
-    {
-        var handler = new TagMissingSpotifyMetadataCommandHandler(connectionString);
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    public string Album { get; set; }
+    
+    [CommandOption("write", 'w', Description = "Write missing metadata to media on disk.", IsRequired = false)]
+    public bool Write { get; set; }
 
-        if (string.IsNullOrWhiteSpace(artist))
+    [CommandOption("overwrite-tag", 'o', Description = "Overwrite existing tag values.", IsRequired = false)]
+    public bool OverwriteTag { get; set; } = true;
+    
+    public async ValueTask ExecuteAsync(IConsole console)
+    {
+        var handler = new TagMissingSpotifyMetadataCommandHandler(ConnectionString);
+
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.TagMetadata(write, album, overwritetag);
+            await handler.TagMetadataAsync(Write, Album, OverwriteTag);
         }
         else
         {
-            handler.TagMetadata(write, artist, album, overwritetag);
+            await handler.TagMetadataAsync(Write, Artist, Album, OverwriteTag);
         }
     }
 }

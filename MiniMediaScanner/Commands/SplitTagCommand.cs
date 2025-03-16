@@ -1,50 +1,65 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class SplitTagCommand
+[Command("splittag", Description = "Split the target media tag by the seperator")]
+public class SplitTagCommand : ICommand
 {
-    /// <summary>
-    /// Split the target media tag by the seperator
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="album">-b, target Album.</param>
-    /// <param name="tag">-t, Tag.</param>
-    /// <param name="writetag">-wt, Tag to write to, if not set, the tag to read from (-t/--tag) is used to write to.</param>
-    /// <param name="updateReadTag">-rt, Update as well the tag that was being read.</param>
-    /// <param name="updateReadTagOriginalValue">-rto, Update the read tag with the original tag value.</param>
-    /// <param name="updateWriteTagOriginalValue">-wto, Update the write tag with the original tag value.</param>
-    /// <param name="confirm">-y, Always confirm automatically.</param>
-    /// <param name="overwriteTag">-ow, Overwrite existing tag values.</param>
-    /// <param name="seperator">-s, Split seperator.</param>
-    [Command("splittag")]
-    public static void SplitTag(string connectionString, 
-        string tag,
-        string artist = "", 
-        string album = "", 
-        bool confirm = false,
-        string writetag = "",
-        string seperator = ";",
-        bool overwriteTag = false,
-        bool updateReadTag = false,
-        bool updateReadTagOriginalValue = false,
-        bool updateWriteTagOriginalValue = false)
-    {
-        var handler = new SplitTagCommandHandler(connectionString);
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    public string Album { get; set; }
+    
+    [CommandOption("tag", 't', Description = "Tag.", IsRequired = true)]
+    public required string Tag { get; init; }
+    
+    [CommandOption("write-tag", 'w', Description = "Tag to write to, if not set, the tag to read from (-t/--tag) is used to write to.", IsRequired = false)]
+    public string Writetag { get; set; }
+    
+    [CommandOption("update-read-tag", 'r', Description = "Update as well the tag that was being read.", IsRequired = false)]
+    public bool UpdateReadTag { get; set; }
+    
+    [CommandOption("update-read-tag-original-value", 'R', Description = "Update the read tag with the original tag value.", IsRequired = false)]
+    public bool UpdateReadTagOriginalValue { get; set; }
+    
+    [CommandOption("update-write-tag-original-value", 'W', Description = "Update the read tag with the original tag value.", IsRequired = false)]
+    public bool UpdateWriteTagOriginalValue { get; set; }
+    
+    [CommandOption("confirm", 'y', Description = "Always confirm automatically.", IsRequired = false)]
+    public bool Confirm { get; set; }
+    
+    [CommandOption("overwrite-tag", 'o', Description = "Overwrite existing tag values.", IsRequired = false)]
+    public bool OverWriteTag { get; set; }
 
-        if (string.IsNullOrWhiteSpace(writetag))
+    [CommandOption("seperator", 's', Description = "Split seperator.", IsRequired = false)]
+    public string Seperator { get; set; } = ";";
+    
+    public async ValueTask ExecuteAsync(IConsole console)
+    {
+        var handler = new SplitTagCommandHandler(ConnectionString);
+
+        if (string.IsNullOrWhiteSpace(Writetag))
         {
-            writetag = tag;
+            Writetag = Tag;
         }
         
-        if (string.IsNullOrWhiteSpace(artist))
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.SplitTags(album, tag, confirm, writetag, overwriteTag, seperator, updateReadTag, updateReadTagOriginalValue, updateWriteTagOriginalValue);
+            await handler.SplitTagsAsync(Album, Tag, Confirm, Writetag, OverWriteTag, Seperator, UpdateReadTag, UpdateReadTagOriginalValue, UpdateWriteTagOriginalValue);
         }
         else
         {
-            handler.SplitTags(artist, album, tag, confirm, writetag, overwriteTag, seperator, updateReadTag, updateReadTagOriginalValue, updateWriteTagOriginalValue);
+            await handler.SplitTagsAsync(Artist, Album, Tag, Confirm, Writetag, OverWriteTag, Seperator, UpdateReadTag, UpdateReadTagOriginalValue, UpdateWriteTagOriginalValue);
         }
     }
 }

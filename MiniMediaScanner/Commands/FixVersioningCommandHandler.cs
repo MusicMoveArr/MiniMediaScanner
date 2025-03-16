@@ -23,20 +23,20 @@ public class FixVersioningCommandHandler
         _mediaTagWriteService = new MediaTagWriteService();
     }
 
-    public void FixDiscVersioning(string album, int discIncrement, List<string> trackFilters, bool autoConfirm)
+    public async Task FixDiscVersioningAsync(string album, int discIncrement, List<string> trackFilters, bool autoConfirm)
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => FixDiscVersioning(artist, album, discIncrement, trackFilters, autoConfirm));
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await FixDiscVersioningAsync(artist, album, discIncrement, trackFilters, autoConfirm);
+        }
     }
     
-    public void FixDiscVersioning(string artist, string album, int discIncrement, List<string> trackFilters, bool autoConfirm)
+    public async Task FixDiscVersioningAsync(string artist, string album, int discIncrement, List<string> trackFilters, bool autoConfirm)
     {
-        var metadata = _metadataRepository.GetMetadataByArtist(artist)
+        var metadata = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
             .Where(metadata => File.Exists(metadata.Path))
             .ToList();
-
-        bool success = false;
 
         var groupedByAlbumId = metadata.GroupBy(metadata => metadata.AlbumId);
         
@@ -88,9 +88,9 @@ public class FixVersioningCommandHandler
             foreach (var track in updateMetadata)
             {
                 int newDisc = track.Tag_Disc + discIncrement;
-                if (_mediaTagWriteService.SaveTag(new FileInfo(track.Path), "disc", $"{newDisc}"))
+                if (await _mediaTagWriteService.SaveTagAsync(new FileInfo(track.Path), "disc", $"{newDisc}"))
                 {
-                    _importCommandHandler.ProcessFile(track.Path);
+                    await _importCommandHandler.ProcessFileAsync(track.Path);
                 }
             }
         }

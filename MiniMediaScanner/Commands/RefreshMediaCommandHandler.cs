@@ -8,29 +8,43 @@ public class RefreshMetadataCommandHandler
     private readonly MetadataRepository _metadataRepository;
     private readonly ImportCommandHandler _importCommandHandler;
     private readonly ArtistRepository _artistRepository;
+    private readonly MetadataTagRepository _metadataTagRepository;
 
     public RefreshMetadataCommandHandler(string connectionString)
     {
         _metadataRepository = new MetadataRepository(connectionString);
         _importCommandHandler = new ImportCommandHandler(connectionString);
         _artistRepository = new ArtistRepository(connectionString);
+        _metadataTagRepository =  new MetadataTagRepository(connectionString);
     }
 
-    public void RefreshMetadata(string album)
+    public async Task RefreshMetadataAsync(string album)
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => RefreshMetadata(artist, album));
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await RefreshMetadataAsync(artist, album);
+        }
     }
     
-    public void RefreshMetadata(string artist, string album)
+    public async Task RefreshMetadataAsync(string artist, string album)
     {
-        var metadata = _metadataRepository.GetMetadataByArtist(artist)
-            .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        
-        metadata
-            .AsParallel()
-            .WithDegreeOfParallelism(8)
-            .ForAll(m => _importCommandHandler.ProcessFile(m.Path, true));
+        try
+        {
+            Console.WriteLine($"Processing {artist}");
+            var metadatas = (await _metadataRepository.GetMetadataByArtistAsync(artist))
+                .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            foreach (var metadata in metadatas
+                         .AsParallel()
+                         .WithDegreeOfParallelism(4))
+            {
+                await _importCommandHandler.ProcessFileAsync(metadata.Path, true);
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
     }
 }

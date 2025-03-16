@@ -1,53 +1,75 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 using MiniMediaScanner.Models;
 using SmartFormat;
 
 namespace MiniMediaScanner.Commands;
 
-public class NormalizeFileCommand
+[Command("normalizefile", 
+    Description = @"Normalize/Standardize all your media file names to a common standard. 
+Every word gets capatalized (rest of the letters lowercase) except roman letters, all uppercase.
+Small words are lowercase: of, the, and, in, on, at, for, to, a
+Special characters are replaced: – to -, — to -, … to ...
+Seperators between words are kept: : - _ / ,")]
+public class NormalizeFileCommand : ICommand
 {
-    /// <summary>
-    /// Normalize/Standardize all your media file names to a common standard
-    /// Every word gets capatalized (rest of the letters lowercase) except roman letters, all uppercase
-    /// Small words are lowercase: of, the, and, in, on, at, for, to, a
-    /// Special characters are replaced: – to -, — to -, … to ...
-    /// Seperators between words are kept: : - _ / , 
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="album">-b, target Album.</param>
-    /// <param name="normalizeArtistName">-na, normalize Artistname.</param>
-    /// <param name="normalizeAlbumName">-nb, normalize Albumname.</param>
-    /// <param name="normalizeTitleName">-nt, normalize music Title.</param>
-    /// <param name="rename">-r, rename file.</param>
-    /// <param name="overwrite">-w, overwrite existing files.</param>
-    /// <param name="subDirectoryDepth">-s, sub-directory depth to root-folder.</param>
-    /// <param name="fileFormat">-f, rename file format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}.</param>
-    /// <param name="directoryFormat">-df, rename directory format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}.</param>
-    /// <param name="directorySeperator">-ds, Directory Seperator replacer, replace '/' '\' to .e.g. '_'.</param>
-    [Command("normalizefile")]
-    public static void NormalizeFile(
-        string connectionString,
-        bool normalizeArtistName,
-        bool normalizeAlbumName,
-        bool normalizeTitleName,
-        bool overwrite,
-        int subDirectoryDepth = 0,
-        bool rename = false, 
-        string fileFormat = "", 
-        string directoryFormat = "", 
-        string directorySeperator = "_",
-        string artist = "", 
-        string album = "")
-    {
-        var handler = new NormalizeFileCommandHandler(connectionString);
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    public string Album { get; set; }
+    
+    [CommandOption("normalize-artist-name", 'A', Description = "normalize Artistname", IsRequired = false)]
+    public bool NormalizeArtistName { get; set; }
+    
+    [CommandOption("normalize-album-name", 'B', Description = "normalize Albumname", IsRequired = false)]
+    public bool NormalizeAlbumName { get; set; }
+    
+    [CommandOption("normalize-title-name", 'T', Description = "normalize music Title", IsRequired = false)]
+    public bool NormalizeTitleName { get; set; }
+    
+    [CommandOption("overwrite", 'w', Description = "overwrite existing files.", IsRequired = false)]
+    public bool Overwrite { get; set; }
 
-        if (rename && string.IsNullOrWhiteSpace(fileFormat))
+    [CommandOption("sub-directory-depth", 's', Description = "sub-directory depth to root-folder.", IsRequired = false)]
+    public int SubDirectoryDepth { get; set; } = 0;
+
+    [CommandOption("rename", 'r', Description = "rename file.", IsRequired = false)]
+    public bool Rename { get; set; } = false;
+
+    [CommandOption("file-format", 'f', Description = "rename file format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}.", IsRequired = false)]
+    public string FileFormat { get; set; } = string.Empty;
+
+    [CommandOption("directory-format", 'D', Description = "rename directory format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}.", IsRequired = false)]
+    public string DirectoryFormat { get; set; } = string.Empty;
+
+    [CommandOption("directory-seperator", 'S', Description = "Directory Seperator replacer, replace '/' '\\' to .e.g. '_'.", IsRequired = false)]
+    public string DirectorySeperator { get; set; } = "_";
+    
+    public async ValueTask ExecuteAsync(IConsole console)
+    {
+        if (!NormalizeArtistName && !NormalizeAlbumName && !NormalizeTitleName && !Rename)
+        {
+            Console.WriteLine("Nothing todo... NormalizeArtistName, NormalizeAlbumName, NormalizeTitleName, Rename options are all false.");
+            return;
+        }
+        
+        var handler = new NormalizeFileCommandHandler(ConnectionString);
+
+        if (Rename && string.IsNullOrWhiteSpace(FileFormat))
         {
             Console.WriteLine("File Format is required.");
             return;
         }
-        if (rename && string.IsNullOrWhiteSpace(directoryFormat))
+        if (Rename && string.IsNullOrWhiteSpace(DirectoryFormat))
         {
             Console.WriteLine("Directory Format is required.");
             return;
@@ -61,7 +83,7 @@ public class NormalizeFileCommand
         file.Tag_Track = 7;
         
         //run small test to see if format is correct
-        string newFileName = handler.GetFormatName(file, fileFormat, directorySeperator);
+        string newFileName = handler.GetFormatName(file, FileFormat, DirectorySeperator);
         
         if (newFileName.Contains("{") || newFileName.Contains("}"))
         {
@@ -70,7 +92,7 @@ public class NormalizeFileCommand
         }
         
         //run small test to see if format is correct
-        string newDirectoryName = handler.GetFormatName(file, directoryFormat, directorySeperator);
+        string newDirectoryName = handler.GetFormatName(file, DirectoryFormat, DirectorySeperator);
         
         if (newDirectoryName.Contains("{") || newDirectoryName.Contains("}"))
         {
@@ -78,32 +100,32 @@ public class NormalizeFileCommand
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(artist))
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.NormalizeFiles(album,
-                normalizeArtistName, 
-                normalizeAlbumName, 
-                normalizeTitleName, 
-                overwrite, 
-                subDirectoryDepth, 
-                rename, 
-                fileFormat, 
-                directoryFormat, 
-                directorySeperator);
+            await handler.NormalizeFilesAsync(Album,
+                NormalizeArtistName, 
+                NormalizeAlbumName, 
+                NormalizeTitleName, 
+                Overwrite, 
+                SubDirectoryDepth, 
+                Rename, 
+                FileFormat, 
+                DirectoryFormat, 
+                DirectorySeperator);
         }
         else
         {
-            handler.NormalizeFiles(artist, 
-                album, 
-                normalizeArtistName, 
-                normalizeAlbumName, 
-                normalizeTitleName, 
-                overwrite, 
-                subDirectoryDepth, 
-                rename, 
-                fileFormat, 
-                directoryFormat, 
-                directorySeperator);
+            await handler.NormalizeFilesAsync(Artist, 
+                Album, 
+                NormalizeArtistName, 
+                NormalizeAlbumName, 
+                NormalizeTitleName, 
+                Overwrite, 
+                SubDirectoryDepth, 
+                Rename, 
+                FileFormat, 
+                DirectoryFormat, 
+                DirectorySeperator);
         }
         
     }

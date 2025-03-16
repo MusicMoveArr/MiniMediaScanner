@@ -1,33 +1,42 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class UpdateSpotifyCommand
+[Command("updatespotify", Description = "Update Spotify metadata")]
+public class UpdateSpotifyCommand : ICommand
 {
-    /// <summary>
-    /// Update MusicBrainz metadata
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artist filter to update.</param>
-    /// <param name="spotifyClientId">-SID, Spotify Client Id, to use for the Spotify API.</param>
-    /// <param name="spotifySecretId">-SIS, Spotify Secret Id, to use for the Spotify API.</param>
-    /// <param name="apiDelay">-D, Api Delay in seconds after each API call to prevent rate limiting.</param>
-    [Command("updatespotify")]
-    public static void UpdateSpotify(string connectionString, 
-        string spotifyClientId,
-        string spotifySecretId,
-        int apiDelay = 10,
-        string artist = "")
-    {
-        var handler = new UpdateSpotifyCommandHandler(connectionString, spotifyClientId, spotifySecretId, apiDelay);
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artist filter to update.", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("spotify-client-id", 'c', Description = "Spotify Client Id, to use for the Spotify API.", IsRequired = false)]
+    public string SpotifyClientId { get; set; }
+    
+    [CommandOption("spotify-secret-id", 's', Description = "Spotify Secret Id, to use for the Spotify API.", IsRequired = false)]
+    public string SpotifySecretId { get; set; }
 
-        if (!string.IsNullOrWhiteSpace(artist))
+    [CommandOption("api-delay", 'D', Description = "Api Delay in seconds after each API call to prevent rate limiting.", IsRequired = false)]
+    public int ApiDelay { get; set; } = 10;
+    
+    public async ValueTask ExecuteAsync(IConsole console)
+    {
+        var handler = new UpdateSpotifyCommandHandler(ConnectionString, SpotifyClientId, SpotifySecretId, ApiDelay);
+
+        if (!string.IsNullOrWhiteSpace(Artist))
         {
-            handler.UpdateSpotifyArtistsByName(artist);
+            await handler.UpdateSpotifyArtistsByNameAsync(Artist);
         }
         else
         {
-            handler.UpdateAllSpotifyArtists();
+            await handler.UpdateAllSpotifyArtistsAsync();
         }
         
     }

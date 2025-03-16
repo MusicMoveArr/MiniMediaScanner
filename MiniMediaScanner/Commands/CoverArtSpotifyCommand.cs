@@ -1,33 +1,42 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class CoverArtSpotifyCommand
+[Command("coverartspotify", Description = "Download Cover art from Spotify for Artist and Album")]
+public class CoverArtSpotifyCommand : ICommand
 {
-    /// <summary>
-    /// Download Cover art from Spotify for Artist and Album
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="album">-b, target Album.</param>
-    /// <param name="albumfilename">-f, File name e.g. cover.jpg.</param>
-    /// <param name="artistfilename">-af, File name e.g. cover.jpg.</param>
-    [Command("coverartspotify")]
-    public static void CoverArtSpotify(string connectionString,
-        string artist = "",
-        string album = "",
-        string albumfilename = "cover.jpg",
-        string artistfilename = "cover.jpg")
-    {
-        var handler = new CoverArtSpotifyCommandHandler(connectionString);
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    public string Album { get; set; }
+    
+    [CommandOption("album-filename", 'f', Description = "Filename e.g. cover.jpg.", IsRequired = false)]
+    public string AlbumFilename { get; set; } = "cover.jpg";
 
-        if (string.IsNullOrWhiteSpace(artist))
+    [CommandOption("artist-filename", 'g', Description = "Filename e.g. cover.jpg.", IsRequired = false)]
+    public string ArtistFilename { get; set; } = "cover.jpg";
+    
+    public async ValueTask ExecuteAsync(IConsole console)
+    {
+        var handler = new CoverArtSpotifyCommandHandler(ConnectionString);
+
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.CheckAllMissingCovers(album, albumfilename, artistfilename);
+            await handler.CheckAllMissingCoversAsync(Album, AlbumFilename, ArtistFilename);
         }
         else
         {
-            handler.CheckAllMissingCovers(artist, album, albumfilename, artistfilename);
+            await handler.CheckAllMissingCoversAsync(Artist, Album, AlbumFilename, ArtistFilename);
         }
     }
 }

@@ -1,18 +1,23 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class StatsCommand
+[Command("stats", Description = "Get statistics about your media in the database")]
+public class StatsCommand : ICommand
 {
-    /// <summary>
-    /// Get statistics about your media in the database
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    [Command("stats")]
-    public static void Stats(string connectionString)
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new StatsCommandHandler(connectionString);
+        var handler = new StatsCommandHandler(ConnectionString);
 
-        handler.ShowStats();
+        await handler.ShowStatsAsync();
     }
 }

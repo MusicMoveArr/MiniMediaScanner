@@ -27,35 +27,35 @@ public class SpotifyService
         _apiDelay = apiDelay;
     }
     
-    public void UpdateArtistByName(string artistName)
+    public async Task UpdateArtistByNameAsync(string artistName)
     {
         if (string.IsNullOrWhiteSpace(_spotifyAuthentication?.AccessToken) ||
             (_spotifyAuthentication.ExpiresIn > 0 && DateTime.Now > _spotifyAuthentication.ExpiresAt))
         {
-            _spotifyAuthentication = GetToken();
+            _spotifyAuthentication = await GetTokenAsync();
         }
 
         var spotify = new SpotifyClient(_spotifyAuthentication.AccessToken);
         var search = new SearchRequest(SearchRequest.Types.Artist, artistName);
-        var searchResult = spotify.Search.Item(search).GetAwaiter().GetResult();
+        var searchResult = await spotify.Search.Item(search);
         Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
         
         foreach(var artist in searchResult.Artists.Items
                     .Where(artist => string.Equals(artist.Name, artistName, StringComparison.OrdinalIgnoreCase)))
         {
-            UpdateArtistById(artist.Id, artist);
+            await UpdateArtistByIdAsync(artist.Id, artist);
         }
     }
 
-    public void UpdateArtistById(string artistId, FullArtist artist = null)
+    public async Task UpdateArtistByIdAsync(string artistId, FullArtist? artist = null)
     {
         if (string.IsNullOrWhiteSpace(_spotifyAuthentication?.AccessToken) ||
             (_spotifyAuthentication.ExpiresIn > 0 && DateTime.Now > _spotifyAuthentication.ExpiresAt))
         {
-            _spotifyAuthentication = GetToken();
+            _spotifyAuthentication = await GetTokenAsync();
         }
         
-        DateTime? lastSyncTime = _spotifyRepository.GetArtistLastSyncTime(artistId);
+        DateTime? lastSyncTime = await _spotifyRepository.GetArtistLastSyncTimeAsync(artistId);
 
         if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < 7)
         {
@@ -67,52 +67,53 @@ public class SpotifyService
 
         if (artist == null)
         {
-            artist = spotify.Artists.Get(artistId).GetAwaiter().GetResult();
+            artist = await spotify.Artists.Get(artistId);
             Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
         }
+
+        var albums = await spotify.Artists.GetAlbums(artistId);
         
-        var albums = spotify.Artists.GetAlbums(artistId).GetAwaiter().GetResult();
         Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
         
-        _spotifyRepository.InsertOrUpdateArtist(artist);
-        _spotifyRepository.InsertOrUpdateArtistImage(artist);
+        await _spotifyRepository.InsertOrUpdateArtistAsync(artist);
+        await _spotifyRepository.InsertOrUpdateArtistImageAsync(artist);
 
         AlbumsRequest albumsRequest = new AlbumsRequest(albums.Items.Take(20).Select(album => album.Id).ToList());
-        var fullAlbums = spotify.Albums.GetSeveral(albumsRequest).GetAwaiter().GetResult();
+        var fullAlbums = await spotify.Albums.GetSeveral(albumsRequest);
         Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
 
         foreach (var album in fullAlbums.Albums)
         {
             Console.WriteLine($"Grabbing album {album.Name}, Artist: {artist.Name}");
             var simpleAlbum = albums.Items.FirstOrDefault(a => a.Id == album.Id);
-            _spotifyRepository.InsertOrUpdateAlbum(album, simpleAlbum?.AlbumGroup ?? string.Empty);
-            _spotifyRepository.InsertOrUpdateAlbumArtist(album);
-            _spotifyRepository.InsertOrUpdateAlbumImage(album);
-            _spotifyRepository.InsertOrUpdateAlbumExternalId(album);
+            await _spotifyRepository.InsertOrUpdateAlbumAsync(album, simpleAlbum?.AlbumGroup ?? string.Empty);
+            await _spotifyRepository.InsertOrUpdateAlbumArtistAsync(album);
+            await _spotifyRepository.InsertOrUpdateAlbumImageAsync(album);
+            await _spotifyRepository.InsertOrUpdateAlbumExternalIdAsync(album);
                 
             TracksRequest req = new TracksRequest(album.Tracks.Items.Take(50).Select(track => track.Id).ToList());
-            var fullTracks = spotify.Tracks.GetSeveral(req).GetAwaiter().GetResult();
+            var fullTracks = await spotify.Tracks.GetSeveral(req);
             Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
                 
             foreach (var track in fullTracks.Tracks)
             {
-                _spotifyRepository.InsertOrUpdateTrack(track);
-                _spotifyRepository.InsertOrUpdateTrack_Artist(track);
-                _spotifyRepository.InsertOrUpdateTrackExternalId(track);
+                await _spotifyRepository.InsertOrUpdateTrackAsync(track);
+                await _spotifyRepository.InsertOrUpdateTrack_ArtistAsync(track);
+                await _spotifyRepository.InsertOrUpdateTrackExternalIdAsync(track);
             }
         }
     }
 
-    private SpotifyAuthenticationResponse GetToken()
+    private async Task<SpotifyAuthenticationResponse> GetTokenAsync()
     {
-        var client = new RestClient("https://accounts.spotify.com/api/token");
+        using var client = new RestClient("https://accounts.spotify.com/api/token");
         var request = new RestRequest();
         request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
         request.AddParameter("grant_type", "client_credentials");
         request.AddParameter("client_id", _spotifyClientId);
         request.AddParameter("client_secret", _spotifySecretId);
         
-        var response = client.Post<SpotifyAuthenticationResponse>(request);
+        var response = await client.PostAsync<SpotifyAuthenticationResponse>(request);
         response.RequestedAt = DateTime.Now;
         return response;
     }

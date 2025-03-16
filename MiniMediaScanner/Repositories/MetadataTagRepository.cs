@@ -21,8 +21,7 @@ public class MetadataTagRepository
         _connectionString = connectionString;
     }
 
-
-    public void InsertOrUpdateMetadataTag(MetadataInfo metadataInfo)
+    public async Task InsertOrUpdateMetadataTagAsync(MetadataInfo metadataInfo)
     {
         Dictionary<string, string>? allTags = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(metadataInfo.Tag_AllJsonTags);
 
@@ -31,12 +30,12 @@ public class MetadataTagRepository
             return;
         }
         
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
         foreach (var tag in allTags.Where(tag => !_ignoreTags.Contains(tag.Key)))
         {
             try
             {
-                InsertOrUpdateMetadataTag(conn, metadataInfo.MetadataId, tag.Key, tag.Value);
+                await InsertOrUpdateMetadataTagAsync(conn, metadataInfo.MetadataId, tag.Key, tag.Value);
             }
             catch (Exception e)
             {
@@ -46,7 +45,7 @@ public class MetadataTagRepository
         }
     }
     
-    public void InsertOrUpdateMetadataTag(MetadataModel metadataInfo)
+    public async Task InsertOrUpdateMetadataTagAsync(MetadataModel metadataInfo)
     {
         Dictionary<string, string>? allTags = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(metadataInfo.Tag_AllJsonTags);
 
@@ -61,7 +60,7 @@ public class MetadataTagRepository
         {
             try
             {
-                InsertOrUpdateMetadataTag(conn, metadataInfo.MetadataId.Value, tag.Key, tag.Value);
+                await InsertOrUpdateMetadataTagAsync(conn, metadataInfo.MetadataId.Value, tag.Key, tag.Value);
             }
             catch (Exception e)
             {
@@ -71,7 +70,7 @@ public class MetadataTagRepository
         }
     }
 
-    public void InsertOrUpdateMetadataTag(NpgsqlConnection conn, Guid metadataId, string name, string value)
+    public async Task InsertOrUpdateMetadataTagAsync(NpgsqlConnection conn, Guid metadataId, string name, string value)
     {
         string query = @"
             INSERT INTO Metadata_Tag (MetadataId, 
@@ -82,7 +81,7 @@ public class MetadataTagRepository
             DO UPDATE SET
                 Value = EXCLUDED.Value";
 
-        conn.Execute(query, param: new
+        await conn.ExecuteAsync(query, param: new
         {
             MetadataId = metadataId, 
             Name = name, 

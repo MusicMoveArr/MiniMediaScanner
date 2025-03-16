@@ -11,7 +11,7 @@ public class AlbumRepository
         _connectionString = connectionString;
     }
     
-    public Guid InsertOrFindAlbum(string albumName, Guid artistId)
+    public async Task<Guid> InsertOrFindAlbumAsync(string albumName, Guid artistId)
     {
         string query = @"
             INSERT INTO Albums (AlbumId, Title, ArtistId) 
@@ -21,9 +21,9 @@ public class AlbumRepository
             RETURNING AlbumId";
         
         Guid albumId = Guid.NewGuid();
-        using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = new NpgsqlConnection(_connectionString);
 
-        return conn.ExecuteScalar<Guid>(query, new
+        return await conn.ExecuteScalarAsync<Guid>(query, new
         {
             id = albumId,
             title = albumName,

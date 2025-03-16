@@ -29,45 +29,44 @@ public class TagMissingSpotifyMetadataCommandHandler
         _spotifyRepository = new SpotifyRepository(connectionString);
     }
     
-    public void TagMetadata(bool write, string album, bool overwriteTagValue)
+    public async Task TagMetadataAsync(bool write, string album, bool overwriteTagValue)
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => TagMetadata(write, artist, album, overwriteTagValue));
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await TagMetadataAsync(write, artist, album, overwriteTagValue);
+        }
     }
 
-    public void TagMetadata(bool write, string artist, string album, bool overwriteTagValue)
+    public async Task TagMetadataAsync(bool write, string artist, string album, bool overwriteTagValue)
     {
-        var metadata = _metadataRepository.GetMissingSpotifyMetadataRecords(artist)
+        var metadata = (await _metadataRepository.GetMissingSpotifyMetadataRecordsAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || 
                                string.Equals(metadata.Album, album, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         Console.WriteLine($"Checking artist '{artist}', found {metadata.Count} tracks to process");
 
-        metadata
-            .Where(metadata => new FileInfo(metadata.Path).Exists)
-            .ToList()
-            .ForEach(metadata =>
+        foreach (var record in metadata.Where(r => new FileInfo(r.Path).Exists))
+        {
+            try
             {
-                try
-                {
-                    ProcessFile(metadata, write, overwriteTagValue);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                }
-            });
+                await ProcessFileAsync(record, write, overwriteTagValue);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
     }
                 
-    private void ProcessFile(MetadataInfo metadata, bool write, bool overwriteTagValue)
+    private async Task ProcessFileAsync(MetadataInfo metadata, bool write, bool overwriteTagValue)
     {
-        string spotifyArtistId = _matchRepository.GetBestSpotifyMatch(metadata.ArtistId, metadata.Artist);
-        var spotifyTracks = _spotifyRepository.GetTrackByArtistId(spotifyArtistId, metadata.Album, metadata.Title);
+        string spotifyArtistId = await _matchRepository.GetBestSpotifyMatchAsync(metadata.ArtistId, metadata.Artist);
+        var spotifyTracks = await _spotifyRepository.GetTrackByArtistIdAsync(spotifyArtistId, metadata.Album, metadata.Title);
 
         if (spotifyTracks.Count == 0)
         {
-            Console.WriteLine($"Found No  '{metadata.Album}', '{metadata.Title}'");
+            Console.WriteLine($"Found '{metadata.Album}', '{metadata.Title}'");
             return;
         }
         if (spotifyTracks.Count > 1)
@@ -78,9 +77,9 @@ public class TagMissingSpotifyMetadataCommandHandler
         
         
         var spotifyTrack = spotifyTracks.FirstOrDefault();
-        var externalAlbumInfo = _spotifyRepository.GetAlbumExternalValues(spotifyTrack.AlbumId);
-        var externalTrackInfo = _spotifyRepository.GetTrackExternalValues(spotifyTrack.TrackId);
-        var trackArtists = _spotifyRepository.GetTrackArtists(spotifyTrack.TrackId);
+        var externalAlbumInfo = await _spotifyRepository.GetAlbumExternalValuesAsync(spotifyTrack.AlbumId);
+        var externalTrackInfo = await _spotifyRepository.GetTrackExternalValuesAsync(spotifyTrack.TrackId);
+        var trackArtists = await _spotifyRepository.GetTrackArtistsAsync(spotifyTrack.TrackId);
         string artists = string.Join(';', trackArtists);
         
         Console.WriteLine($"Release found for '{metadata.Path}', Title '{spotifyTrack.TrackName}', Date '{spotifyTrack.ReleaseDate}'");
@@ -137,9 +136,9 @@ public class TagMissingSpotifyMetadataCommandHandler
         UpdateTag(track, "Track Number", spotifyTrack.TrackNumber.ToString(), ref trackInfoUpdated, overwriteTagValue);
         UpdateTag(track, "Total Tracks", spotifyTrack.TotalTracks.ToString(), ref trackInfoUpdated, overwriteTagValue);
 
-        if (trackInfoUpdated && _mediaTagWriteService.SafeSave(track))
+        if (trackInfoUpdated && await _mediaTagWriteService.SafeSaveAsync(track))
         {
-            _importCommandHandler.ProcessFile(metadata.Path);
+            await _importCommandHandler.ProcessFileAsync(metadata.Path);
         }
         
     }

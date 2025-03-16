@@ -1,3 +1,4 @@
+using CliFx;
 using Quartz;
 
 namespace MiniMediaScanner.Jobs;
@@ -5,16 +6,18 @@ namespace MiniMediaScanner.Jobs;
 [DisallowConcurrentExecution]
 public class CronJob : IJob
 {
-    public Task Execute(IJobExecutionContext context)
+    public async Task Execute(IJobExecutionContext context)
     {
         try
         {
-            Program.AppBuilder.Run(Program.ConsoleArguments);
+            await new CliApplicationBuilder()
+                .AddCommandsFromThisAssembly()
+                .Build()
+                .RunAsync(Program.ConsoleArguments);
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Console.WriteLine(e.Message);
         }
-        return Task.CompletedTask;
     }
 }

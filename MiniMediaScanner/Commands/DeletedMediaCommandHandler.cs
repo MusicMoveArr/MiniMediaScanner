@@ -14,15 +14,17 @@ public class DeletedMediaCommandHandler
         _artistRepository = new ArtistRepository(connectionString);
     }
 
-    public void CheckAllMissingTracks(bool remove, string album)
+    public async Task CheckAllMissingTracksAsync(bool remove, string album)
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => CheckAllMissingTracks(remove, artist, album));
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await CheckAllMissingTracksAsync(remove, artist, album);
+        }
     }
     
-    public int CheckAllMissingTracks(bool remove, string artist, string album)
+    public async Task<int> CheckAllMissingTracksAsync(bool remove, string artist, string album)
     {
-        var metadata = _metadataRepository.GetMetadataByArtist(artist)
+        var metadata = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
             .ToList();
         
@@ -42,7 +44,7 @@ public class DeletedMediaCommandHandler
 
         if (remove && missing.Count > 0)
         {
-            _metadataRepository.DeleteMetadataRecords(missing.Select(metadata => metadata.MetadataId.ToString()).ToList());
+            await _metadataRepository.DeleteMetadataRecordsAsync(missing.Select(metadata => metadata.MetadataId.ToString()).ToList());
         }
         Console.WriteLine($"Total missing media files: {missingCount} for artist '{artist}'");
         return missingCount;

@@ -22,36 +22,36 @@ public class RemoveTagCommandHandler
         _importCommandHandler = new ImportCommandHandler(connectionString);
     }
 
-    public void RemoveTagFromMedia(string album, List<string> tagNames, bool autoConfirm)
+    public async Task RemoveTagFromMediaAsync(string album, List<string> tagNames, bool autoConfirm)
     {
-        _artistRepository.GetAllArtistNames()
-            .ForEach(artist => RemoveTagFromMedia(artist, album, tagNames, autoConfirm));
+        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        {
+            await RemoveTagFromMediaAsync(artist, album, tagNames, autoConfirm);
+        }
     }
 
-    public void RemoveTagFromMedia(string artist, string album, List<string> tagNames, bool autoConfirm)
+    public async Task RemoveTagFromMediaAsync(string artist, string album, List<string> tagNames, bool autoConfirm)
     {
         try
         {
-            var metadatas = _metadataRepository.GetMetadataByTagRecords(artist, tagNames)
+            var metadatas = (await _metadataRepository.GetMetadataByTagRecordsAsync(artist, tagNames))
                 .Where(metadata => string.IsNullOrWhiteSpace(album) || 
                                    string.Equals(metadata.Album, album, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             Console.WriteLine($"Checking artist '{artist}', found {metadatas.Count} tracks to process");
 
-            metadatas
-                .ForEach(metadata =>
+            foreach (var metadata in metadatas)
+            {
+                try
                 {
-                    try
-                    {
-                        ProcessFile(metadata, tagNames, autoConfirm);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
-                });
-
+                    await ProcessFileAsync(metadata, tagNames, autoConfirm);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            }
         }
         catch (Exception e)
         {
@@ -59,7 +59,7 @@ public class RemoveTagCommandHandler
         }
     }
                 
-    private void ProcessFile(MetadataInfo metadata, List<string> tagNames, bool autoConfirm)
+    private async Task ProcessFileAsync(MetadataInfo metadata, List<string> tagNames, bool autoConfirm)
     {
         if (!new FileInfo(metadata.Path).Exists)
         {
@@ -82,9 +82,9 @@ public class RemoveTagCommandHandler
         Console.WriteLine("Confirm changes? (Y/y or N/n)");
         bool confirm = autoConfirm || Console.ReadLine()?.ToLower() == "y";
         
-        if (confirm && _mediaTagWriteService.SafeSave(track))
+        if (confirm && await _mediaTagWriteService.SafeSaveAsync(track))
         {
-            _importCommandHandler.ProcessFile(metadata.Path);
+            await _importCommandHandler.ProcessFileAsync(metadata.Path);
         }
     }
 

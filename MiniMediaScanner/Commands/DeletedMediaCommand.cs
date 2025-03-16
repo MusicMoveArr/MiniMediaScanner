@@ -1,31 +1,39 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class DeletedMediaCommand
+[Command("deletedmedia", Description = "Check for deleted/missing music files on disk")]
+public class DeletedMediaCommand : ICommand
 {
-    /// <summary>
-    /// Check for deleted/missing music files on disk
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="album">-b, target Album.</param>
-    /// <param name="remove">-r, Remove records from database.</param>
-    [Command("missing")]
-    public static void DeletedMedia(string connectionString, 
-        bool remove = true,
-        string artist = "", 
-        string album = "")
-    {
-        var handler = new DeletedMediaCommandHandler(connectionString);
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    public string Album { get; set; }
 
-        if (string.IsNullOrWhiteSpace(artist))
+    [CommandOption("remove", 'r', Description = "Remove records from database.", IsRequired = false)]
+    public bool Remove { get; set; } = true;
+    
+    public async ValueTask ExecuteAsync(IConsole console)
+    {
+        var handler = new DeletedMediaCommandHandler(ConnectionString);
+
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.CheckAllMissingTracks(remove, album);
+            await handler.CheckAllMissingTracksAsync(Remove, Album);
         }
         else
         {
-            handler.CheckAllMissingTracks(remove, artist, album);
+            await handler.CheckAllMissingTracksAsync(Remove, Artist, Album);
         }
         
     }

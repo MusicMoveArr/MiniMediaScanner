@@ -33,13 +33,13 @@ public class ImportCommandHandler
         _metadataTagRepository = new MetadataTagRepository(connectionString);
     }
     
-    public void ProcessDirectory(string directoryPath)
+    public async Task ProcessDirectoryAsync(string directoryPath)
     {
         try
         {
             foreach (var file in Directory.EnumerateFileSystemEntries(directoryPath, "*.*", SearchOption.AllDirectories))
             {
-                ProcessFile(file);
+                await ProcessFileAsync(file);
             }
         }
         catch (Exception e)
@@ -48,7 +48,7 @@ public class ImportCommandHandler
         }
     }
 
-    public bool ProcessFile(string filePath, bool forceReimport = false)
+    public async Task<bool> ProcessFileAsync(string filePath, bool forceReimport = false)
     {
         var metadata = default(MetadataInfo);
 
@@ -67,7 +67,7 @@ public class ImportCommandHandler
             }
 
             if (!forceReimport && 
-                !_metadataRepository.MetadataCanUpdate(fileInfo.FullName, fileInfo.LastWriteTime, fileInfo.CreationTime))
+                !await _metadataRepository.MetadataCanUpdateAsync(fileInfo.FullName, fileInfo.LastWriteTime, fileInfo.CreationTime))
             {
                 return false;
             }
@@ -85,16 +85,13 @@ public class ImportCommandHandler
                 return false;
             }
             
-            ProcessMetadata(metadata);
+            await ProcessMetadataAsync(metadata);
                 
             if (!string.IsNullOrWhiteSpace(metadata?.MusicBrainzArtistId) &&
                 !string.IsNullOrWhiteSpace(metadata?.Album) &&
                 !string.IsNullOrWhiteSpace(metadata?.Artist))
             {
-                lock (_musicBrainzService)
-                {
-                    _musicBrainzService.InsertMissingMusicBrainzArtist(metadata);
-                }
+                await _musicBrainzService.InsertMissingMusicBrainzArtistAsync(metadata);
             }
         }
         catch (Exception e)
@@ -105,16 +102,16 @@ public class ImportCommandHandler
         return true;
     }
     
-    private void ProcessMetadata(MetadataInfo metadata)
+    private async Task ProcessMetadataAsync(MetadataInfo metadata)
     {
         // 1. Insert/Find Artist
-        var artistId = _artistRepository.InsertOrFindArtist(metadata.Artist);
+        var artistId = await _artistRepository.InsertOrFindArtist(metadata.Artist);
 
         // 2. Insert/Find Album
-        var albumId = _albumRepository.InsertOrFindAlbum(metadata.Album, artistId);
+        var albumId = await _albumRepository.InsertOrFindAlbumAsync(metadata.Album, artistId);
 
         // 3. Insert/Update Metadata
-        _metadataRepository.InsertOrUpdateMetadata(metadata, albumId);
-        _metadataTagRepository.InsertOrUpdateMetadataTag(metadata);
+        await _metadataRepository.InsertOrUpdateMetadataAsync(metadata, albumId);
+        await _metadataTagRepository.InsertOrUpdateMetadataTagAsync(metadata);
     }
 }

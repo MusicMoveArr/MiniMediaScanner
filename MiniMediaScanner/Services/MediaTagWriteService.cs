@@ -5,7 +5,7 @@ namespace MiniMediaScanner.Services;
 
 public class MediaTagWriteService
 {
-    public bool Save(FileInfo targetFile, string artistName, string albumName, string title)
+    public async Task<bool> SaveAsync(FileInfo targetFile, string artistName, string albumName, string title)
     {
         string orgValue = string.Empty;
         bool isUpdated = false;
@@ -14,13 +14,13 @@ public class MediaTagWriteService
         UpdateTrackTag(track, "album", albumName, ref isUpdated, ref orgValue);
         UpdateTrackTag(track, "title", title, ref isUpdated, ref orgValue);
 
-        return SafeSave(track);
+        return await SafeSaveAsync(track);
     }
 
     public bool UpdateTrackTag(Track track, string tag, string value, ref bool updated, ref string orgValue)
     {
         value = value.Trim();
-        var oldValues = track.AdditionalFields.ToDictionary();//.ToDictionary(StringComparer.OrdinalIgnoreCase);
+        var oldValues = track.AdditionalFields.ToDictionary();
         switch (tag.ToLower())
         {
             case "title":
@@ -350,24 +350,24 @@ public class MediaTagWriteService
         return field;
     }
     
-    public bool SaveTag(FileInfo targetFile, string tag, string value)
+    public async Task<bool> SaveTagAsync(FileInfo targetFile, string tag, string value)
     {
         string orgValue = string.Empty;
         bool isUpdated = false;
         Track track = new Track(targetFile.FullName);
         UpdateTrackTag(track, tag, value, ref isUpdated, ref orgValue);
 
-        return SafeSave(track);
+        return await SafeSaveAsync(track);
     }
     
-    public bool SafeSave(Track track)
+    public async Task<bool> SafeSaveAsync(Track track)
     {
         FileInfo targetFile = new FileInfo(track.Path);
         string tempFile = $"{track.Path}.tmp{targetFile.Extension}";
         bool success = false;
         try
         {
-            success = track.SaveTo(tempFile);
+            success = await track.SaveToAsync(tempFile);
         }
         catch (Exception ex)
         {

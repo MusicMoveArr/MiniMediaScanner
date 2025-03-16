@@ -11,19 +11,19 @@ public class StatsRepository
         _connectionString = connectionString;
     }
     
-    public int GetGenericCount(string tableName)
+    public async Task<int> GetGenericCountAsync(string tableName)
     {
         string query = $"SELECT count(*) FROM {tableName}";
-        using var conn = new NpgsqlConnection(_connectionString);
-        return conn.ExecuteScalar<int>(query);
+        await using var conn = new NpgsqlConnection(_connectionString);
+        return await conn.ExecuteScalarAsync<int>(query);
     }
     
-    public int GetTracksAddedCount(int lastDays)
+    public async Task<int> GetTracksAddedCountAsync(int lastDays)
     {
         string query = @$"SELECT count(*) 
                          FROM metadata 
                          WHERE file_creationtime > NOW() - INTERVAL '{lastDays} days';";
-        using var conn = new NpgsqlConnection(_connectionString);
-        return conn.ExecuteScalar<int>(query);
+        await using var conn = new NpgsqlConnection(_connectionString);
+        return await conn.ExecuteScalarAsync<int>(query);
     }
 }

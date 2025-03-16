@@ -1,41 +1,51 @@
-using ConsoleAppFramework;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 
 namespace MiniMediaScanner.Commands;
 
-public class EqualizeMediaTagCommand
+[Command("equalizemediatag", Description = @"Equalize MediaTags of albums from artists to fix issues with albums showing weird/duplicated in Plex/Navidrome etc, 
+Tags available: date, originaldate, originalyear, year, disc, asin, catalognumber")]
+public class EqualizeMediaTagCommand : ICommand
 {
-    /// <summary>
-    /// Equalize MediaTags of albums from artists to fix issues with albums showing weird/duplicated in Plex/Navidrome etc
-    /// Tags available: date, originaldate, originalyear, year, disc, asin, catalognumber
-    /// </summary>
-    /// <param name="connectionString">-C, ConnectionString for Postgres database.</param>
-    /// <param name="artist">-a, Artistname.</param>
-    /// <param name="album">-b, target Album.</param>
-    /// <param name="tag">-t, Tag.</param>
-    /// <param name="writetag">-wt, Tag to write to, if not set, the tag to read from (-t/--tag) is used to write to.</param>
-    /// <param name="confirm">-y, Always confirm automatically.</param>
-    [Command("equalizemediatag")]
-    public static void EqualizeMediaTag(string connectionString, 
-        string tag,
-        string artist = "", 
-        string album = "", 
-        bool confirm = false,
-        string writetag = "")
-    {
-        var handler = new EqualizeMediaTagCommandHandler(connectionString);
+    [CommandOption("connection-string", 
+        'C', 
+        Description = "ConnectionString for Postgres database.", 
+        EnvironmentVariable = "CONNECTIONSTRING",
+        IsRequired = true)]
+    public required string ConnectionString { get; init; }
+    
+    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    public string Artist { get; set; }
+    
+    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    public string Album { get; set; }
+    
+    [CommandOption("tag", 't', Description = "Tag.", IsRequired = true)]
+    public required string Tag { get; init; }
 
-        if (string.IsNullOrWhiteSpace(writetag))
+    [CommandOption("confirm", 'y', Description = "Always confirm automatically.", IsRequired = false)]
+    public bool Confirm { get; set; } = false;
+    
+    [CommandOption("writetag", 'w', Description = "Tag to write to, if not set, the tag to read from (-t/--tag) is used to write to.", IsRequired = false)]
+    public string WriteTag { get; set; }
+    
+    public async ValueTask ExecuteAsync(IConsole console)
+    {
+        var handler = new EqualizeMediaTagCommandHandler(ConnectionString);
+
+        if (string.IsNullOrWhiteSpace(WriteTag))
         {
-            writetag = tag;
+            WriteTag = Tag;
         }
 
-        if (string.IsNullOrWhiteSpace(artist))
+        if (string.IsNullOrWhiteSpace(Artist))
         {
-            handler.EqualizeTags(album, tag, writetag, confirm);
+            await handler.EqualizeTagsAsync(Album, Tag, WriteTag, Confirm);
         }
         else
         {
-            handler.EqualizeTags(artist, album, tag, writetag, confirm);
+            await handler.EqualizeTagsAsync(Artist, Album, Tag, WriteTag, Confirm);
         }
     }
 }
