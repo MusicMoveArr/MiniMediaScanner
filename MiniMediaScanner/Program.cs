@@ -12,7 +12,7 @@ public class Program
     public static async Task Main(string[] args)
     {
         ConsoleArguments = args;
-        
+
         string? cronExpression = Environment.GetEnvironmentVariable("CRON");
         string? commandEnvironmentValue = Environment.GetEnvironmentVariable("COMMAND");
         
@@ -24,6 +24,10 @@ public class Program
         if (!string.IsNullOrWhiteSpace(cronExpression))
         {
             await CreateSchedulerAsync(cronExpression);
+            while (true)
+            {
+                Thread.Sleep(1000);
+            }
         }
         else
         {
