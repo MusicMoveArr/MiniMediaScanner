@@ -14,13 +14,22 @@ public class CoverExtractCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "COVEREXTRACT_ARTIST")]
     public string Artist { get; set; }
     
-    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    [CommandOption("album", 'b', 
+        Description = "target Album", 
+        IsRequired = false,
+        EnvironmentVariable = "COVEREXTRACT_ALBUM")]
     public string Album { get; set; }
 
-    [CommandOption("filename", 'f', Description = "File name e.g. cover.jpg.", IsRequired = false)]
+    [CommandOption("filename", 'f', 
+        Description = "File name e.g. cover.jpg.", 
+        IsRequired = false,
+        EnvironmentVariable = "COVEREXTRACT_FILENAME")]
     public string Filename { get; set; } = "cover.jpg";
     
     public async ValueTask ExecuteAsync(IConsole console)

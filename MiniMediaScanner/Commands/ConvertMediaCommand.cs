@@ -14,19 +14,34 @@ public class ConvertMediaCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "CONVERT_ARTIST")]
     public string Artist { get; set; }
     
-    [CommandOption("from-extension", 'f', Description = "From extension.", IsRequired = true)]
+    [CommandOption("from-extension", 'f', 
+        Description = "From extension.", 
+        IsRequired = true,
+        EnvironmentVariable = "CONVERT_FROM_EXTENSION")]
     public string FromExtension { get; init; }
     
-    [CommandOption("to-extension", 't', Description = "To extension.", IsRequired = true)]
+    [CommandOption("to-extension", 't', 
+        Description = "To extension.", 
+        IsRequired = true,
+        EnvironmentVariable = "CONVERT_TO_EXTENSION")]
     public string ToExtension { get; init; }
     
-    [CommandOption("codec", 'c', Description = "Codec e.g. aac.", IsRequired = true)]
+    [CommandOption("codec", 'c', 
+        Description = "Codec e.g. aac.", 
+        IsRequired = true,
+        EnvironmentVariable = "CONVERT_CODEC")]
     public string Codec { get; init; }
     
-    [CommandOption("bitrate", 'b', Description = "Bitrate e.g. 320k.", IsRequired = true)]
+    [CommandOption("bitrate", 'b', 
+        Description = "Bitrate e.g. 320k.", 
+        IsRequired = true,
+        EnvironmentVariable = "CONVERT_BITRATE")]
     public string Bitrate { get; init; }
 
     public async ValueTask ExecuteAsync(IConsole console)

@@ -14,10 +14,16 @@ public class DeDuplicateSinglesCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "DEDUPLICATESINGLES_ARTIST")]
     public string Artist { get; set; }
     
-    [CommandOption("delete", 'd', Description = "Delete duplicate file", IsRequired = false)]
+    [CommandOption("delete", 'd', 
+        Description = "Delete duplicate file", 
+        IsRequired = false,
+        EnvironmentVariable = "DEDUPLICATESINGLES_DELETE")]
     public bool Delete { get; set; }
     
     public async ValueTask ExecuteAsync(IConsole console)

@@ -14,13 +14,22 @@ public class DeletedMediaCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "DELETEDMEDIA_ARTIST")]
     public string Artist { get; set; }
     
-    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    [CommandOption("album", 'b',
+        Description = "target Album", 
+        IsRequired = false,
+        EnvironmentVariable = "DELETEDMEDIA_ALBUM")]
     public string Album { get; set; }
 
-    [CommandOption("remove", 'r', Description = "Remove records from database.", IsRequired = false)]
+    [CommandOption("remove", 'r', 
+        Description = "Remove records from database.", 
+        IsRequired = false,
+        EnvironmentVariable = "DELETEDMEDIA_REMOVE")]
     public bool Remove { get; set; } = true;
     
     public async ValueTask ExecuteAsync(IConsole console)

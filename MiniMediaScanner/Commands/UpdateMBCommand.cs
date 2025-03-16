@@ -14,7 +14,10 @@ public class UpdateMBCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artist filter to update.", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artist filter to update.", 
+        IsRequired = false,
+        EnvironmentVariable = "UPDATEMB_ARTIST")]
     public string Artist { get; set; }
     
     public async ValueTask ExecuteAsync(IConsole console)

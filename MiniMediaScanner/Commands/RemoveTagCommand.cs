@@ -14,19 +14,34 @@ public class RemoveTagCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "REMOVETAG_ARTIST")]
     public string Artist { get; set; }
     
-    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    [CommandOption("album", 'b', 
+        Description = "target Album", 
+        IsRequired = false,
+        EnvironmentVariable = "REMOVETAG_ALBUM")]
     public string Album { get; set; }
     
-    [CommandOption("tag", 't', Description = "The tag to remove from media.", IsRequired = false)]
+    [CommandOption("tag", 't', 
+        Description = "The tag to remove from media.", 
+        IsRequired = false,
+        EnvironmentVariable = "REMOVETAG_TAG")]
     public string Tag { get; set; }
     
-    [CommandOption("tags", 'T', Description = "The tags to remove from media.", IsRequired = false)]
+    [CommandOption("tags", 'T', 
+        Description = "The tags to remove from media.", 
+        IsRequired = false,
+        EnvironmentVariable = "REMOVETAG_TAGS")]
     public List<string> Tags { get; set; }
 
-    [CommandOption("confirm", 'y', Description = "Always confirm automatically.", IsRequired = false)]
+    [CommandOption("confirm", 'y', 
+        Description = "Always confirm automatically.", 
+        IsRequired = false,
+        EnvironmentVariable = "REMOVETAG_CONFIRM")]
     public bool Confirm { get; set; } = false;
     
     public async ValueTask ExecuteAsync(IConsole console)

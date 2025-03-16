@@ -15,19 +15,34 @@ public class EqualizeMediaTagCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "EQUALIZEMEDIATAG_ARTIST")]
     public string Artist { get; set; }
     
-    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    [CommandOption("album", 'b', 
+        Description = "target Album", 
+        IsRequired = false,
+        EnvironmentVariable = "EQUALIZEMEDIATAG_ALBUM")]
     public string Album { get; set; }
     
-    [CommandOption("tag", 't', Description = "Tag.", IsRequired = true)]
+    [CommandOption("tag", 't', 
+        Description = "Tag.", 
+        IsRequired = true,
+        EnvironmentVariable = "EQUALIZEMEDIATAG_TAG")]
     public required string Tag { get; init; }
 
-    [CommandOption("confirm", 'y', Description = "Always confirm automatically.", IsRequired = false)]
+    [CommandOption("confirm", 'y', 
+        Description = "Always confirm automatically.", 
+        IsRequired = false,
+        EnvironmentVariable = "EQUALIZEMEDIATAG_CONFIRM")]
     public bool Confirm { get; set; } = false;
     
-    [CommandOption("writetag", 'w', Description = "Tag to write to, if not set, the tag to read from (-t/--tag) is used to write to.", IsRequired = false)]
+    [CommandOption("writetag", 'w', 
+        Description = "Tag to write to, if not set, the tag to read from (-t/--tag) is used to write to.", 
+        IsRequired = false,
+        EnvironmentVariable = "EQUALIZEMEDIATAG_WRITETAG")]
     public string WriteTag { get; set; }
     
     public async ValueTask ExecuteAsync(IConsole console)

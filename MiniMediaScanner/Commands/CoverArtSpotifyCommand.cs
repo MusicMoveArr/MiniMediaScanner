@@ -14,16 +14,28 @@ public class CoverArtSpotifyCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "COVERARTSPOTIFY_ARTIST")]
     public string Artist { get; set; }
     
-    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    [CommandOption("album", 'b', 
+        Description = "target Album", 
+        IsRequired = false,
+        EnvironmentVariable = "COVERARTSPOTIFY_ALBUM")]
     public string Album { get; set; }
     
-    [CommandOption("album-filename", 'f', Description = "Filename e.g. cover.jpg.", IsRequired = false)]
+    [CommandOption("album-filename", 'f', 
+        Description = "Filename e.g. cover.jpg.", 
+        IsRequired = false,
+        EnvironmentVariable = "COVERARTSPOTIFY_ALBUM_FILENAME")]
     public string AlbumFilename { get; set; } = "cover.jpg";
 
-    [CommandOption("artist-filename", 'g', Description = "Filename e.g. cover.jpg.", IsRequired = false)]
+    [CommandOption("artist-filename", 'g', 
+        Description = "Filename e.g. cover.jpg.", 
+        IsRequired = false,
+        EnvironmentVariable = "COVERARTSPOTIFY_ARTIST_FILENAME")]
     public string ArtistFilename { get; set; } = "cover.jpg";
     
     public async ValueTask ExecuteAsync(IConsole console)

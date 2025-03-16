@@ -15,16 +15,28 @@ public class SplitArtistCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "SPLITARTIST_ARTIST")]
     public string Artist { get; set; }
     
-    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    [CommandOption("album", 'b', 
+        Description = "target Album", 
+        IsRequired = false,
+        EnvironmentVariable = "SPLITARTIST_ALBUM")]
     public string Album { get; set; }
     
-    [CommandOption("artist-format", 'f', Description = "artist format for splitting the 2 artists apart.", IsRequired = true)]
+    [CommandOption("artist-format", 'f', 
+        Description = "artist format for splitting the 2 artists apart.", 
+        IsRequired = true,
+        EnvironmentVariable = "SPLITARTIST_ARTIST_FORMAT")]
     public required string ArtistFormat { get; init; }
     
-    [CommandOption("confirm", 'y', Description = "Always confirm automatically.", IsRequired = false)]
+    [CommandOption("confirm", 'y', 
+        Description = "Always confirm automatically.", 
+        IsRequired = false,
+        EnvironmentVariable = "SPLITARTIST_CONFIRM")]
     public bool Confirm { get; set; }
     
     public async ValueTask ExecuteAsync(IConsole console)

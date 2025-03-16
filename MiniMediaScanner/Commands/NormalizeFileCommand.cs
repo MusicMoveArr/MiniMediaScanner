@@ -21,37 +21,70 @@ public class NormalizeFileCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "NORMALIZEFILE_ARTIST")]
     public string Artist { get; set; }
     
-    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    [CommandOption("album", 'b', 
+        Description = "target Album", 
+        IsRequired = false,
+        EnvironmentVariable = "NORMALIZEFILE_ALBUM")]
     public string Album { get; set; }
     
-    [CommandOption("normalize-artist-name", 'A', Description = "normalize Artistname", IsRequired = false)]
+    [CommandOption("normalize-artist-name", 'A', 
+        Description = "normalize Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "NORMALIZEFILE_NORMALIZE_ARTIST_NAME")]
     public bool NormalizeArtistName { get; set; }
     
-    [CommandOption("normalize-album-name", 'B', Description = "normalize Albumname", IsRequired = false)]
+    [CommandOption("normalize-album-name", 'B', 
+        Description = "normalize Albumname", 
+        IsRequired = false,
+        EnvironmentVariable = "NORMALIZEFILE_NORMALIZE_ALBUM_NAME")]
     public bool NormalizeAlbumName { get; set; }
     
-    [CommandOption("normalize-title-name", 'T', Description = "normalize music Title", IsRequired = false)]
+    [CommandOption("normalize-title-name", 'T', 
+        Description = "normalize music Title", 
+        IsRequired = false,
+        EnvironmentVariable = "NORMALIZEFILE_NORMALIZE_TITLE_NAME")]
     public bool NormalizeTitleName { get; set; }
     
-    [CommandOption("overwrite", 'w', Description = "overwrite existing files.", IsRequired = false)]
+    [CommandOption("overwrite", 'w', 
+        Description = "overwrite existing files.", 
+        IsRequired = false,
+        EnvironmentVariable = "NORMALIZEFILE_OVERWRITE")]
     public bool Overwrite { get; set; }
 
-    [CommandOption("sub-directory-depth", 's', Description = "sub-directory depth to root-folder.", IsRequired = false)]
+    [CommandOption("sub-directory-depth", 's', 
+        Description = "sub-directory depth to root-folder.", 
+        IsRequired = false,
+        EnvironmentVariable = "NORMALIZEFILE_SUB_DIRECTORY_DEPTH")]
     public int SubDirectoryDepth { get; set; } = 0;
 
-    [CommandOption("rename", 'r', Description = "rename file.", IsRequired = false)]
+    [CommandOption("rename", 'r', 
+        Description = "rename file.", 
+        IsRequired = false,
+        EnvironmentVariable = "NORMALIZEFILE_RENAME")]
     public bool Rename { get; set; } = false;
 
-    [CommandOption("file-format", 'f', Description = "rename file format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}.", IsRequired = false)]
+    [CommandOption("file-format", 'f', 
+        Description = "rename file format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}.", 
+        IsRequired = false,
+        EnvironmentVariable = "NORMALIZEFILE_FILE_FORMAT")]
     public string FileFormat { get; set; } = string.Empty;
 
-    [CommandOption("directory-format", 'D', Description = "rename directory format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}.", IsRequired = false)]
+    [CommandOption("directory-format", 'D', 
+        Description = "rename directory format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}.", 
+        IsRequired = false,
+        EnvironmentVariable = "NORMALIZEFILE_DIRECTORY_FORMAT")]
     public string DirectoryFormat { get; set; } = string.Empty;
 
-    [CommandOption("directory-seperator", 'S', Description = "Directory Seperator replacer, replace '/' '\\' to .e.g. '_'.", IsRequired = false)]
+    [CommandOption("directory-seperator", 'S', 
+        Description = "Directory Seperator replacer, replace '/' '\\' to .e.g. '_'.", 
+        IsRequired = false,
+        EnvironmentVariable = "NORMALIZEFILE_DIRECTORY_SEPARATOR")]
     public string DirectorySeperator { get; set; } = "_";
     
     public async ValueTask ExecuteAsync(IConsole console)

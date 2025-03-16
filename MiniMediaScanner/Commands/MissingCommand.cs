@@ -14,10 +14,16 @@ public class MissingCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "MISSING_ARTIST")]
     public string Artist { get; set; }
 
-    [CommandOption("provider", 'p', Description = "Provider can be either MusicBrainz or Spotify.", IsRequired = false)]
+    [CommandOption("provider", 'p', 
+        Description = "Provider can be either MusicBrainz or Spotify.", 
+        IsRequired = false,
+        EnvironmentVariable = "MISSING_PROVIDER")]
     public string Provider { get; set; } = "musicbrainz";
     
     public async ValueTask ExecuteAsync(IConsole console)

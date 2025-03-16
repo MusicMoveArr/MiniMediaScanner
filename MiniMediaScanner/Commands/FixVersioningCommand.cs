@@ -16,19 +16,34 @@ public class FixVersioningCommand : ICommand
         IsRequired = true)]
     public required string ConnectionString { get; init; }
     
-    [CommandOption("artist", 'a', Description = "Artistname", IsRequired = false)]
+    [CommandOption("artist", 'a', 
+        Description = "Artistname", 
+        IsRequired = false,
+        EnvironmentVariable = "FIXVERSIONING_ARTIST")]
     public string Artist { get; set; }
     
-    [CommandOption("album", 'b', Description = "target Album", IsRequired = false)]
+    [CommandOption("album", 'b', 
+        Description = "target Album", 
+        IsRequired = false,
+        EnvironmentVariable = "FIXVERSIONING_ALBUM")]
     public string Album { get; set; }
 
-    [CommandOption("disc-increment", 'd', Description = "Disc increment for remixes (+1000 recommended).", IsRequired = false)]
+    [CommandOption("disc-increment", 'd', 
+        Description = "Disc increment for remixes (+1000 recommended).", 
+        IsRequired = false,
+        EnvironmentVariable = "FIXVERSIONING_DISC_INCREMENT")]
     public int DiscIncrement { get; set; } = 1000;
     
-    [CommandOption("track-filters", 'f', Description = "Filter names to apply to tracks, .e.g. (remixed by ...).", IsRequired = false)]
+    [CommandOption("track-filters", 'f', 
+        Description = "Filter names to apply to tracks, .e.g. (remixed by ...).", 
+        IsRequired = false,
+        EnvironmentVariable = "FIXVERSIONING_TRACK_FILTERS")]
     public List<string> TrackFilters { get; set; }
     
-    [CommandOption("confirm", 'y', Description = "Always confirm automatically.", IsRequired = false)]
+    [CommandOption("confirm", 'y', 
+        Description = "Always confirm automatically.", 
+        IsRequired = false,
+        EnvironmentVariable = "FIXVERSIONING_CONFIRM")]
     public bool Confirm { get; set; } = false;
     
     public async ValueTask ExecuteAsync(IConsole console)
