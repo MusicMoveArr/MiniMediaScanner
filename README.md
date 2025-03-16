@@ -192,6 +192,25 @@ dotnet MiniMediaScanner.dll equalizemediatag -a Pendulum -t asin -w asin -y
 |COMMAND|import|
 |CONNECTIONSTRING|Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia|
 
+# Docker Compose example
+Refresh the metadata every 6 hours, change the volume(s), connectionstring accordingly to your environment
+```
+services:
+  minimediascanner:
+    image: musicmovearr/minimediascanner:main
+    container_name: minimediascanner
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - COMMAND=refreshmetadata
+      - CONNECTIONSTRING=Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia
+      - CRON=0 0 */6 ? * *
+    volumes:
+      - ~/Music:~/Music
+```
+
+
 # Convert Command
 ```
 USAGE
