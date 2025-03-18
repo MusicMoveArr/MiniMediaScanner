@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ATL;
+using FuzzySharp;
 using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models.MusicBrainz;
 using MiniMediaScanner.Repositories;
@@ -93,24 +94,64 @@ public class TagMissingMetadataCommandHandler
         {
             artistModel = await _musicBrainzAPIService.GetRecordingByIdAsync(recordingId);
         }
+
+        if (track == null)
+        {
+            track = new Track(metadata.Path);
+        }
         
-        MusicBrainzArtistReleaseModel? release = artistModel?.Releases?.FirstOrDefault();
+        //grab the best matched release
+        string? artistCountry = !string.IsNullOrWhiteSpace(track.Artist) ? await _musicBrainzArtistRepository.GetMusicBrainzArtistCountryByNameAsync(track.Artist) : string.Empty;
+        string trackBarcode = _mediaTagWriteService.GetTagValue(track, "barcode");
+        var matchedReleases =
+            artistModel?.Releases
+                .Where(release => release.Media?.Any() == true && release.Media?.First()?.Tracks?.Any() == true)
+                .Select(release => new
+                {
+                    Album = release.Title,
+                    release.Media?.First()?.Tracks?.First().Title,
+                    Length = release.Media?.First()?.Tracks?.First()?.Length / 1000 ?? int.MaxValue,
+                    release.Barcode,
+                    Release = release
+                })
+                .Where(release => !string.IsNullOrWhiteSpace(release.Album) && !string.IsNullOrWhiteSpace(release.Title) && !string.IsNullOrWhiteSpace(release.Release.Country))
+                .Select(release => new
+                {
+                    Release = release.Release,
+                    AlbumMatch = Fuzz.Ratio(release.Album, track.Album),
+                    TitleMatch = Fuzz.Ratio(release.Title, track.Title),
+                    LengthMatch = Math.Abs(track.Duration - release.Length),
+                    CountryMatch = !string.IsNullOrWhiteSpace(artistCountry) ? Fuzz.Ratio(release.Release.Country, artistCountry) : 0,
+                    BarcodeMatch = !string.IsNullOrWhiteSpace(release.Barcode) ? Fuzz.Ratio(release.Barcode, trackBarcode) : 0
+                })
+                .OrderByDescending(match => match.AlbumMatch)
+                .ThenByDescending(match => match.TitleMatch)
+                .ThenByDescending(match => match.CountryMatch)
+                .ThenBy(match => match.LengthMatch)
+                .ThenBy(match => match.BarcodeMatch)
+                .ToList();
+
+        var firstMatch = matchedReleases?.FirstOrDefault();
+        MusicBrainzArtistReleaseModel? release = matchedReleases?.FirstOrDefault()?.Release;
         
         if (artistModel == null || release == null)
         {
             return;
         }
         
-        Console.WriteLine($"Release found for '{metadata.Path}', Title '{release.Title}', Date '{release.Date}', Barcode '{release.Barcode}', Country '{release.Country}'");
+        Console.WriteLine($"Release found for '{metadata.Path}'" +
+                          $", Title '{release.Title}'" +
+                          $", Date '{release.Date}'" +
+                          $", Barcode '{release.Barcode}'" +
+                          $", Country '{release.Country}'" +
+                          $", Album match: {firstMatch.AlbumMatch}%" +
+                          $", Title match: {firstMatch.TitleMatch}%" +
+                          $", Barcode match: {firstMatch.BarcodeMatch}%"+
+                          $", Country match: {firstMatch.CountryMatch}%");
 
         if (!write)
         {
             return;
-        }
-
-        if (track == null)
-        {
-            track = new Track(metadata.Path);
         }
 
         if (!GuidHelper.GuidHasValue(recordingId))
@@ -118,11 +159,24 @@ public class TagMissingMetadataCommandHandler
             Guid.TryParse(release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Recording?.Id, out recordingId);
         }
         
-        
-        
         bool trackInfoUpdated = false;
         string? musicBrainzTrackId = release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Id;
-        string? musicBrainzReleaseArtistId = artistModel?.ArtistCredit?.FirstOrDefault()?.Artist?.Id;
+
+        //grab the best matching Artist based on the name from the AlbumArtist media tag
+        var bestMatchedArtist =
+            !string.IsNullOrWhiteSpace(track.AlbumArtist)
+                ? artistModel?.ArtistCredit
+                    .Select(artist => new
+                    {
+                        Artist = artist,
+                        MatchedFor = Fuzz.Ratio(artist.Name, track.AlbumArtist)
+                    })
+                    .OrderByDescending(match => match.MatchedFor)
+                    .Select(match => match.Artist)
+                    .FirstOrDefault()
+                : artistModel?.ArtistCredit?.FirstOrDefault();
+        
+        string? musicBrainzReleaseArtistId = bestMatchedArtist?.Artist?.Id;
         string? musicBrainzAlbumId = release.Id;
         string? musicBrainzReleaseGroupId = release.ReleaseGroup.Id;
         
@@ -170,11 +224,11 @@ public class TagMissingMetadataCommandHandler
         }
         if (string.IsNullOrWhiteSpace(track.AlbumArtist)  || track.AlbumArtist.ToLower().Contains("various"))
         {
-            UpdateTag(track, "AlbumArtist", artistModel.ArtistCredit.FirstOrDefault()?.Name, ref trackInfoUpdated, overwriteTagValue);
+            UpdateTag(track, "AlbumArtist", bestMatchedArtist?.Name, ref trackInfoUpdated, overwriteTagValue);
         }
         if (string.IsNullOrWhiteSpace(track.Artist) || track.Artist.ToLower().Contains("various"))
         {
-            UpdateTag(track, "Artist", artistModel.ArtistCredit.FirstOrDefault()?.Name, ref trackInfoUpdated, overwriteTagValue);
+            UpdateTag(track, "Artist", bestMatchedArtist?.Name, ref trackInfoUpdated, overwriteTagValue);
         }
 
         UpdateTag(track, "ARTISTS", artists, ref trackInfoUpdated, overwriteTagValue);

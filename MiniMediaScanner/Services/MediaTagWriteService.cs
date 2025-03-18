@@ -346,8 +346,18 @@ public class MediaTagWriteService
         {
             return track.AdditionalFields.First(pair => pair.Key.ToLower() == field.ToLower()).Key;
         }
-
         return field;
+    }
+
+    public string GetTagValue(Track track, string tagName)
+    {
+        string fieldName = GetFieldName(track, tagName);
+        if (track.AdditionalFields.ContainsKey(fieldName))
+        {
+            return track.AdditionalFields[fieldName];
+        }
+
+        return string.Empty;
     }
     
     public async Task<bool> SaveTagAsync(FileInfo targetFile, string tag, string value)

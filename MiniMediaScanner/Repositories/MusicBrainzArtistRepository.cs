@@ -21,11 +21,24 @@ public class MusicBrainzArtistRepository
         await using var conn = new NpgsqlConnection(_connectionString);
 
         return (await conn
-            .QueryAsync<string>(query, new
+                .QueryAsync<string>(query, new
+                {
+                    artist
+                }))
+            .ToList();
+    }
+    
+    public async Task<string?> GetMusicBrainzArtistCountryByNameAsync(string artist)
+    {
+        string query = @"SELECT country FROM MusicBrainzArtist where lower(name) = lower(@artist)";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .ExecuteScalarAsync<string>(query, new
             {
                 artist
-            }))
-            .ToList();
+            });
     }
     
     public async Task<List<string>> GetAllMusicBrainzArtistRemoteIdsAsync()
