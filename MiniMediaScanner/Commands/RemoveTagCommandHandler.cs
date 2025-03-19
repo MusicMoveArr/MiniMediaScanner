@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ATL;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -24,9 +25,26 @@ public class RemoveTagCommandHandler
 
     public async Task RemoveTagFromMediaAsync(string album, List<string> tagNames, bool autoConfirm)
     {
-        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        if (autoConfirm)
         {
-            await RemoveTagFromMediaAsync(artist, album, tagNames, autoConfirm);
+            await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
+            {
+                try
+                {
+                    await RemoveTagFromMediaAsync(artist, album, tagNames, autoConfirm);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            });
+        }
+        else
+        {
+            foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+            {
+                await RemoveTagFromMediaAsync(artist, album, tagNames, autoConfirm);
+            }
         }
     }
 

@@ -32,15 +32,22 @@ public class TagMissingMetadataCommandHandler
         _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
     }
     
-    public async Task FingerPrintMediaAsync(string accoustId, bool write, string album, bool overwriteTagValue)
+    public async Task TagMetadataAsync(string accoustId, bool write, string album, bool overwriteTagValue)
     {
-        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
-            await FingerPrintMediaAsync(accoustId, write, artist, album, overwriteTagValue);
-        }
+            try
+            {
+                await TagMetadataAsync(accoustId, write, artist, album, overwriteTagValue);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        });
     }
 
-    public async Task FingerPrintMediaAsync(string accoustId, bool write, string artist, string album, bool overwriteTagValue)
+    public async Task TagMetadataAsync(string accoustId, bool write, string artist, string album, bool overwriteTagValue)
     {
         var metadata = (await _metadataRepository.GetMissingMusicBrainzMetadataRecordsAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || 

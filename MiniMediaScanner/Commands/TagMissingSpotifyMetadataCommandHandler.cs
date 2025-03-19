@@ -31,10 +31,17 @@ public class TagMissingSpotifyMetadataCommandHandler
     
     public async Task TagMetadataAsync(bool write, string album, bool overwriteTagValue)
     {
-        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
-            await TagMetadataAsync(write, artist, album, overwriteTagValue);
-        }
+            try
+            {
+                await TagMetadataAsync(write, artist, album, overwriteTagValue);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        });
     }
 
     public async Task TagMetadataAsync(bool write, string artist, string album, bool overwriteTagValue)

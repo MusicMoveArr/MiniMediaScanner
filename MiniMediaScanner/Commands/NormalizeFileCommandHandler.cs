@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -45,19 +46,26 @@ public class NormalizeFileCommandHandler
         string directoryFormat = "",
         string directorySeperator = "_")
     {
-        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
-            await NormalizeFilesAsync(artist, album,
-                normalizeArtistName, 
-                normalizeAlbumName, 
-                normalizeTitleName, 
-                overwrite,
-                subDirectoryDepth, 
-                rename, 
-                fileFormat, 
-                directoryFormat, 
-                directorySeperator);
-        }
+            try
+            {
+                await NormalizeFilesAsync(artist, album,
+                    normalizeArtistName, 
+                    normalizeAlbumName, 
+                    normalizeTitleName, 
+                    overwrite,
+                    subDirectoryDepth, 
+                    rename, 
+                    fileFormat, 
+                    directoryFormat, 
+                    directorySeperator);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        });
     }
     
     public async Task NormalizeFilesAsync(
@@ -79,9 +87,7 @@ public class NormalizeFileCommandHandler
 
         //due to I/O limitations max 4 threads is probably the best for now
         //making more threads won't make anything faster but rather make it slooow
-        foreach (var metadata in metadatas
-                     .AsParallel()
-                     .WithDegreeOfParallelism(4))
+        await ParallelHelper.ForEachAsync(metadatas, 4, async metadata =>
         {
             try
             {
@@ -97,7 +103,8 @@ public class NormalizeFileCommandHandler
             {
                 Console.WriteLine(e.Message);
             }
-        }
+        });
+        
         Console.WriteLine($"Can update files: {_updateFiles}, artist names {_updateArtistNames}, album names {_updateAlbumNames}, title names {_updateTitleNames}");
     }
 

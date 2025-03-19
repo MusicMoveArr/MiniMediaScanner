@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -25,9 +26,26 @@ public class FixVersioningCommandHandler
 
     public async Task FixDiscVersioningAsync(string album, int discIncrement, List<string> trackFilters, bool autoConfirm)
     {
-        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        if (autoConfirm)
         {
-            await FixDiscVersioningAsync(artist, album, discIncrement, trackFilters, autoConfirm);
+            await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
+            {
+                try
+                {
+                    await FixDiscVersioningAsync(artist, album, discIncrement, trackFilters, autoConfirm);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            });
+        }
+        else
+        {
+            foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+            {
+                await FixDiscVersioningAsync(artist, album, discIncrement, trackFilters, autoConfirm);
+            }
         }
     }
     

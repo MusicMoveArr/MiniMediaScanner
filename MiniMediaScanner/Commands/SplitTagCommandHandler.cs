@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ATL;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models.MusicBrainz;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -35,9 +36,26 @@ public class SplitTagCommandHandler
         bool overwriteTag, string seperator, bool updateReadTag, bool updateReadTagOriginalValue,
         bool updateWriteTagOriginalValue)
     {
-        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        if (confirm)
         {
-            await SplitTagsAsync(artist, album, tag, confirm, writetag, overwriteTag, seperator, updateReadTag, updateReadTagOriginalValue, updateWriteTagOriginalValue);
+            await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
+            {
+                try
+                {
+                    await SplitTagsAsync(artist, album, tag, confirm, writetag, overwriteTag, seperator, updateReadTag, updateReadTagOriginalValue, updateWriteTagOriginalValue);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            });
+        }
+        else
+        {
+            foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+            {
+                await SplitTagsAsync(artist, album, tag, confirm, writetag, overwriteTag, seperator, updateReadTag, updateReadTagOriginalValue, updateWriteTagOriginalValue);
+            }
         }
     }
 

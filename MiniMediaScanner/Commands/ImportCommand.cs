@@ -1,6 +1,7 @@
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
+using MiniMediaScanner.Helpers;
 
 namespace MiniMediaScanner.Commands;
 
@@ -29,11 +30,10 @@ public class ImportCommand : ICommand
             .OrderBy(dir => dir)
             .ToList();
 
-        foreach (string dir in sortedTopDirectories
-                     .AsParallel()
-                     .WithDegreeOfParallelism(8))
+        
+        await ParallelHelper.ForEachAsync(sortedTopDirectories, 8, async dir =>
         {
             await handler.ProcessDirectoryAsync(dir);
-        }
+        });
     }
 }

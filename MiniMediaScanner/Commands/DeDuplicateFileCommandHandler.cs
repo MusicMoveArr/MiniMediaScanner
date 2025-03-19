@@ -1,5 +1,6 @@
 using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -19,10 +20,17 @@ public class DeDuplicateFileCommandHandler
 
     public async Task CheckDuplicateFilesAsync(bool delete)
     {
-        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
-            await CheckDuplicateFilesAsync(artist, delete);
-        }
+            try
+            {
+                await CheckDuplicateFilesAsync(artist, delete);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        });
     }
     
     public async Task CheckDuplicateFilesAsync(string artistName, bool delete)

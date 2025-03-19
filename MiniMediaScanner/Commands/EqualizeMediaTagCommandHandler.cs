@@ -1,4 +1,5 @@
 using ATL;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -24,9 +25,26 @@ public class EqualizeMediaTagCommandHandler
 
     public async Task EqualizeTagsAsync(string album, string tag, string writetag, bool autoConfirm)
     {
-        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        if (autoConfirm)
         {
-            await EqualizeTagsAsync(artist, album, tag, writetag, autoConfirm);
+            await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
+            {
+                try
+                {
+                    await EqualizeTagsAsync(artist, album, tag, writetag, autoConfirm);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            });
+        }
+        else
+        {
+            foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+            {
+                await EqualizeTagsAsync(artist, album, tag, writetag, autoConfirm);
+            }
         }
     }
     

@@ -1,3 +1,4 @@
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
@@ -16,10 +17,17 @@ public class DeletedMediaCommandHandler
 
     public async Task CheckAllMissingTracksAsync(bool remove, string album)
     {
-        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
-            await CheckAllMissingTracksAsync(remove, artist, album);
-        }
+            try
+            {
+                await CheckAllMissingTracksAsync(remove, artist, album);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        });
     }
     
     public async Task<int> CheckAllMissingTracksAsync(bool remove, string artist, string album)

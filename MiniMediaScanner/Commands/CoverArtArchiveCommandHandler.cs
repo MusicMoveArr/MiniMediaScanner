@@ -1,3 +1,4 @@
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using RestSharp;
@@ -17,12 +18,17 @@ public class CoverArtArchiveCommandHandler
 
     public async Task CheckAllMissingCoversAsync(string album, string coverFileName)
     {
-        foreach (var artist in (await _artistRepository.GetAllArtistNamesAsync())
-                 .AsParallel()
-                 .WithDegreeOfParallelism(4))
+        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
-            await CheckAllMissingCoversAsync(artist, album, coverFileName);
-        }
+            try
+            {
+                await CheckAllMissingCoversAsync(artist, album, coverFileName);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        });
     }
     
     public async Task CheckAllMissingCoversAsync(string artist, string album, string coverFileName)

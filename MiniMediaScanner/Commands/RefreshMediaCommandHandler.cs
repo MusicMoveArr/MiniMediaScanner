@@ -1,3 +1,4 @@
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
@@ -20,10 +21,17 @@ public class RefreshMetadataCommandHandler
 
     public async Task RefreshMetadataAsync(string album)
     {
-        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
-            await RefreshMetadataAsync(artist, album);
-        }
+            try
+            {
+                await RefreshMetadataAsync(artist, album);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        });
     }
     
     public async Task RefreshMetadataAsync(string artist, string album)
@@ -35,9 +43,7 @@ public class RefreshMetadataCommandHandler
                 .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            foreach (var metadata in metadatas
-                         .AsParallel()
-                         .WithDegreeOfParallelism(4))
+            foreach (var metadata in metadatas)
             {
                 await _importCommandHandler.ProcessFileAsync(metadata.Path, true);
             }

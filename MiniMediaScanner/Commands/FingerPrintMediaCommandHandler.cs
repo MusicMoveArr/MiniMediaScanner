@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -24,10 +25,17 @@ public class FingerPrintMediaCommandHandler
     
     public async Task FingerPrintMediaAsync(string album)
     {
-        foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
+        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
-            await FingerPrintMediaAsync(artist, album);
-        }
+            try
+            {
+                await FingerPrintMediaAsync(artist, album);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        });
     }
     
     public async Task FingerPrintMediaAsync(string artist, string album)
@@ -38,9 +46,7 @@ public class FingerPrintMediaCommandHandler
             .Where(metadata => new FileInfo(metadata.Path).Exists)
             .ToList();
 
-        foreach (var metadata in metadatas
-                     .AsParallel()
-                     .WithDegreeOfParallelism(4))
+        await ParallelHelper.ForEachAsync(metadatas, 4, async metadata =>
         {
             try
             {
@@ -50,7 +56,7 @@ public class FingerPrintMediaCommandHandler
             {
                 Console.WriteLine(e.Message);
             }
-        }
+        });
     }
 
     private async Task FingerPrintFileAsync(MetadataModel metadata)

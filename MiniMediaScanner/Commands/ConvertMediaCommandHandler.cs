@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -23,12 +24,17 @@ public class ConvertMediaCommandHandler
     {
         var metadataFiles = (await _metadataRepository.GetMetadataByFileExtensionAsync(fromExtension));
 
-        foreach (var metadata in metadataFiles  
-                     .AsParallel()
-                     .WithDegreeOfParallelism(4))
+        await ParallelHelper.ForEachAsync(metadataFiles, 4, async metadata =>
         {
-            await ProcessFileAsync(metadata, toExtension, codec, bitrate);
-        }
+            try
+            {
+                await ProcessFileAsync(metadata, toExtension, codec, bitrate);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        });
     }
     
     public async Task ConvertByArtistAsync(string fromExtension, string toExtension, string artist, string codec,  string bitrate)
@@ -37,12 +43,17 @@ public class ConvertMediaCommandHandler
             .Where(metadata => metadata.Path.EndsWith(fromExtension))
             .ToList();
 
-        foreach (var metadata in metadataFiles
-                     .AsParallel()
-                     .WithDegreeOfParallelism(4))
+        await ParallelHelper.ForEachAsync(metadataFiles, 4, async metadata =>
         {
-            await ProcessFileAsync(metadata, toExtension, codec, bitrate);
-        }
+            try
+            {
+                await ProcessFileAsync(metadata, toExtension, codec, bitrate);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        });
     }
 
     private async Task ProcessFileAsync(MetadataModel metadata, string toExtension, string codec,  string bitrate)

@@ -50,11 +50,11 @@ public class TagMissingMetadataCommand : ICommand
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.FingerPrintMediaAsync(AccoustId, Write, Album, OverwriteTag);
+            await handler.TagMetadataAsync(AccoustId, Write, Album, OverwriteTag);
         }
         else
         {
-            await handler.FingerPrintMediaAsync(AccoustId, Write, Artist, Album, OverwriteTag);
+            await handler.TagMetadataAsync(AccoustId, Write, Artist, Album, OverwriteTag);
         }
     }
 }
