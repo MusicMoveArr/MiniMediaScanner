@@ -79,21 +79,28 @@ public class MediaTagWriteService
                 orgValue = GetDictionaryValue(track, "date");
                 if (DateTime.TryParse(value, out var result))
                 {
+                    DateTime? oldDate = track.Date;
                     track.AdditionalFields[GetFieldName(track,"date")] = value;
-                    updated = IsDictionaryUpdated(track, oldValues, "date");
+                    track.Date = result;
+                    updated = track.Date != oldDate || IsDictionaryUpdated(track, oldValues, "date");
                     return true;
                 }
                 else if (int.TryParse(value, out var result2))
                 {
+                    int? oldYear = track.Year;
+                    track.Year = result2;
                     track.AdditionalFields[GetFieldName(track,"date")] = value;
-                    updated = IsDictionaryUpdated(track, oldValues, "date");
+                    updated = track.Year != oldYear || IsDictionaryUpdated(track, oldValues, "date");
                     return true;
                 }
                 return false;
             case "catalognumber":
-                orgValue = track.CatalogNumber;
-                updated = !string.Equals(track.CatalogNumber, value);
-                track.CatalogNumber = value;
+                if (!string.Equals(value, "[None]", StringComparison.OrdinalIgnoreCase))
+                {
+                    orgValue = track.CatalogNumber;
+                    updated = !string.Equals(track.CatalogNumber, value);
+                    track.CatalogNumber = value;
+                }
                 return true;
             case "asin":
                 orgValue = GetDictionaryValue(track, "asin");
@@ -374,6 +381,12 @@ public class MediaTagWriteService
     {
         FileInfo targetFile = new FileInfo(track.Path);
         string tempFile = $"{track.Path}.tmp{targetFile.Extension}";
+        
+        if (File.Exists(tempFile))
+        {
+            File.Delete(tempFile);
+        }
+        
         bool success = false;
         try
         {
