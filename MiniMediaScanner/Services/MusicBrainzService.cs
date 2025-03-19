@@ -113,10 +113,12 @@ public class MusicBrainzService
                         continue;
                     }
                     
+                    var releaseRecordings = await _musicBrainzApiService.GetReleasesWithRecordingsForArtistAsync(releaseId, BulkRequestLimit, 0);
+                    
                     await _musicBrainzReleaseRepository.InsertMusicBrainzReleaseAsync(artistDbId.Value, releaseId, release.Title, release.Status, 
                         release.StatusId, release.Date, release.Barcode, release.Country, release.Disambiguation, release.Quality);
 
-                    foreach (var media in release.Media)
+                    foreach (var media in releaseRecordings.Media)
                     {
                         foreach (var track in media.Tracks)
                         {
