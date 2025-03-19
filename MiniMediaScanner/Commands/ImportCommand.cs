@@ -28,12 +28,12 @@ public class ImportCommand : ICommand
             .EnumerateFileSystemEntries(Path, "*.*", SearchOption.TopDirectoryOnly)
             .OrderBy(dir => dir)
             .ToList();
-        
-        await Task.WhenAll(
-            sortedTopDirectories
-                .AsParallel()
-                .WithDegreeOfParallelism(8)
-                .Select(dir => handler.ProcessDirectoryAsync(dir))
-        );
+
+        foreach (string dir in sortedTopDirectories
+                     .AsParallel()
+                     .WithDegreeOfParallelism(8))
+        {
+            await handler.ProcessDirectoryAsync(dir);
+        }
     }
 }
