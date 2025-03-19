@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
@@ -12,6 +13,7 @@ public class ImportCommandHandler
     private readonly MetadataRepository _metadataRepository;
     private readonly MetadataTagRepository _metadataTagRepository;
     private readonly AlbumRepository _albumRepository;
+    private readonly AsyncLock _asyncLock = new AsyncLock();
 
     public static string[] MediaFileExtensions = new string[]
     {
@@ -71,7 +73,6 @@ public class ImportCommandHandler
             {
                 return false;
             }
-
             Console.WriteLine($"Scanning {fileInfo.FullName}");
 
             try
@@ -91,7 +92,10 @@ public class ImportCommandHandler
                 !string.IsNullOrWhiteSpace(metadata?.Album) &&
                 !string.IsNullOrWhiteSpace(metadata?.Artist))
             {
-                await _musicBrainzService.InsertMissingMusicBrainzArtistAsync(metadata);
+                using (await _asyncLock.LockAsync())
+                {
+                    await _musicBrainzService.InsertMissingMusicBrainzArtistAsync(metadata);
+                }
             }
         }
         catch (Exception e)
