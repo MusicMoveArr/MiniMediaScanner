@@ -70,22 +70,21 @@ public class SpotifyService
             artist = await spotify.Artists.Get(artistId);
             Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
         }
-
-        var albums = await spotify.Artists.GetAlbums(artistId);
         
         Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
-        
         await _spotifyRepository.InsertOrUpdateArtistAsync(artist);
         await _spotifyRepository.InsertOrUpdateArtistImageAsync(artist);
 
-        AlbumsRequest albumsRequest = new AlbumsRequest(albums.Items.Take(20).Select(album => album.Id).ToList());
-        var fullAlbums = await spotify.Albums.GetSeveral(albumsRequest);
-        Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
-
-        foreach (var album in fullAlbums.Albums)
+        await foreach(var simpleAlbum in spotify.Paginate(await spotify.Artists.GetAlbums(artistId)))
         {
+            if (simpleAlbum.AlbumGroup == "appears_on")
+            {
+                continue;
+            }
+            var album = await spotify.Albums.Get(simpleAlbum.Id);
+            Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
+            
             Console.WriteLine($"Grabbing album {album.Name}, Artist: {artist.Name}");
-            var simpleAlbum = albums.Items.FirstOrDefault(a => a.Id == album.Id);
             await _spotifyRepository.InsertOrUpdateAlbumAsync(album, simpleAlbum?.AlbumGroup ?? string.Empty);
             await _spotifyRepository.InsertOrUpdateAlbumArtistAsync(album);
             await _spotifyRepository.InsertOrUpdateAlbumImageAsync(album);
