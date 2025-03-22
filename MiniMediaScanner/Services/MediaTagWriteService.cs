@@ -258,9 +258,12 @@ public class MediaTagWriteService
                 track.ISRC = value;
                 return true;
             case "label":
-                orgValue = GetDictionaryValue(track, "LABEL");
-                track.AdditionalFields[GetFieldName(track, "LABEL")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "LABEL");
+                if (!string.Equals(value, "[no label]", StringComparison.OrdinalIgnoreCase))
+                {
+                    orgValue = GetDictionaryValue(track, "LABEL");
+                    track.AdditionalFields[GetFieldName(track, "LABEL")] = value;
+                    updated = IsDictionaryUpdated(track, oldValues, "LABEL");
+                }
                 return true;
             case "spotify track id":
                 orgValue = GetDictionaryValue(track, "Spotify Track Id");
