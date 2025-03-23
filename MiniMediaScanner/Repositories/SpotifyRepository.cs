@@ -362,14 +362,14 @@ public class SpotifyRepository
 	                         artist.name as ArtistName,
 	                         artist.id as ArtistId
                          from spotify_track track
-                         join spotify_album album on album.albumid = track.albumid
+                         join spotify_album album on album.albumid = track.albumid and album.albumgroup in ('album', 'single') and album.albumtype in ('album', 'single')
                          join spotify_track_artist track_artist on track_artist.trackid = track.trackid
                          join spotify_album_artist album_artist on album_artist.albumid = album.albumid 
                          join spotify_artist artist on artist.id = track_artist.artistid or 
 						 	                           artist.id = album_artist.artistid
                          where artist.id = @artistId
-	                         and lower(album.name) = lower(@albumName)
-	                         and lower(track.name) = lower(@trackName)";
+	                         and (length(@albumName) = 0 OR lower(album.name) = lower(@albumName))
+	                         and (length(@trackName) = 0 OR lower(track.name) = lower(@trackName))";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         
