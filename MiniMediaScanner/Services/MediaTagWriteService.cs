@@ -320,6 +320,11 @@ public class MediaTagWriteService
                 track.AdditionalFields[GetFieldName(track, "UPC")] = value;
                 updated = IsDictionaryUpdated(track, oldValues, "UPC");
                 return true;
+            case "genre":
+                orgValue = GetDictionaryValue(track, "genre");
+                track.AdditionalFields[GetFieldName(track, "genre")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "genre");
+                return true;
         }
 
         return false;
