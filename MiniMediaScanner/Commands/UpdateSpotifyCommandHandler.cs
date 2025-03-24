@@ -1,5 +1,8 @@
+using System.Diagnostics;
+using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
+using Spectre.Console;
 using SpotifyAPI.Web;
 
 namespace MiniMediaScanner.Commands;
@@ -21,24 +24,25 @@ public class UpdateSpotifyCommandHandler
     
     public async Task UpdateSpotifyArtistsByNameAsync(string artist)
     {
-        Console.WriteLine($"Updating artist, {artist}");
-
-        var artistIds = await _spotifyRepository.GetSpotifyArtistIdsByNameAsync(artist);
-        
-        foreach (var artistId in artistIds)
-        {
-            DateTime? lastSyncTime = await _spotifyRepository.GetArtistLastSyncTimeAsync(artistId);
-
-            if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < 7)
-            {
-                Console.WriteLine($"Skipped synchronizing for Spotify '{artist}' synced already within 7days");
-                return;
-            }
-        }
-
         try
         {
-            await _spotifyService.UpdateArtistByNameAsync(artist);
+            await AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .StartAsync($"Importing '{artist}'", async ctx => 
+                {
+                    await _spotifyService.UpdateArtistByNameAsync(artist, callback =>
+                    {
+                        if (callback.Status == SpotifyUpdateStatus.Updating)
+                        {
+                            AnsiConsole.WriteLine($"Importing Album '{callback.CurrentAblum?.Name}', Artist '{callback.Artist?.Name}'");
+                            ctx.Status($"Importing Artist '{callback.Artist?.Name}' Albums {callback.Progress} of {callback.SimpleAlbums?.Count}");
+                        }
+                        else if(callback.Status == SpotifyUpdateStatus.SkippedSyncedWithin)
+                        {
+                            AnsiConsole.WriteLine($"Skipped synchronizing for Spotify '{callback?.Artist?.Name}' synced already within 7days");
+                        }
+                    });
+                });
         }
         catch (APITooManyRequestsException ex)
         {
@@ -70,24 +74,6 @@ public class UpdateSpotifyCommandHandler
             {
                 Console.WriteLine(ex.Message);
             }
-        }
-    }
-    
-    public async Task UpdateSpotifyArtistIdAsync(string artistId)
-    {
-        try
-        {
-            Console.WriteLine($"Updating Music Spotify Artist Id '{artistId}'");
-            await _spotifyService.UpdateArtistByIdAsync(artistId);
-        }
-        catch (APITooManyRequestsException ex)
-        {
-            Console.WriteLine($"Too many requests to synced artist, waiting {ex.RetryAfter}...");
-            Thread.Sleep(ex.RetryAfter.Add(TimeSpan.FromSeconds(10)));
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
         }
     }
 }

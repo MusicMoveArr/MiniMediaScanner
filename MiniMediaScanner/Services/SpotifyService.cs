@@ -1,8 +1,9 @@
+using MiniMediaScanner.Callbacks;
+using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Models.Spotify;
 using MiniMediaScanner.Repositories;
 using RestSharp;
 using SpotifyAPI.Web;
-using Swan;
 
 namespace MiniMediaScanner.Services;
 
@@ -27,7 +28,8 @@ public class SpotifyService
         _apiDelay = apiDelay;
     }
     
-    public async Task UpdateArtistByNameAsync(string artistName)
+    public async Task UpdateArtistByNameAsync(string artistName, 
+            Action<SpotifyUpdateCallback>? callback = null)
     {
         if (string.IsNullOrWhiteSpace(_spotifyAuthentication?.AccessToken) ||
             (_spotifyAuthentication.ExpiresIn > 0 && DateTime.Now > _spotifyAuthentication.ExpiresAt))
@@ -43,11 +45,13 @@ public class SpotifyService
         foreach(var artist in searchResult.Artists.Items
                     .Where(artist => string.Equals(artist.Name, artistName, StringComparison.OrdinalIgnoreCase)))
         {
-            await UpdateArtistByIdAsync(artist.Id, artist);
+            await UpdateArtistByIdAsync(artist.Id, artist, callback);
         }
     }
 
-    public async Task UpdateArtistByIdAsync(string artistId, FullArtist? artist = null)
+    public async Task UpdateArtistByIdAsync(string artistId, 
+        FullArtist? artist = null, 
+        Action<SpotifyUpdateCallback>? callback = null)
     {
         if (string.IsNullOrWhiteSpace(_spotifyAuthentication?.AccessToken) ||
             (_spotifyAuthentication.ExpiresIn > 0 && DateTime.Now > _spotifyAuthentication.ExpiresAt))
@@ -59,7 +63,7 @@ public class SpotifyService
 
         if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < 7)
         {
-            Console.WriteLine($"Skipped synchronizing for Spotify '{artistId}' synced already within 7days");
+            callback?.Invoke(new SpotifyUpdateCallback(artist, SpotifyUpdateStatus.SkippedSyncedWithin));
             return;
         }
             
@@ -74,9 +78,20 @@ public class SpotifyService
         Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
         await _spotifyRepository.InsertOrUpdateArtistAsync(artist);
         await _spotifyRepository.InsertOrUpdateArtistImageAsync(artist);
+        
+        List<SimpleAlbum> simpleAlbums = new List<SimpleAlbum>();
 
-        await foreach(var simpleAlbum in spotify.Paginate(await spotify.Artists.GetAlbums(artistId)))
+        await foreach (var simpleAlbum in spotify.Paginate(await spotify.Artists.GetAlbums(artistId)))
         {
+            simpleAlbums.Add(simpleAlbum);
+        }
+
+        int progress = 0;
+
+        foreach(var simpleAlbum in simpleAlbums)
+        {
+            callback?.Invoke(new SpotifyUpdateCallback(artist, simpleAlbum, simpleAlbums, SpotifyUpdateStatus.Updating, progress++));
+            
             if (simpleAlbum.AlbumGroup == "appears_on")
             {
                 continue;
@@ -90,7 +105,6 @@ public class SpotifyService
             var album = await spotify.Albums.Get(simpleAlbum.Id);
             Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
             
-            Console.WriteLine($"Grabbing album {album.Name}, Artist: {artist.Name}");
             await _spotifyRepository.InsertOrUpdateAlbumAsync(album, simpleAlbum?.AlbumGroup ?? string.Empty);
             await _spotifyRepository.InsertOrUpdateAlbumArtistAsync(album);
             await _spotifyRepository.InsertOrUpdateAlbumImageAsync(album);

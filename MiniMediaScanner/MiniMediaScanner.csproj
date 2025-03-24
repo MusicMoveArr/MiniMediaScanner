@@ -21,6 +21,7 @@
       <PackageReference Include="Quartz" Version="3.13.1" />
       <PackageReference Include="RestSharp" Version="112.1.0" />
       <PackageReference Include="SmartFormat" Version="3.5.3" />
+      <PackageReference Include="Spectre.Console" Version="0.49.1" />
       <PackageReference Include="SpotifyAPI.Web.Auth" Version="7.2.1" />
       <PackageReference Include="TagLibSharp" Version="2.3.0" />
       <PackageReference Include="z440.atl.core" Version="6.12.0" />
