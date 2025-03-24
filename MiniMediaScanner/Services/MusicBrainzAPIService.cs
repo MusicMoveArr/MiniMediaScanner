@@ -11,7 +11,7 @@ public class MusicBrainzAPIService
     public async Task<MusicBrainzArtistSearchModel?> SearchArtistAsync(string artistName)
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
-        Console.WriteLine($"Requesting MusicBrainz SearchArtist '{artistName}'");
+        Debug.WriteLine($"Requesting MusicBrainz SearchArtist '{artistName}'");
         string url = $"https://musicbrainz.org/ws/2/artist/?query=artist:'{artistName}' AND (type:person or type:group)&fmt=json";
         using RestClient client = new RestClient(url);
 
@@ -24,7 +24,7 @@ public class MusicBrainzAPIService
     public async Task<MusicBrainzArtistModel?> GetArtistAsync(Guid musicBrainzArtistId)
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
-        Console.WriteLine($"Requesting MusicBrainz GetArtist '{musicBrainzArtistId}'");
+        Debug.WriteLine($"Requesting MusicBrainz GetArtist '{musicBrainzArtistId}'");
         string url = $"https://musicbrainz.org/ws/2/release?artist={musicBrainzArtistId}&fmt=json";
         using RestClient client = new RestClient(url);
 
@@ -37,7 +37,7 @@ public class MusicBrainzAPIService
     public async Task<MusicBrainzArtistInfoModel?> GetArtistInfoAsync(Guid musicBrainzArtistId)
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
-        Console.WriteLine($"Requesting MusicBrainz GetArtistInfo '{musicBrainzArtistId}'");
+        Debug.WriteLine($"Requesting MusicBrainz GetArtistInfo '{musicBrainzArtistId}'");
         string url = $"https://musicbrainz.org/ws/2/artist/{musicBrainzArtistId}?inc=aliases&fmt=json";
         using RestClient client = new RestClient(url);
 
@@ -50,7 +50,7 @@ public class MusicBrainzAPIService
     public async Task<MusicBrainzReleaseModel?> GetTracksAsync(Guid musicBrainzAlbumId)
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
-        Console.WriteLine($"Requesting MusicBrainz Tracks '{musicBrainzAlbumId}'");
+        Debug.WriteLine($"Requesting MusicBrainz Tracks '{musicBrainzAlbumId}'");
         string url = $"https://musicbrainz.org/ws/2/release/{musicBrainzAlbumId}?inc=recordings&fmt=json";
         using RestClient client = new RestClient(url);
 
@@ -65,7 +65,7 @@ public class MusicBrainzAPIService
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         
-        Console.WriteLine($"Requesting MusicBrainz GetReleaseWithLabel '{musicBrainzReleaseId}'");
+        Debug.WriteLine($"Requesting MusicBrainz GetReleaseWithLabel '{musicBrainzReleaseId}'");
         string url = $"https://musicbrainz.org/ws/2/release/{musicBrainzReleaseId}?inc=labels&fmt=json";
         using RestClient client = new RestClient(url);
 
@@ -79,7 +79,7 @@ public class MusicBrainzAPIService
     public async Task<MusicBrainzArtistRelationModel?> GetExternalLinksAsync(Guid musicBrainzArtistId)
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
-        Console.WriteLine("Requesting MusicBrainz external links");
+        Debug.WriteLine("Requesting MusicBrainz external links");
         string url = $"https://musicbrainz.org/ws/2/artist/{musicBrainzArtistId}?inc=url-rels&fmt=json";
         using RestClient client = new RestClient(url);
 
@@ -94,7 +94,7 @@ public class MusicBrainzAPIService
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         
-        Console.WriteLine($"Requesting MusicBrainz GetRecordingById, {recordingId}");
+        Debug.WriteLine($"Requesting MusicBrainz GetRecordingById, {recordingId}");
         string url = $"https://musicbrainz.org/ws/2/recording/{recordingId}?fmt=json&inc=isrcs+artists+releases+release-groups+url-rels+media";
         using RestClient client = new RestClient(url);
 
@@ -110,7 +110,7 @@ public class MusicBrainzAPIService
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         var url = $"https://musicbrainz.org/ws/2/release?artist={artistId}&fmt=json&limit={limit}&offset={offset}";
 
-        Console.WriteLine($"Requesting MusicBrainz Releases '{artistId}', limit '{limit}', offset '{offset}'");
+        Debug.WriteLine($"Requesting MusicBrainz Releases '{artistId}', limit '{limit}', offset '{offset}'");
         using RestClient client = new RestClient(url);
 
         return await retryPolicy.ExecuteAsync(async () =>
@@ -124,7 +124,7 @@ public class MusicBrainzAPIService
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         var url = $"https://musicbrainz.org/ws/2/release/{releaseId}?inc=recordings&fmt=json&limit={limit}&offset={offset}";
 
-        Console.WriteLine($"Requesting MusicBrainz Releases by release id '{releaseId}', limit '{limit}', offset '{offset}'");
+        Debug.WriteLine($"Requesting MusicBrainz Releases by release id '{releaseId}', limit '{limit}', offset '{offset}'");
         using RestClient client = new RestClient(url);
 
         return await retryPolicy.ExecuteAsync(async () =>
@@ -142,7 +142,7 @@ public class MusicBrainzAPIService
             .WaitAndRetryAsync(5, retryAttempt => 
                     TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 (exception, timeSpan, retryCount, context) => {
-                    Console.WriteLine($"Retry {retryCount} after {timeSpan.TotalSeconds} sec due to: {exception.Message}");
+                    Debug.WriteLine($"Retry {retryCount} after {timeSpan.TotalSeconds} sec due to: {exception.Message}");
                 });
         return retryPolicy;
     }

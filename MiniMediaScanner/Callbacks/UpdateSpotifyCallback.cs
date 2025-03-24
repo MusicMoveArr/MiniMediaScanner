@@ -3,31 +3,31 @@ using SpotifyAPI.Web;
 
 namespace MiniMediaScanner.Callbacks;
 
-public class SpotifyUpdateCallback
+public class UpdateSpotifyCallback
 {
     public FullArtist? Artist { get; set; }
     public SimpleAlbum? CurrentAblum { get; set; }
-    public List<SimpleAlbum>? SimpleAlbums { get; set; }
-    public SpotifyUpdateStatus Status { get; set; }
+    public List<SimpleAlbum>? Albums { get; set; }
+    public UpdateSpotifyStatus Status { get; set; }
     public int Progress { get; set; }
 
-    public SpotifyUpdateCallback(
+    public UpdateSpotifyCallback(
         FullArtist artist, 
         SimpleAlbum currentAblum, 
-        List<SimpleAlbum> simpleAlbums,
-        SpotifyUpdateStatus status,
+        List<SimpleAlbum> albums,
+        UpdateSpotifyStatus status,
         int progress)
     {
         this.Artist = artist;
         this.CurrentAblum = currentAblum;
-        this.SimpleAlbums = simpleAlbums;
+        this.Albums = albums;
         this.Status = status;
         this.Progress = progress;
     }
     
-    public SpotifyUpdateCallback(
+    public UpdateSpotifyCallback(
         FullArtist? artist, 
-        SpotifyUpdateStatus status)
+        UpdateSpotifyStatus status)
     {
         this.Artist = artist;
         this.Status = status;

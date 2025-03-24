@@ -1,6 +1,6 @@
 namespace MiniMediaScanner.Callbacks.Status;
 
-public enum SpotifyUpdateStatus
+public enum UpdateSpotifyStatus
 {
     SkippedSyncedWithin,
     Updating

@@ -24,16 +24,6 @@ public class ImportCommand : ICommand
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new ImportCommandHandler(ConnectionString);
-        
-        var sortedTopDirectories = Directory
-            .EnumerateFileSystemEntries(Path, "*.*", SearchOption.TopDirectoryOnly)
-            .OrderBy(dir => dir)
-            .ToList();
-
-        
-        await ParallelHelper.ForEachAsync(sortedTopDirectories, 8, async dir =>
-        {
-            await handler.ProcessDirectoryAsync(dir);
-        });
+        await handler.ProcessDirectoryAsync(Path);
     }
 }

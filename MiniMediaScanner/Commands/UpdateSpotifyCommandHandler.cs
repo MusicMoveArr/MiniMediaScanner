@@ -32,12 +32,12 @@ public class UpdateSpotifyCommandHandler
                 {
                     await _spotifyService.UpdateArtistByNameAsync(artist, callback =>
                     {
-                        if (callback.Status == SpotifyUpdateStatus.Updating)
+                        if (callback.Status == UpdateSpotifyStatus.Updating)
                         {
                             AnsiConsole.WriteLine($"Importing Album '{callback.CurrentAblum?.Name}', Artist '{callback.Artist?.Name}'");
-                            ctx.Status($"Importing Artist '{callback.Artist?.Name}' Albums {callback.Progress} of {callback.SimpleAlbums?.Count}");
+                            ctx.Status($"Importing Artist '{callback.Artist?.Name}' Albums {callback.Progress} of {callback.Albums?.Count}");
                         }
-                        else if(callback.Status == SpotifyUpdateStatus.SkippedSyncedWithin)
+                        else if(callback.Status == UpdateSpotifyStatus.SkippedSyncedWithin)
                         {
                             AnsiConsole.WriteLine($"Skipped synchronizing for Spotify '{callback?.Artist?.Name}' synced already within 7days");
                         }

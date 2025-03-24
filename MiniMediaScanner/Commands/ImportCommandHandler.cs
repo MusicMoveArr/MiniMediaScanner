@@ -2,6 +2,7 @@ using System.Diagnostics;
 using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
+using Spectre.Console;
 
 namespace MiniMediaScanner.Commands;
 
@@ -39,14 +40,47 @@ public class ImportCommandHandler
     {
         try
         {
-            foreach (var file in Directory.EnumerateFileSystemEntries(directoryPath, "*.*", SearchOption.AllDirectories))
+            var sortedTopDirectories = Directory
+                .EnumerateFileSystemEntries(directoryPath, "*.*", SearchOption.TopDirectoryOnly)
+                .OrderBy(dir => dir)
+                .ToList();
+
+        await AnsiConsole.Progress()
+            .HideCompleted(true)
+            .AutoClear(true)
+            .Columns(new ProgressColumn[]
             {
-                await ProcessFileAsync(file);
-            }
+                new TaskDescriptionColumn()
+                {
+                    Alignment = Justify.Left
+                },
+                new ProgressBarColumn(),
+                new PercentageColumn(),
+                new RemainingTimeColumn(),
+            })
+            .StartAsync(async ctx =>
+            {
+                await ParallelHelper.ForEachAsync(sortedTopDirectories, 8, async dir =>
+                {
+                    var task = ctx.AddTask(Markup.Escape($"Importing {dir}"));
+
+                    var allFilePaths = Directory
+                        .EnumerateFileSystemEntries(dir, "*.*", SearchOption.AllDirectories)
+                        .ToList();
+
+                    task.MaxValue = allFilePaths.Count ;
+                    
+                    foreach (var file in allFilePaths)
+                    {
+                        await ProcessFileAsync(file);
+                        task.Value++;
+                    }
+                });
+            });
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
+            Debug.WriteLine(e.Message);
         }
     }
 
@@ -73,7 +107,7 @@ public class ImportCommandHandler
             {
                 return false;
             }
-            Console.WriteLine($"Scanning {fileInfo.FullName}");
+            Debug.WriteLine($"Scanning {fileInfo.FullName}");
 
             try
             {
@@ -82,7 +116,7 @@ public class ImportCommandHandler
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Debug.WriteLine(e.Message);
                 return false;
             }
             
@@ -100,7 +134,7 @@ public class ImportCommandHandler
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
+            Debug.WriteLine(e.Message);
         }
 
         return true;

@@ -29,7 +29,7 @@ public class SpotifyService
     }
     
     public async Task UpdateArtistByNameAsync(string artistName, 
-            Action<SpotifyUpdateCallback>? callback = null)
+            Action<UpdateSpotifyCallback>? callback = null)
     {
         if (string.IsNullOrWhiteSpace(_spotifyAuthentication?.AccessToken) ||
             (_spotifyAuthentication.ExpiresIn > 0 && DateTime.Now > _spotifyAuthentication.ExpiresAt))
@@ -51,7 +51,7 @@ public class SpotifyService
 
     public async Task UpdateArtistByIdAsync(string artistId, 
         FullArtist? artist = null, 
-        Action<SpotifyUpdateCallback>? callback = null)
+        Action<UpdateSpotifyCallback>? callback = null)
     {
         if (string.IsNullOrWhiteSpace(_spotifyAuthentication?.AccessToken) ||
             (_spotifyAuthentication.ExpiresIn > 0 && DateTime.Now > _spotifyAuthentication.ExpiresAt))
@@ -63,7 +63,7 @@ public class SpotifyService
 
         if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < 7)
         {
-            callback?.Invoke(new SpotifyUpdateCallback(artist, SpotifyUpdateStatus.SkippedSyncedWithin));
+            callback?.Invoke(new UpdateSpotifyCallback(artist, UpdateSpotifyStatus.SkippedSyncedWithin));
             return;
         }
             
@@ -90,7 +90,7 @@ public class SpotifyService
 
         foreach(var simpleAlbum in simpleAlbums)
         {
-            callback?.Invoke(new SpotifyUpdateCallback(artist, simpleAlbum, simpleAlbums, SpotifyUpdateStatus.Updating, progress++));
+            callback?.Invoke(new UpdateSpotifyCallback(artist, simpleAlbum, simpleAlbums, UpdateSpotifyStatus.Updating, progress++));
             
             if (simpleAlbum.AlbumGroup == "appears_on")
             {

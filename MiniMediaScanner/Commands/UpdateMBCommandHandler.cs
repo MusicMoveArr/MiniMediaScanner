@@ -1,5 +1,8 @@
+using System.Diagnostics;
+using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
+using Spectre.Console;
 
 namespace MiniMediaScanner.Commands;
 
@@ -18,7 +21,6 @@ public class UpdateMBCommandHandler
     
     public async Task UpdateMusicBrainzArtistsByNameAsync(string artistName)
     {
-        Console.WriteLine($"Updating artist, {artistName}");
         var artistIds = await _musicBrainzArtistRepository.GetMusicBrainzArtistRemoteIdsByNameAsync(artistName);
 
         if (artistIds?.Count == 0)
@@ -26,36 +28,56 @@ public class UpdateMBCommandHandler
             artistIds = (await _musicBrainzAPIService
                 .SearchArtistAsync(artistName))
                 ?.Artists?
-                .Where(artist => artist.Name.ToLower().Contains(artistName))
+                .Where(artist => artist.Name.ToLower().Contains(artistName.ToLower()))
                 .Select(artist => artist.Id)
                 .ToList();
         }
 
-        foreach (var artistId in artistIds)
-        {
-            await UpdateMusicBrainzArtistIdAsync(artistId);
-        }
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .StartAsync($"Updating Music Brainz Artist '{artistName}'", async ctx =>
+            {
+                foreach (var artistId in artistIds)
+                {
+                    await _musicBrainzService.UpdateMusicBrainzArtistAsync(artistId, true, callback =>
+                    {
+                        if (callback.Status == UpdateMBStatus.Updating)
+                        {
+                            AnsiConsole.WriteLine($"Importing Album '{callback.CurrentAlbum?.Title}', Artist '{callback.Artist?.Name}'");
+                            ctx.Status($"Updating Music Brainz Artist '{callback.Artist?.Name}' Albums {callback.Progress} of {callback.Albums?.Count}");
+                        }
+                        else if(callback.Status == UpdateMBStatus.SkippedSyncedWithin)
+                        {
+                            AnsiConsole.WriteLine($"Skipped synchronizing for MusicBrainz ArtistId '{callback?.ArtistId}' synced already within 7days");
+                        }
+                    });
+                }
+            });
     }
     
     public async Task UpdateAllMusicBrainzArtistsAsync()
     {
         var artistIds = await _musicBrainzArtistRepository.GetAllMusicBrainzArtistRemoteIdsAsync();
-        foreach (var id in artistIds)
-        {
-            await UpdateMusicBrainzArtistIdAsync(id);
-        }
-    }
-    
-    public async Task UpdateMusicBrainzArtistIdAsync(string artistId)
-    {
-        try
-        {
-            Console.WriteLine($"Updating Music Brainz Artist ID '{artistId}'");
-            await _musicBrainzService.UpdateMusicBrainzArtistAsync(artistId, true);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
-        }
+        
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .StartAsync($"Updating all Music Brainz Artist...", async ctx =>
+            {
+                foreach (var artistId in artistIds)
+                {
+                    await _musicBrainzService.UpdateMusicBrainzArtistAsync(artistId, true, callback =>
+                    {
+                        if (callback.Status == UpdateMBStatus.Updating)
+                        {
+                            AnsiConsole.WriteLine($"Importing Album '{callback.CurrentAlbum?.Title}', Artist '{callback.Artist?.Name}'");
+                            ctx.Status($"Updating MusicBrainz Artist '{callback.Artist?.Name}' Albums {callback.Progress} of {callback.Albums?.Count}");
+                        }
+                        else if(callback.Status == UpdateMBStatus.SkippedSyncedWithin)
+                        {
+                            AnsiConsole.WriteLine($"Skipped synchronizing for MusicBrainz ArtistId '{callback?.ArtistId}' synced already within 7days");
+                        }
+                    });
+                }
+            });
     }
 }

@@ -1,3 +1,7 @@
+using System.Diagnostics;
+using MiniMediaScanner.Callbacks;
+using MiniMediaScanner.Callbacks.Status;
+using MiniMediaScanner.Models.MusicBrainz;
 using MiniMediaScanner.Repositories;
 
 namespace MiniMediaScanner.Services;
@@ -18,19 +22,22 @@ public class MusicBrainzService
         _musicBrainzReleaseTrackRepository = new MusicBrainzReleaseTrackRepository(connectionString);
     }
 
-    public async Task InsertMissingMusicBrainzArtistAsync(MetadataInfo metadataInfo)
+    public async Task InsertMissingMusicBrainzArtistAsync(MetadataInfo metadataInfo,
+        Action<UpdateMBCallback> callback = null)
     {
         if (!string.IsNullOrWhiteSpace(metadataInfo.MusicBrainzArtistId))
         {
             foreach (var artistId in metadataInfo.MusicBrainzArtistId
                          .Split('/', StringSplitOptions.RemoveEmptyEntries))
             {
-                await UpdateMusicBrainzArtistAsync(artistId, true);
+                await UpdateMusicBrainzArtistAsync(artistId, true, callback);
             }
         }
     }
     
-    public async Task UpdateMusicBrainzArtistAsync(string musicBrainzArtistId, bool updateExisting = false)
+    public async Task UpdateMusicBrainzArtistAsync(string musicBrainzArtistId, 
+        bool updateExisting = false,
+        Action<UpdateMBCallback> callback = null)
     {
         try
         {
@@ -43,16 +50,18 @@ public class MusicBrainzService
 
             foreach (string artistId in musicBrainzArtistIds)
             {
-                await ProcessMusicBrainzArtistAsync(artistId, updateExisting);
+                await ProcessMusicBrainzArtistAsync(artistId, updateExisting, callback);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"{ex.Message}");
+            Debug.WriteLine($"{ex.Message}");
         }
     }
 
-    private async Task ProcessMusicBrainzArtistAsync(string musicBrainzArtistId, bool updateExisting = false)
+    private async Task ProcessMusicBrainzArtistAsync(string musicBrainzArtistId, 
+        bool updateExisting = false,
+        Action<UpdateMBCallback> callback = null)
     {
         try
         {
@@ -70,7 +79,8 @@ public class MusicBrainzService
 
             if (DateTime.Now.Subtract(lastSyncTime).TotalDays < 7)
             {
-                Console.WriteLine($"Skipped synchronizing for MusicBrainzArtistId '{musicBrainzArtistId}' synced already within 7days");
+                callback?.Invoke(new UpdateMBCallback(musicBrainzArtistGuid, UpdateMBStatus.SkippedSyncedWithin));
+                Debug.WriteLine($"Skipped synchronizing for MusicBrainzArtistId '{musicBrainzArtistId}' synced already within 7days");
                 return;
             }
             
@@ -93,6 +103,11 @@ public class MusicBrainzService
                 musicBrainzArtistInfo.SortName,
                 musicBrainzArtistInfo.Disambiguation);
 
+
+            UpdateMBCallback updateMbCallback = new UpdateMBCallback(musicBrainzArtistGuid, UpdateMBStatus.Updating);
+            updateMbCallback.Albums = new List<MusicBrainzArtistReleaseModel>();
+            updateMbCallback.Artist = musicBrainzArtistInfo;
+            
             int offset = 0;
             while (true)
             {
@@ -104,6 +119,9 @@ public class MusicBrainzService
                 }
 
                 offset += BulkRequestLimit;
+                
+                updateMbCallback.Albums.AddRange(releases.Releases);
+                
             
                 foreach (var release in releases.Releases)
                 {
@@ -112,6 +130,10 @@ public class MusicBrainzService
                     {
                         continue;
                     }
+
+                    updateMbCallback.CurrentAlbum = release;
+                    updateMbCallback.Progress++;
+                    callback?.Invoke(updateMbCallback);
                     
                     var releaseRecordings = await _musicBrainzApiService.GetReleasesWithRecordingsForArtistAsync(releaseId, BulkRequestLimit, 0);
                     
@@ -158,7 +180,7 @@ public class MusicBrainzService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
+            Debug.WriteLine(e.Message);
         }
     }
 }
