@@ -81,6 +81,12 @@ public class SpotifyService
             {
                 continue;
             }
+
+            if (await _spotifyRepository.SpotifyAlbumIdExistsAsync(simpleAlbum.Id))
+            {
+                continue;
+            }
+            
             var album = await spotify.Albums.Get(simpleAlbum.Id);
             Thread.Sleep(TimeSpan.FromSeconds(_apiDelay));
             

@@ -477,4 +477,21 @@ public class SpotifyRepository
                     artistId
                 });
     }
+    
+    public async Task<bool> SpotifyAlbumIdExistsAsync(string albumId)
+    {
+        string query = @"SELECT 1
+                         FROM spotify_album album
+                         where album.albumid = @albumId
+                         limit 1";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn
+            .ExecuteScalarAsync<int?>(query,
+                param: new
+                {
+                    albumId
+                })) == 1;
+    }
 }
