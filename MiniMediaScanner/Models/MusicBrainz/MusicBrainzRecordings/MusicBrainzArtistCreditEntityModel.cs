@@ -8,4 +8,5 @@ public class MusicBrainzArtistCreditEntityModel
     public string? Id { get; set; }
     public string? SortName { get; set; }
     public string? Type { get; set; }
+    public string? Country { get; set; } //not officially in musicbrainz model (api response)
 }

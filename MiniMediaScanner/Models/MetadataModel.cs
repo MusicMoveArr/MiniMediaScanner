@@ -3,6 +3,7 @@ namespace MiniMediaScanner.Models;
 public class MetadataModel
 {
     public Guid? MetadataId { get; set; }
+    public Guid? ArtistId { get; set; }
     public string? Path { get; set; }
     public string? Title { get; set; }
     public Guid? AlbumId { get; set; }

@@ -427,7 +427,8 @@ public class MetadataRepository
                                  artist.name AS ArtistName,
                                  m.MusicBrainzArtistId,
                                  m.tag_acoustid,
-                                 m.Tag_AllJsonTags
+                                 m.Tag_AllJsonTags,
+                                 artist.ArtistId
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
@@ -536,7 +537,7 @@ public class MetadataRepository
                          LIMIT 1";
         
         await using var conn = new NpgsqlConnection(_connectionString);
-
+        
         CanUpdateMetadataModel? canUpdateMetadataModel = await conn
             .QueryFirstOrDefaultAsync<CanUpdateMetadataModel>(query, new
             {

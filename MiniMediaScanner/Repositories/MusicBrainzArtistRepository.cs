@@ -178,116 +178,6 @@ public class MusicBrainzArtistRepository
         })).ToList();
     }
 
-    public async Task<MusicBrainzArtistModel?> GetMusicBrainzArtistByRecordingIdAsync(string recordingId)
-    {
-        const string query = @"
-                                SELECT 
-                                    a.musicbrainzremoteid AS ArtistMusicBrainzRemoteId,
-                                    a.releasecount AS ArtistReleaseCount,
-                                    a.disambiguation AS ArtistDisambiguation,
-                                    a.name AS ArtistName,
-                                    a.sortname AS ArtistSortName,
-                                    a.type AS ArtistType,
-                                    r.musicbrainzremotereleaseid AS ReleaseMusicBrainzRemoteReleaseId,
-                                    r.title AS ReleaseTitle,
-                                    r.status AS ReleaseStatus,
-                                    r.statusid AS ReleaseStatusId,
-                                    r.date AS ReleaseDate,
-                                    r.barcode AS ReleaseBarcode,
-                                    r.country AS ReleaseCountry,
-                                    r.disambiguation AS ReleaseDisambiguation,
-                                    r.quality AS ReleaseQuality,
-                                    rt.recordingid AS ReleaseTrackRecordingId,
-                                    rt.musicbrainzremotereleasetrackid AS ReleaseTrackMusicBrainzRemoteReleaseTrackId,
-                                    rt.mediatrackcount AS ReleaseTrackMediaTrackCount,
-                                    rt.mediaformat AS ReleaseTrackMediaFormat,
-                                    rt.title AS ReleaseTrackTitle,
-                                    rt.position AS ReleaseTrackPosition,
-                                    rt.mediatrackoffset AS ReleaseTrackMediaTrackOffset,
-                                    rt.length AS ReleaseTrackLength,
-                                    rt.number AS ReleaseTrackNumber,
-                                    rt.recordingvideo AS ReleaseTrackRecordingVideo
-                                FROM musicbrainzreleasetrack rt
-                                 join musicbrainzrelease r on r.musicbrainzremotereleaseid = rt.musicbrainzremotereleaseid
-                                 join musicbrainzartist a on a.musicbrainzartistid = r.musicbrainzartistid 
-                                WHERE rt.recordingid = @recordingId";
-
-        var lookup = new Dictionary<string, MusicBrainzArtistModel>();
-
-        await using var conn = new NpgsqlConnection(_connectionString);
-        var records = await conn.QueryAsync<MusicBrainzRecordingFlatModel>(query, 
-            param: new
-            {
-                recordingId = recordingId
-            });
-
-        MusicBrainzArtistModel artistModel = new MusicBrainzArtistModel();
-
-        artistModel.ArtistCredit = records
-            .GroupBy(record => record.ArtistMusicBrainzRemoteId)
-            .Select(record => record.First())
-            .Select(record => new MusicBrainzArtistCreditModel
-            {
-                Name = record.ArtistName,
-                Artist = new MusicBrainzArtistCreditEntityModel
-                {
-                    Disambiguation = record.ArtistDisambiguation,
-                    Name = record.ArtistName,
-                    Type = record.ArtistType,
-                    Id = record.ArtistMusicBrainzRemoteId.ToString(),
-                    SortName = record.ArtistSortName
-                }
-                
-            })
-            .ToList();
-        
-        artistModel.Releases = records
-            .GroupBy(record => record.ReleaseMusicBrainzRemoteReleaseId)
-            .Select(record => record.First())
-            .Select(record => new MusicBrainzArtistReleaseModel
-            {
-                Id = record.ReleaseMusicBrainzRemoteReleaseId.ToString(),
-                Title = record.ReleaseTitle,
-                Status = record.ReleaseStatus,
-                StatusId = record.ReleaseStatusId,
-                Date = record.ReleaseDate.ToString("yyyy-MM-dd") ?? string.Empty,
-                Barcode = record.ReleaseBarcode,
-                Country = record.ReleaseCountry,
-                Disambiguation = record.ReleaseDisambiguation,
-                Quality = record.ReleaseQuality,
-                TextRepresentation = new MusicBrainzTextRepresentationModel
-                {
-                    Language = string.Empty,
-                    Script = string.Empty,
-                }
-            })
-            .ToList();
-        
-        var releaseTracks = records
-            .GroupBy(record => record.ReleaseTrackRecordingId)
-            .Select(record => record.First())
-            .Select(record => new MusicBrainzReleaseMediaTrackModel
-            {
-                Id = record.ReleaseTrackMusicBrainzRemoteReleaseTrackId.ToString(),
-                Title = record.ReleaseTrackTitle,
-                Position = record.ReleaseTrackPosition,
-                Length = record.ReleaseTrackLength,
-                Number = record.ReleaseTrackNumber,
-                Recording = new MusicBrainzReleaseMediaTrackRecordingModel
-                {
-                    Id = record.ReleaseTrackRecordingId.ToString(),
-                    Title = record.ReleaseTrackTitle,
-                    Length = record.ReleaseTrackLength,
-                    Video = record.ReleaseTrackRecordingVideo
-                }
-            })
-            .ToList();
-        
-        
-        
-        return null;
-    }
-
     public async Task<Guid?> GetMusicBrainzRecordingIdByNameAsync(string artistName, string albumName, string trackName)
     {
         const string query = @"SELECT rt.recordingid
@@ -318,6 +208,7 @@ public class MusicBrainzArtistRepository
                                     a.name AS ArtistName,
                                     a.sortname AS ArtistSortName,
                                     a.type AS ArtistType,
+                                    a.country AS ArtistCountry,
                                     r.musicbrainzremotereleaseid AS ReleaseMusicBrainzRemoteReleaseId,
                                     r.title AS ReleaseTitle,
                                     r.status AS ReleaseStatus,
@@ -336,16 +227,15 @@ public class MusicBrainzArtistRepository
                                     rt.mediatrackoffset AS ReleaseTrackMediaTrackOffset,
                                     rt.length AS ReleaseTrackLength,
                                     rt.number AS ReleaseTrackNumber,
-                                    rt.recordingvideo AS ReleaseTrackRecordingVideo
+                                    rt.recordingvideo AS ReleaseTrackRecordingVideo,
+                                    rt.mediaposition as ReleaseTrackDiscNumber
                                 FROM musicbrainzreleasetrack rt
-                                 join musicbrainzrelease r on r.musicbrainzremotereleaseid = rt.musicbrainzremotereleaseid
-                                 join musicbrainzartist a on a.musicbrainzartistid = r.musicbrainzartistid 
+                                join musicbrainzrelease r on r.musicbrainzremotereleaseid = rt.musicbrainzremotereleaseid
+                                join musicbrainzartist a on a.musicbrainzartistid = r.musicbrainzartistid 
                                 WHERE lower(a.name) = lower(@artistName)
                                       AND lower(r.status) = 'official'
-                                      AND lower(r.title) = lower(@albumName)
-                                      AND lower(rt.title) = lower(@trackName)";
-
-        var lookup = new Dictionary<string, MusicBrainzArtistModel>();
+                                      AND (length(@albumName) = 0 OR lower(r.title) = lower(@albumName))
+                                      AND (length(@trackName) = 0 OR lower(rt.title) = lower(@trackName))";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         var records = await conn.QueryAsync<MusicBrainzRecordingFlatModel>(query, 
@@ -375,13 +265,12 @@ public class MusicBrainzArtistRepository
                     Name = record.ArtistName,
                     Type = record.ArtistType,
                     Id = record.ArtistMusicBrainzRemoteId.ToString(),
-                    SortName = record.ArtistSortName
+                    SortName = record.ArtistSortName,
+                    Country = record.ArtistCountry
                 }
                 
             })
             .ToList();
-        
-        
         
         artistModel.Releases = records
             .GroupBy(record => record.ReleaseMusicBrainzRemoteReleaseId)
@@ -392,7 +281,7 @@ public class MusicBrainzArtistRepository
                 Title = record.ReleaseTitle,
                 Status = record.ReleaseStatus,
                 StatusId = record.ReleaseStatusId,
-                Date = record.ReleaseDate.ToString("yyyy-MM-dd") ?? string.Empty,
+                Date = record.ReleaseDate,
                 Barcode = record.ReleaseBarcode,
                 Country = record.ReleaseCountry,
                 Disambiguation = record.ReleaseDisambiguation,
@@ -401,40 +290,48 @@ public class MusicBrainzArtistRepository
                 TextRepresentation = new MusicBrainzTextRepresentationModel
                 {
                     Language = string.Empty,
-                    Script = string.Empty,
+                    Script = string.Empty
                 }
             })
             .ToList();
-        
-        var releaseTracks = records
-            .GroupBy(record => record.ReleaseTrackRecordingId)
-            .Select(record => record.First())
-            .Select(record => new MusicBrainzReleaseMediaTrackModel
-            {
-                Id = record.ReleaseTrackMusicBrainzRemoteReleaseTrackId.ToString(),
-                Title = record.ReleaseTrackTitle,
-                Position = record.ReleaseTrackPosition,
-                Length = record.ReleaseTrackLength,
-                Number = record.ReleaseTrackNumber,
-                Recording = new MusicBrainzReleaseMediaTrackRecordingModel
-                {
-                    Id = record.ReleaseTrackRecordingId.ToString(),
-                    Title = record.ReleaseTrackTitle,
-                    Length = record.ReleaseTrackLength,
-                    Video = record.ReleaseTrackRecordingVideo
-                }
-            })
-            .ToList();
-        
-        artistModel.Releases.First().Media.Add(new MusicBrainzReleaseMediaModel
+
+        foreach (var releaseGroup in records.GroupBy(r => r.ReleaseMusicBrainzRemoteReleaseId))
         {
-            Position = records.First().ReleaseTrackPosition,
-            Title = records.First().ReleaseTitle,
-            Format = records.First().ReleaseTrackMediaFormat,
-            TrackCount = records.First().ArtistReleaseCount,
-            TrackOffset = records.First().ReleaseTrackMediaTrackOffset,
-            Tracks = releaseTracks,
-        });
+            var releaseTracks = records
+                .Where(record => record.ReleaseMusicBrainzRemoteReleaseId == releaseGroup.Key)
+                .GroupBy(record => record.ReleaseTrackRecordingId)
+                .Select(record => record.First())
+                .Select(record => new MusicBrainzReleaseMediaTrackModel
+                {
+                    Id = record.ReleaseTrackMusicBrainzRemoteReleaseTrackId.ToString(),
+                    Title = record.ReleaseTrackTitle,
+                    Position = record.ReleaseTrackPosition,
+                    Length = record.ReleaseTrackLength,
+                    Number = record.ReleaseTrackNumber,
+                    Recording = new MusicBrainzReleaseMediaTrackRecordingModel
+                    {
+                        Id = record.ReleaseTrackRecordingId.ToString(),
+                        Title = record.ReleaseTrackTitle,
+                        Length = record.ReleaseTrackLength,
+                        Video = record.ReleaseTrackRecordingVideo
+                    }
+                })
+                .ToList();
+
+            var artistRelease = artistModel.Releases.FirstOrDefault(r => r.Id == releaseGroup.Key.ToString());
+            if (artistRelease != null)
+            {
+                artistRelease.Media.Add(new MusicBrainzReleaseMediaModel
+                {
+                    Position = records.First().ReleaseTrackDiscNumber,
+                    Title = records.First().ReleaseTitle,
+                    Format = records.First().ReleaseTrackMediaFormat,
+                    TrackCount = records.First().ArtistReleaseCount,
+                    TrackOffset = records.First().ReleaseTrackMediaTrackOffset,
+                    Tracks = releaseTracks
+                });
+            }
+        }
         
         return artistModel;
     }

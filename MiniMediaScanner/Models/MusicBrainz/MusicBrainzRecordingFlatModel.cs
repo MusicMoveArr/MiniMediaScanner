@@ -8,12 +8,13 @@ public class MusicBrainzRecordingFlatModel
     public Guid ArtistMusicBrainzRemoteId { get; set; }
     public string ArtistSortName { get; set; }
     public string ArtistType { get; set; }
+    public string ArtistCountry { get; set; }
     
     public Guid ReleaseMusicBrainzRemoteReleaseId { get; set; }
     public string ReleaseTitle { get; set; }
     public string ReleaseStatus { get; set; }
     public string ReleaseStatusId { get; set; }
-    public DateTime ReleaseDate { get; set; }
+    public string ReleaseDate { get; set; }
     public string ReleaseBarcode { get; set; }
     public string ReleaseCountry { get; set; }
     public string ReleaseDisambiguation { get; set; }
@@ -29,4 +30,5 @@ public class MusicBrainzRecordingFlatModel
     public int ReleaseTrackNumber { get; set; }
     public bool ReleaseTrackRecordingVideo { get; set; }
     public Guid ReleaseTrackRecordingId { get; set; }
+    public int ReleaseTrackDiscNumber { get; set; }
 }
