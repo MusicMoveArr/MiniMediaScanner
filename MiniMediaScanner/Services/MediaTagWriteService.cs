@@ -1,5 +1,4 @@
 using ATL;
-using FFMpegCore;
 
 namespace MiniMediaScanner.Services;
 
