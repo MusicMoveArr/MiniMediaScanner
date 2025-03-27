@@ -442,6 +442,24 @@ public class MetadataRepository
         }).ToList();
     }
     
+    
+    
+    public async Task<List<Guid?>> GetArtistIdByMetadataAsync(string artistName)
+    {
+        string query = @$"SELECT distinct artist.ArtistId
+                        FROM metadata m
+                        JOIN albums album ON album.albumid = m.albumid
+                        JOIN artists artist ON artist.artistid = album.artistid
+                        where lower(artist.name) = lower(@artistName)";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn.Query<Guid?>(query, new
+        {
+            artistName
+        }).ToList();
+    }
+    
     public async Task<List<MetadataPathCoverModel>> GetFolderPathsByArtistForCoversAsync(string artistName, string album)
     {
         string query = @$"SELECT distinct regexp_replace(path, '[^/]+$', '') AS FolderPath, 

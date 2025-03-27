@@ -72,7 +72,8 @@ public class MissingRepository
 						        m.AlbumId,
 						        artist.name AS ArtistName,
 						        album.title AS AlbumName,
-						        m.MusicBrainzArtistId
+						        m.MusicBrainzArtistId,
+								artist.artistid as ArtistId
 						 FROM metadata m
 						 JOIN albums album ON album.albumid = m.albumid
 						 JOIN artists artist ON artist.artistid = album.artistid
@@ -142,7 +143,7 @@ public class MissingRepository
             .ToList();
     }
 	
-	public async Task<List<string>> GetMissingTracksByArtistMusicBrainz2Async(string artistName)
+	public async Task<List<MissingTrackModel>> GetMissingTracksByArtistMusicBrainz2Async(string artistName)
     {
         string query = @"WITH MusicLibrary AS (
 						    SELECT 
@@ -172,7 +173,7 @@ public class MissingRepository
 						    JOIN musicbrainzartist ma ON mr.musicbrainzartistid = ma.musicbrainzartistid
 						    where lower(ma.name) = lower(@artistName)
 						)
-						SELECT distinct mb.artist_name || ' - ' || mb.album_name || ' - ' || mb.track_name
+						SELECT distinct mb.artist_name AS Artist, mb.album_name AS Album, mb.track_name AS Track
 						FROM MusicBrainzData mb
 						LEFT JOIN MusicLibrary ml 
 						    ON (lower(mb.album_name) = lower(ml.album_name)
@@ -184,55 +185,49 @@ public class MissingRepository
         await using var conn = new NpgsqlConnection(_connectionString);
         
         return (await conn
-            .QueryAsync<string>(query, new
+            .QueryAsync<MissingTrackModel>(query, new
             {
                 artistName
             }, commandTimeout: 60))
             .ToList();
     }
 	
-    public async Task<List<string>> GetMissingTracksByArtistSpotify2Async(string artistName)
+    public async Task<List<MissingTrackModel>> GetMissingTracksByArtistSpotify2Async(string spotifyArtistId, string artistName)
     {
-	    string query = @"WITH MusicLibrary AS (
-						    SELECT 
-						        a.artistid, 
-						        a.name AS artist_name, 
-						        al.albumid, 
-						        al.title AS album_name, 
-						        m.title AS track_name
-						    FROM metadata m
-						    JOIN albums al ON m.albumid = al.albumid
-						    JOIN artists a ON al.artistid = a.artistid
-							join metadata_tag tag on tag.metadataid = m.metadataid
-    											 and ((tag.name in ('ALBUM ARTIST', 'ALBUMARTIST', 'ALBUM_ARTIST', 'artist', 'album_artist', 'AlbumArtist', 'Artists') and tag.value ilike '%' || @artistName || '%')
-    											    or (tag.name in ('ARTISTS', 'ALBUMARTISTS', 'Artists', 'artists', 'album_artists', 'albumartists') and tag.value ilike '%' || @artistName || '%'))
-						),
-						MusicBrainzData AS (
-							select artist.id as artist_id, 
-							        artist.name AS artist_name, 
-							        album.name AS album_name, 
-							        track.name AS track_name
-							from spotify_track track
-							 join spotify_album album on album.albumid = track.albumid
-							 join spotify_track_artist track_artist on track_artist.trackid = track.trackid
-							 join spotify_album_artist album_artist on album_artist.albumid = album.albumid 
-							 join spotify_artist artist on artist.id = track_artist.artistid or 
-														   artist.id = album_artist.artistid
-						    where lower(artist.name) = lower(@artistName)
-						)
-						SELECT distinct mb.artist_name || ' - ' || mb.album_name || ' - ' || mb.track_name
-						FROM MusicBrainzData mb
-						LEFT JOIN MusicLibrary ml 
-						    ON (lower(mb.album_name) = lower(ml.album_name)
-						    and similarity(lower(mb.track_name), lower(ml.track_name)) >= 0.5)
-						    or (similarity(lower(mb.track_name), lower(ml.track_name)) >= 0.5)
-						WHERE ml.track_name IS null ";
+	    string query = @"WITH SpotifyData AS (
+						 	select artist.id as artist_id, 
+						 	       artist.name AS artist_name, 
+						 	       album.name AS album_name, 
+						 	       track.name AS track_name
+						 	from spotify_track track
+						 	 join spotify_album album on album.albumid = track.albumid and album.albumgroup in ('album', 'single') and album.albumtype in ('album', 'single')
+						 	 join spotify_track_artist track_artist on track_artist.trackid = track.trackid
+						 	 join spotify_album_artist album_artist on album_artist.albumid = album.albumid 
+						 	 join spotify_artist artist on artist.id = track_artist.artistid or 
+						 								   artist.id = album_artist.artistid
+						     where artist.id = @spotifyArtistId
+						 ),
+						 MusicLibrary as (
+						 	select distinct 
+						 		m.title as track_name,
+						 		album.title as album_name
+						 	from metadata m
+						 	join albums album on album.albumid = m.albumid
+						 	join artists artist on artist.artistid = album.artistid and lower(artist.name) = lower(@artistName)
+						 )
+ 
+						 select distinct sd.artist_name AS Artist, sd.album_name AS Album, sd.track_name AS Track
+						 FROM SpotifyData sd
+						 left join MusicLibrary ml on similarity(sd.album_name, ml.album_name) >= 0.9 
+						 							and similarity(sd.track_name, ml.track_name) >= 0.9 
+						 where ml.track_name is null";
 
 	    await using var conn = new NpgsqlConnection(_connectionString);
         
 	    return (await conn
-		    .QueryAsync<string>(query, new
+		    .QueryAsync<MissingTrackModel>(query, new
 		    {
+			    spotifyArtistId,
 			    artistName
 		    }, commandTimeout: 60))
 		    .ToList();

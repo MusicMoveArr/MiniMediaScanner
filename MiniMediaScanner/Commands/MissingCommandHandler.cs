@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 using FuzzySharp;
+using MiniMediaScanner.Helpers;
+using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 
@@ -10,54 +12,49 @@ public class MissingCommandHandler
     private readonly ArtistRepository _artistRepository;
     private readonly MetadataRepository _metadataRepository;
     private readonly MissingRepository _missingRepository;
+    private readonly MatchRepository _matchRepository;
 
     public MissingCommandHandler(string connectionString)
     {
         _artistRepository = new ArtistRepository(connectionString);
         _metadataRepository = new MetadataRepository(connectionString);
         _missingRepository = new MissingRepository(connectionString);
+        _matchRepository = new MatchRepository(connectionString);
     }
     
-    public async Task CheckMissingTracksByArtistAsync(string artistName, string provider)
+    public async Task CheckMissingTracksByArtistAsync(string artistName, string provider, string output, List<string>? filterOut)
     {
-        /*var musicBrainzRecords = _missingRepository.GetMusicBrainzRecords(artistName);
-        var metadata = _missingRepository.GetMetadataByArtist(artistName);
-        //var associatedArtists = _missingRepository.GetAssociatedArtists(artistName);
-
-        foreach (var musicBrainzRecord in musicBrainzRecords)
-        {
-            //var targetMetadata = metadata
-            //    .FirstOrDefault(m =>
-            //        string.Equals(m.Title, musicBrainzRecord.TrackTitle, StringComparison.OrdinalIgnoreCase));
-            var targetMetadata = metadata
-                .FirstOrDefault(m =>
-                    Fuzz.Ratio(m.Title.ToLower(), musicBrainzRecord.TrackTitle.ToLower()) > 90);
-
-            if (targetMetadata == null)
-            {
-                Console.WriteLine($"{musicBrainzRecord.ArtistName} - {musicBrainzRecord.AlbumTitle} - {musicBrainzRecord.TrackTitle}");
-            }
-        }*/
-        
-        /*var artistNames = _artistRepository.GetArtistNamesCaseInsensitive(artistName);
-        
-        _metadataRepository.GetMissingTracksByArtist(artistNames)
-            .ToList()
-            .ForEach(track =>
-            {
-                Console.WriteLine(track);
-            });*/
-
         try
         {
-            var missingTracks = provider.ToLower() == "spotify" ? 
-                await _missingRepository.GetMissingTracksByArtistSpotify2Async(artistName) :
-                await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(artistName);
-        
-            missingTracks.ForEach(track =>
+            List<MissingTrackModel> missingTracks = new List<MissingTrackModel>();
+            
+            if (provider.ToLower() == "spotify")
             {
-                Console.WriteLine(track);
-            });
+                var artistIds = await _metadataRepository.GetArtistIdByMetadataAsync(artistName);
+                Guid? artistId = artistIds.FirstOrDefault(track => track.HasValue);
+                if (GuidHelper.GuidHasValue(artistId))
+                {
+                    string? spotifyArtistId = await _matchRepository.GetBestSpotifyMatchAsync(artistId.Value, artistName);
+                    if (!string.IsNullOrWhiteSpace(spotifyArtistId))
+                    {
+                        missingTracks = await _missingRepository.GetMissingTracksByArtistSpotify2Async(spotifyArtistId, artistName);
+                    }
+                }
+            }
+            else
+            {
+                missingTracks = await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(artistName);
+            }
+            
+            missingTracks
+                .Select(track => SmartFormat.Smart.Format(output, track))
+                .Where(track => filterOut?.Count == 0 || !filterOut.Any(filter => track.ToLower().Contains(filter.ToLower())))
+                .Distinct()
+                .ToList()
+                .ForEach(track =>
+                {
+                    Console.WriteLine(track);
+                });
         }
         catch (Exception e)
         {
@@ -66,20 +63,13 @@ public class MissingCommandHandler
         }
     }
     
-    public async Task CheckAllMissingTracksAsync(string provider)
+    public async Task CheckAllMissingTracksAsync(string provider, string output, List<string>? filterOut)
     {
         var filteredNames = await _artistRepository.GetAllArtistNamesAsync();
 
         foreach (string artistName in filteredNames)
         {
-            var missingTracks = provider.ToLower() == "spotify" ? 
-                await _missingRepository.GetMissingTracksByArtistSpotify2Async(artistName) :
-                await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(artistName);
-
-            missingTracks.ForEach(track =>
-            {
-                Console.WriteLine(track);
-            });
+            await CheckMissingTracksByArtistAsync(artistName, provider, output, filterOut);
         }
     }
 }

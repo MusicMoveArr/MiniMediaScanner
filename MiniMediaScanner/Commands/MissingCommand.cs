@@ -26,6 +26,19 @@ public class MissingCommand : ICommand
         EnvironmentVariable = "MISSING_PROVIDER")]
     public string Provider { get; set; } = "musicbrainz";
     
+    
+    [CommandOption("output", 'o', 
+        Description = "Output format, tags available: {Artist} {Album} {Track}.", 
+        IsRequired = false,
+        EnvironmentVariable = "MISSING_OUTPUT")]
+    public string Output { get; set; } = "{Artist} - {Album} - {Track}";
+    
+    [CommandOption("filterout", 'F', 
+        Description = "Filterout names from the output.", 
+        IsRequired = false,
+        EnvironmentVariable = "MISSING_FILTEROUT")]
+    public List<string>? FilterOut { get; set; } = new List<string>();
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
         if (string.IsNullOrWhiteSpace(Provider) ||
@@ -38,11 +51,11 @@ public class MissingCommand : ICommand
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.CheckAllMissingTracksAsync(Provider);
+            await handler.CheckAllMissingTracksAsync(Provider, Output, FilterOut);
         }
         else
         {
-            await handler.CheckMissingTracksByArtistAsync(Artist, Provider);
+            await handler.CheckMissingTracksByArtistAsync(Artist, Provider, Output, FilterOut);
         }
     }
 }
