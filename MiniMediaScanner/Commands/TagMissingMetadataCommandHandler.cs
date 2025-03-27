@@ -135,7 +135,7 @@ public class TagMissingMetadataCommandHandler
                 .ThenByDescending(match => match.TitleMatch)
                 .ThenByDescending(match => match.CountryMatch)
                 .ThenBy(match => match.LengthMatch)
-                .ThenBy(match => match.BarcodeMatch)
+                .ThenByDescending(match => match.BarcodeMatch)
                 .ToList();
 
         var firstMatch = matchedReleases?.FirstOrDefault();
@@ -207,19 +207,8 @@ public class TagMissingMetadataCommandHandler
             }
         }
         
-        if ((!track.Date.HasValue ||
-             track.Date.Value.ToString("yyyy-MM-dd") != release.Date))
-        {
-            UpdateTag(track, "date", release.Date, ref trackInfoUpdated, overwriteTagValue);
-            UpdateTag(track, "originaldate", release.Date, ref trackInfoUpdated, overwriteTagValue);
-        }
-        else if (release.Date.Length == 4 &&
-                 (!track.Date.HasValue ||
-                  track.Date.Value.Year.ToString() != release.Date))
-        {
-            UpdateTag(track, "date", release.Date, ref trackInfoUpdated, overwriteTagValue);
-            UpdateTag(track, "originaldate", release.Date, ref trackInfoUpdated, overwriteTagValue);
-        }
+        UpdateTag(track, "date", release.Date, ref trackInfoUpdated, overwriteTagValue);
+        UpdateTag(track, "originaldate", release.Date, ref trackInfoUpdated, overwriteTagValue);
 
         if (string.IsNullOrWhiteSpace(track.Title))
         {
