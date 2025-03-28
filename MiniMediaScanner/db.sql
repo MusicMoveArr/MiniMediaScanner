@@ -67,17 +67,6 @@ CREATE INDEX idx_metadata_trackid_title_albumid ON public.metadata USING btree (
 CREATE INDEX metadata_musicbrainztrackid_idx ON public.metadata USING btree (musicbrainztrackid, albumid, title);
 CREATE INDEX metadata_title_idx ON public.metadata USING btree (title, albumid);
 
-
-CREATE TABLE public.metadata_tag (
-    metadataid uuid NOT NULL,
-    name text,
-    value text null,
-    CONSTRAINT metadata_tag_key UNIQUE (metadataid, name),
-    CONSTRAINT metadata_tag_pkey PRIMARY KEY (metadataid, name)
-);
-CREATE INDEX metadata_tag_name_idx ON public.metadata_tag USING btree (name);
-CREATE INDEX metadata_tag_lower_name_idx ON public.metadata_tag USING btree (lower(name));
-
 CREATE TABLE public.musicbrainzartist (
     musicbrainzartistid uuid NOT NULL,
     musicbrainzremoteid uuid NULL,

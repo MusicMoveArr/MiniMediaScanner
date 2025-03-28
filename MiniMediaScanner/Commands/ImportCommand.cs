@@ -20,10 +20,16 @@ public class ImportCommand : ICommand
         EnvironmentVariable = "IMPORT_PATH",
         IsRequired = true)]
     public required string Path { get; init; }
+
+    [CommandOption("update-mb", 'M',
+        Description = "Update MusicBrainz.",
+        EnvironmentVariable = "IMPORT_UPDATE_MB",
+        IsRequired = true)]
+    public bool UpdateMb { get; set; } = true;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new ImportCommandHandler(ConnectionString);
-        await handler.ProcessDirectoryAsync(Path);
+        await handler.ProcessDirectoryAsync(Path, UpdateMb);
     }
 }

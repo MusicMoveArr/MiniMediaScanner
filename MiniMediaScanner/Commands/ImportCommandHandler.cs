@@ -12,7 +12,6 @@ public class ImportCommandHandler
     private readonly FileMetaDataService _fileMetaDataService;
     private readonly ArtistRepository _artistRepository;
     private readonly MetadataRepository _metadataRepository;
-    private readonly MetadataTagRepository _metadataTagRepository;
     private readonly AlbumRepository _albumRepository;
     private readonly AsyncLock _asyncLock = new AsyncLock();
 
@@ -33,10 +32,9 @@ public class ImportCommandHandler
         _artistRepository = new ArtistRepository(connectionString);
         _metadataRepository =  new MetadataRepository(connectionString);
         _albumRepository =  new AlbumRepository(connectionString);
-        _metadataTagRepository = new MetadataTagRepository(connectionString);
     }
     
-    public async Task ProcessDirectoryAsync(string directoryPath)
+    public async Task ProcessDirectoryAsync(string directoryPath, bool updateMb)
     {
         try
         {
@@ -60,7 +58,8 @@ public class ImportCommandHandler
             })
             .StartAsync(async ctx =>
             {
-                await ParallelHelper.ForEachAsync(sortedTopDirectories, 8, async dir =>
+                int threads = updateMb ? 1 : 8;
+                await ParallelHelper.ForEachAsync(sortedTopDirectories, threads, async dir =>
                 {
                     var task = ctx.AddTask(Markup.Escape($"Importing {dir}"));
 
@@ -72,7 +71,7 @@ public class ImportCommandHandler
                     
                     foreach (var file in allFilePaths)
                     {
-                        await ProcessFileAsync(file);
+                        await ProcessFileAsync(file, updateMb);
                         task.Value++;
                     }
                 });
@@ -84,7 +83,7 @@ public class ImportCommandHandler
         }
     }
 
-    public async Task<bool> ProcessFileAsync(string filePath, bool forceReimport = false)
+    public async Task<bool> ProcessFileAsync(string filePath, bool forceReimport = false, bool updateMb = false)
     {
         var metadata = default(MetadataInfo);
 
@@ -122,9 +121,8 @@ public class ImportCommandHandler
             
             await ProcessMetadataAsync(metadata);
                 
-            if (!string.IsNullOrWhiteSpace(metadata?.MusicBrainzArtistId) &&
-                !string.IsNullOrWhiteSpace(metadata?.Album) &&
-                !string.IsNullOrWhiteSpace(metadata?.Artist))
+            if (updateMb &&
+                !string.IsNullOrWhiteSpace(metadata?.MusicBrainzArtistId))
             {
                 using (await _asyncLock.LockAsync())
                 {
@@ -150,6 +148,5 @@ public class ImportCommandHandler
 
         // 3. Insert/Update Metadata
         await _metadataRepository.InsertOrUpdateMetadataAsync(metadata, albumId);
-        await _metadataTagRepository.InsertOrUpdateMetadataTagAsync(metadata);
     }
 }

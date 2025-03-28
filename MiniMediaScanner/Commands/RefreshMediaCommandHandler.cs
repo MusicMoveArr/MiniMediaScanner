@@ -9,14 +9,12 @@ public class RefreshMetadataCommandHandler
     private readonly MetadataRepository _metadataRepository;
     private readonly ImportCommandHandler _importCommandHandler;
     private readonly ArtistRepository _artistRepository;
-    private readonly MetadataTagRepository _metadataTagRepository;
 
     public RefreshMetadataCommandHandler(string connectionString)
     {
         _metadataRepository = new MetadataRepository(connectionString);
         _importCommandHandler = new ImportCommandHandler(connectionString);
         _artistRepository = new ArtistRepository(connectionString);
-        _metadataTagRepository =  new MetadataTagRepository(connectionString);
     }
 
     public async Task RefreshMetadataAsync(string album)
