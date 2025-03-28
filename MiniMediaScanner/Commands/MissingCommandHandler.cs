@@ -26,7 +26,7 @@ public class MissingCommandHandler
     {
         try
         {
-            List<MissingTrackModel> missingTracks = new List<MissingTrackModel>();
+            List<MissingTrackModel> tempMissingTracks = new List<MissingTrackModel>();
             
             if (provider.ToLower() == "spotify")
             {
@@ -37,13 +37,23 @@ public class MissingCommandHandler
                     string? spotifyArtistId = await _matchRepository.GetBestSpotifyMatchAsync(artistId.Value, artistName);
                     if (!string.IsNullOrWhiteSpace(spotifyArtistId))
                     {
-                        missingTracks = await _missingRepository.GetMissingTracksByArtistSpotify2Async(spotifyArtistId, artistName);
+                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistSpotify2Async(spotifyArtistId, artistName);
                     }
                 }
             }
             else
             {
-                missingTracks = await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(artistName);
+                tempMissingTracks = await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(artistName);
+            }
+
+            //re-check with Associated Artists
+            List<MissingTrackModel> missingTracks = new List<MissingTrackModel>();
+            foreach (var track in tempMissingTracks)
+            {
+                if (!await _missingRepository.TrackExistsAtAssociatedArtist(track.Artist, track.Album, track.Track))
+                {
+                    missingTracks.Add(track);
+                }
             }
             
             missingTracks

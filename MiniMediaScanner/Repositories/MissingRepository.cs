@@ -232,4 +232,29 @@ public class MissingRepository
 		    }, commandTimeout: 60))
 		    .ToList();
     }
+
+    public async Task<bool> TrackExistsAtAssociatedArtist(string artistName, string albumName, string trackName)
+    {
+	    string query = @"SELECT 1
+						 FROM metadata m
+						 JOIN albums al ON m.albumid = al.albumid
+						 JOIN artists a ON al.artistid = a.artistid
+						 JOIN LATERAL (
+						     SELECT jsonb_object_keys(m.tag_alljsontags) AS key
+						 ) subquery ON LOWER(subquery.key) LIKE '%artists%'
+						 WHERE LOWER(al.title) = lower(@albumName)
+						 AND LOWER(m.title) =  lower(@trackName)
+						 AND LOWER(m.tag_alljsontags->>subquery.key) ILIKE '%' || lower(@artistName) || '%'
+						 LIMIT 1";
+	    
+	    await using var conn = new NpgsqlConnection(_connectionString);
+
+	    return await conn
+		    .ExecuteScalarAsync<bool>(query, new
+		    {
+			    artistName,
+			    albumName,
+			    trackName
+		    }, commandTimeout: 60);
+    }
 }
