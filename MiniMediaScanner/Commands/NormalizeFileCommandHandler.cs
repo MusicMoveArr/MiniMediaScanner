@@ -33,8 +33,6 @@ public class NormalizeFileCommandHandler
         _artistRepository = new ArtistRepository(connectionString);
     }
     
-    
-
     public async Task NormalizeFilesAsync(string album,
         bool normalizeArtistName,
         bool normalizeAlbumName,
@@ -146,7 +144,7 @@ public class NormalizeFileCommandHandler
         DirectoryInfo? musicRootDirectory = GetMusicRootFolder(fileInfo, file.ArtistName, subDirectoryDepth);
         if(musicRootDirectory == null)
         {
-            Console.WriteLine($"Depth is too low, directory does not exist for '{fileInfo.Directory?.FullName}'");
+            Console.WriteLine($"Unable to determine the music root folder '{fileInfo.Directory?.FullName}'");
             return false;
         }
 
@@ -314,7 +312,7 @@ public class NormalizeFileCommandHandler
 
     private DirectoryInfo? GetMusicRootFolder(FileInfo fileInfo, string artistName, int subDirectoryDepth)
     {
-        DirectoryInfo subDirectory = fileInfo.Directory!;
+        DirectoryInfo? subDirectory = fileInfo.Directory!;
 
         if (subDirectoryDepth > 0)
         {
@@ -328,11 +326,21 @@ public class NormalizeFileCommandHandler
             }
             return subDirectory;
         }
+        
+        //for albums that have the exact same name as the artist name
+        while (subDirectory != null && string.Equals(subDirectory.Name, artistName, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!string.Equals(subDirectory?.Parent?.Name, artistName, StringComparison.OrdinalIgnoreCase))
+            {
+                break;
+            }
+            subDirectory = subDirectory?.Parent;
+        }
 
         while (subDirectory != null && !string.Equals(subDirectory.Name, artistName, StringComparison.OrdinalIgnoreCase))
         {
-            subDirectory = subDirectory.Parent;
+            subDirectory = subDirectory?.Parent;
         }
-        return subDirectory.Parent;
+        return subDirectory?.Parent;
     }
 }
