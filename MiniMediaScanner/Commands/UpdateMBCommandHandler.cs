@@ -43,12 +43,12 @@ public class UpdateMBCommandHandler
                     {
                         if (callback.Status == UpdateMBStatus.Updating)
                         {
-                            AnsiConsole.WriteLine($"Importing Album '{callback.CurrentAlbum?.Title}', Artist '{callback.Artist?.Name}'");
-                            ctx.Status($"Updating Music Brainz Artist '{callback.Artist?.Name}' Albums {callback.Progress} of {callback.Albums?.Count}");
+                            AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.CurrentAlbum?.Title}', Artist '{callback.Artist?.Name}'"));
+                            ctx.Status(Markup.Escape($"Updating Music Brainz Artist '{callback.Artist?.Name}' Albums {callback.Progress} of {callback.Albums?.Count}"));
                         }
                         else if(callback.Status == UpdateMBStatus.SkippedSyncedWithin)
                         {
-                            AnsiConsole.WriteLine($"Skipped synchronizing for MusicBrainz ArtistId '{callback?.ArtistId}' synced already within 7days");
+                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for MusicBrainz ArtistId '{callback?.ArtistId}' synced already within 7days"));
                         }
                     });
                 }
@@ -69,12 +69,12 @@ public class UpdateMBCommandHandler
                     {
                         if (callback.Status == UpdateMBStatus.Updating)
                         {
-                            AnsiConsole.WriteLine($"Importing Album '{callback.CurrentAlbum?.Title}', Artist '{callback.Artist?.Name}'");
-                            ctx.Status($"Updating MusicBrainz Artist '{callback.Artist?.Name}' Albums {callback.Progress} of {callback.Albums?.Count}");
+                            AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.CurrentAlbum?.Title}', Artist '{callback.Artist?.Name}'"));
+                            ctx.Status(Markup.Escape($"Updating MusicBrainz Artist '{callback.Artist?.Name}' Albums {callback.Progress} of {callback.Albums?.Count}"));
                         }
                         else if(callback.Status == UpdateMBStatus.SkippedSyncedWithin)
                         {
-                            AnsiConsole.WriteLine($"Skipped synchronizing for MusicBrainz ArtistId '{callback?.ArtistId}' synced already within 7days");
+                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for MusicBrainz ArtistId '{callback?.ArtistId}' synced already within 7days"));
                         }
                     });
                 }
