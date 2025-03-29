@@ -35,7 +35,7 @@ public class UpdateMBCommandHandler
 
         await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
-            .StartAsync($"Updating Music Brainz Artist '{artistName}'", async ctx =>
+            .StartAsync(Markup.Escape($"Updating Music Brainz Artist '{artistName}'"), async ctx =>
             {
                 foreach (var artistId in artistIds)
                 {
@@ -61,7 +61,7 @@ public class UpdateMBCommandHandler
         
         await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
-            .StartAsync($"Updating all Music Brainz Artist...", async ctx =>
+            .StartAsync(Markup.Escape($"Updating all Music Brainz Artist..."), async ctx =>
             {
                 foreach (var artistId in artistIds)
                 {

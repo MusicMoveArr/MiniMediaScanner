@@ -28,7 +28,7 @@ public class UpdateSpotifyCommandHandler
         {
             await AnsiConsole.Status()
                 .Spinner(Spinner.Known.Dots)
-                .StartAsync($"Importing '{artist}'", async ctx => 
+                .StartAsync(Markup.Escape($"Importing '{artist}'"), async ctx => 
                 {
                     await _spotifyService.UpdateArtistByNameAsync(artist, callback =>
                     {
