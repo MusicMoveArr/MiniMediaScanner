@@ -243,7 +243,7 @@ public class MissingRepository
 						     SELECT jsonb_object_keys(m.tag_alljsontags) AS key
 						 ) subquery ON LOWER(subquery.key) LIKE '%artists%'
 						 WHERE LOWER(al.title) = lower(@albumName)
-						 AND LOWER(m.title) =  lower(@trackName)
+						 AND similarity(LOWER(m.title), lower(@trackName)) >= 0.9 
 						 AND LOWER(m.tag_alljsontags->>subquery.key) ILIKE '%' || lower(@artistName) || '%'
 						 LIMIT 1";
 	    
