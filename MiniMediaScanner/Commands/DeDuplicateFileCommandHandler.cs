@@ -1,5 +1,6 @@
 using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
+using FuzzySharp;
 using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
@@ -18,13 +19,13 @@ public class DeDuplicateFileCommandHandler
         _metadataRepository = new MetadataRepository(connectionString);
     }
 
-    public async Task CheckDuplicateFilesAsync(bool delete)
+    public async Task CheckDuplicateFilesAsync(bool delete, int accuracy)
     {
         await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
             try
             {
-                await CheckDuplicateFilesAsync(artist, delete);
+                await CheckDuplicateFilesAsync(artist, delete, accuracy);
             }
             catch (Exception e)
             {
@@ -33,14 +34,14 @@ public class DeDuplicateFileCommandHandler
         });
     }
     
-    public async Task CheckDuplicateFilesAsync(string artistName, bool delete)
+    public async Task CheckDuplicateFilesAsync(string artistName, bool delete, int accuracy)
     {
         Console.WriteLine($"Checking artist '{artistName}'");
         try
         {
-            await FindDuplicateAlbumFileNamesAsync(artistName, delete);
             await FindDuplicateFileExtensionsAsync(artistName, delete);
             await FindDuplicateFileVersionsAsync(artistName, delete);
+            await FindDuplicateAlbumFileNamesAsync(artistName, delete, accuracy);
         }
         catch (Exception e)
         {
@@ -48,46 +49,80 @@ public class DeDuplicateFileCommandHandler
         }
     }
 
-    private async Task FindDuplicateAlbumFileNamesAsync(string artistName, bool delete)
+    private async Task FindDuplicateAlbumFileNamesAsync(string artistName, bool delete, int accuracy)
     {
-        var duplicateFiles = (await _metadataRepository.GetDuplicateAlbumFileNamesAsync(artistName))
-            .GroupBy(group => new { group.AlbumId, group.FileName });
-
-        foreach (var duplicateFileVersions in duplicateFiles)
-        {
-            var recordToKeep = duplicateFileVersions
-                .FirstOrDefault(path => new FileInfo(path.Path).Exists);
-
-            if (recordToKeep == null)
-            {
-                continue;
-            }
-
-            var toRemove = duplicateFileVersions
-                .Where(file => !string.Equals(recordToKeep.Path, file.Path))
-                .Where(file => new FileInfo(file.Path).Exists)
-                .ToList();
-
-            if (toRemove.Count == 0)
-            {
-                continue;
-            }
-
-            Console.WriteLine($"Keeping file {recordToKeep.Path}");
-            foreach (var file in toRemove)
-            {
-                if (delete)
+        var duplicateFiles = (await _metadataRepository.GetDuplicateAlbumFileNamesAsync(artistName, accuracy))
+            .GroupBy(group =>
+                new
                 {
-                    Console.WriteLine($"Delete duplicate file {file.Path}");
-                    new FileInfo(file.Path).Delete();
-                    await _metadataRepository.DeleteMetadataRecordsAsync(new List<string>(new string[] { file.MetadataId.ToString() }));
+                    group.AlbumId
+                });
+        
+        foreach (var albumDuplicates in duplicateFiles)
+        {
+            var fileGroups = new List<List<DuplicateAlbumFileNameModel>>();
+            foreach (var file in albumDuplicates)
+            {
+                var matchingGroup = fileGroups
+                    .FirstOrDefault(group => group.Any(n => Fuzz.Ratio(file.FileName, n.FileName) >= accuracy));
+
+                if (matchingGroup != null)
+                {
+                    matchingGroup.Add(file); // Add to the found group
                 }
                 else
                 {
-                    Console.WriteLine($"Duplicate file {file.Path}");
+                    fileGroups.Add(new List<DuplicateAlbumFileNameModel> { file }); // Create a new group
                 }
             }
-            Console.WriteLine($"");
+
+            foreach (var duplicateFileVersions in fileGroups)
+            {
+                DuplicateAlbumFileNameModel recordToKeep = null;
+
+                foreach (string extension in ImportCommandHandler.MediaFileExtensions)
+                {
+                    var record = duplicateFileVersions
+                        .FirstOrDefault(path => new FileInfo($"{path.Path.Substring(0, path.Path.LastIndexOf('.'))}.{extension}").Exists);
+
+                    if (record != null)
+                    {
+                        recordToKeep = record;
+                        break;
+                    }
+                }
+                
+                if (recordToKeep == null)
+                {
+                    continue;
+                }
+
+                var toRemove = duplicateFileVersions
+                    .Where(file => !string.Equals(recordToKeep.Path, file.Path))
+                    .Where(file => new FileInfo(file.Path).Exists)
+                    .ToList();
+
+                if (toRemove.Count == 0)
+                {
+                    continue;
+                }
+
+                Console.WriteLine($"Keeping file {recordToKeep.Path}");
+                foreach (var file in toRemove)
+                {
+                    if (delete)
+                    {
+                        Console.WriteLine($"Delete duplicate file {file.Path}");
+                        new FileInfo(file.Path).Delete();
+                        await _metadataRepository.DeleteMetadataRecordsAsync(new List<string>(new string[] { file.MetadataId.ToString() }));
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Duplicate file {file.Path}");
+                    }
+                }
+                Console.WriteLine();
+            }
         }
     }
     

@@ -151,25 +151,39 @@ public class MetadataRepository
                 })
             .ToList();
     }
-    public async Task<List<DuplicateAlbumFileNameModel>> GetDuplicateAlbumFileNamesAsync(string artistName)
+    public async Task<List<DuplicateAlbumFileNameModel>> GetDuplicateAlbumFileNamesAsync(string artistName, int accuracy)
     {
-        string query = @"WITH duplicates AS (
-                             SELECT 
-                                 m.MetadataId,
-                                 m.Path,
-                                 m.Title,
-                                 album.AlbumId,
-                                 REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g') AS FileName,
-                                 COUNT(*) OVER (PARTITION BY album.albumId, REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g')) AS duplicate_count
-                             FROM artists artist
-                             JOIN albums album ON album.artistid = artist.artistid
-                             JOIN metadata m ON m.albumid = album.albumid
-                             WHERE LOWER(artist.name) = LOWER(@artistName)
-                         )
-                         SELECT MetadataId, Path, Title, AlbumId, FileName, duplicate_count
-                         FROM duplicates
-                         WHERE duplicate_count > 1
-                         ORDER BY albumId, FileName, Path";
+        string query = @$"WITH filenames AS (
+                        SELECT 
+                            m.MetadataId,
+                            m.Path,
+                            m.Title,
+                            album.AlbumId,
+                            REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g') AS FileName
+                        FROM artists artist
+                        JOIN albums album ON album.artistid = artist.artistid
+                        JOIN metadata m ON m.albumid = album.albumid
+                        WHERE LOWER(artist.name) = LOWER(@artistName)
+                    ),
+                    similar_groups AS (
+                        SELECT 
+                            f1.MetadataId,
+                            f1.Path,
+                            f1.Title,
+                            f1.AlbumId,
+                            f1.FileName,
+                            COUNT(*) AS duplicate_count
+                        FROM filenames f1
+                        JOIN filenames f2 
+                            ON f1.AlbumId = f2.AlbumId
+                           AND f1.MetadataId != f2.MetadataId
+                           AND similarity(f1.FileName, f2.FileName) >= 0.{accuracy}
+                        GROUP BY f1.MetadataId, f1.Path, f1.Title, f1.AlbumId, f1.FileName
+                    )
+                    SELECT *
+                    FROM similar_groups
+                    WHERE duplicate_count > 0
+                    ORDER BY AlbumId, FileName, Path";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         

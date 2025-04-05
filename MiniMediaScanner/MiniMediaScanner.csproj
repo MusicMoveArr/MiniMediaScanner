@@ -23,13 +23,17 @@
       <PackageReference Include="Spectre.Console" Version="0.49.1" />
       <PackageReference Include="SpotifyAPI.Web.Auth" Version="7.2.1" />
       <PackageReference Include="TagLibSharp" Version="2.3.0" />
-      <PackageReference Include="z440.atl.core" Version="6.19.0" />
+      <PackageReference Include="z440.atl.core" Version="6.20.0" />
     </ItemGroup>
 
     <ItemGroup>
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\atldotnet\ATL\ATL.csproj" />
     </ItemGroup>
 
 </Project>
