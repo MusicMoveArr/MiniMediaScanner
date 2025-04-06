@@ -231,6 +231,7 @@ public class DeDuplicateFileCommandHandler
             {
                 Console.WriteLine($"Delete duplicate file {possibleDuplicateFile.Path}");
                 duplicatefileInfo.Delete();
+                await _metadataRepository.DeleteMetadataRecordsAsync(new List<string>(new string[] { possibleDuplicateFile.MetadataId.ToString() }));
             }
             else
             {
