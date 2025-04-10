@@ -40,6 +40,7 @@ public class ImportCommandHandler
         {
             var sortedTopDirectories = Directory
                 .EnumerateFileSystemEntries(directoryPath, "*.*", SearchOption.TopDirectoryOnly)
+                .Where(dir => !new DirectoryInfo(dir).Name.StartsWith("."))
                 .OrderBy(dir => dir)
                 .ToList();
 
@@ -65,9 +66,10 @@ public class ImportCommandHandler
 
                     var allFilePaths = Directory
                         .EnumerateFileSystemEntries(dir, "*.*", SearchOption.AllDirectories)
+                        .Where(file => !new DirectoryInfo(file).Name.StartsWith("."))
                         .ToList();
 
-                    task.MaxValue = allFilePaths.Count ;
+                    task.MaxValue = allFilePaths.Count;
                     
                     foreach (var file in allFilePaths)
                     {
