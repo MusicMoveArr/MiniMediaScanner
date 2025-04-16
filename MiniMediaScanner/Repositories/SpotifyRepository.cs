@@ -368,8 +368,8 @@ public class SpotifyRepository
                          join spotify_artist artist on artist.id = track_artist.artistid or 
 						 	                           artist.id = album_artist.artistid
                          where artist.id = @artistId
-	                         and (length(@albumName) = 0 OR lower(album.name) = lower(@albumName))
-	                         and (length(@trackName) = 0 OR lower(track.name) = lower(@trackName))";
+	                         and (length(@albumName) = 0 OR similarity(lower(album.name), lower(@albumName)) >= 0.8)
+	                         and (length(@trackName) = 0 OR similarity(lower(track.name), lower(@trackName)) >= 0.8)";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         
