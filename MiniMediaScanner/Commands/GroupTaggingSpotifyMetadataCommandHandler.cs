@@ -112,15 +112,12 @@ public class GroupTaggingSpotifyMetadataCommandHandler
                 .Select(match => match.SpotifyTrack)
                 .FirstOrDefault();
 
-            bool fixIncorrectAlbumTag = false;
-
             if (foundTrack == null)
             {
                 missingTracks.Add(metadata);
                 
                 //handle incorrectly tagged albums
                 foundTrack = await GetSecondBestTrackMatchAsync(allSpotifyTracks, track.Title);
-                fixIncorrectAlbumTag = overwriteAlbumTag;
 
                 if (foundTrack == null)
                 {
@@ -131,7 +128,7 @@ public class GroupTaggingSpotifyMetadataCommandHandler
 
             try
             {
-                await ProcessFileAsync(track, metadata, foundTrack, overwriteTagValue, confirm, fixIncorrectAlbumTag);
+                await ProcessFileAsync(track, metadata, foundTrack, overwriteTagValue, confirm, overwriteAlbumTag);
             }
             catch (Exception e)
             {
@@ -149,7 +146,7 @@ public class GroupTaggingSpotifyMetadataCommandHandler
                 SpotifyTrack = spotifyTrack,
                 MatchedFor = Fuzz.Ratio(trackTitle, spotifyTrack.TrackName)
             })
-            .Where(match => match.MatchedFor >= 90)
+            .Where(match => match.MatchedFor >= 80)
             .OrderByDescending(match => match.MatchedFor)
             .Select(match => match.SpotifyTrack)
             .ToList();
@@ -175,7 +172,7 @@ public class GroupTaggingSpotifyMetadataCommandHandler
         var externalTrackInfo = await _spotifyRepository.GetTrackExternalValuesAsync(spotifyTrack.TrackId);
         var trackArtists = await _spotifyRepository.GetTrackArtistsAsync(spotifyTrack.TrackId);
 
-        if (string.IsNullOrWhiteSpace(track.Title))
+        if (string.IsNullOrWhiteSpace(track.Title) || overwriteTagValue)
         {
             UpdateTag(track, "Title", spotifyTrack.TrackName, ref trackInfoUpdated, overwriteTagValue);
         }
