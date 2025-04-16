@@ -125,15 +125,20 @@ public class MusicBrainzService
             
                 foreach (var release in releases.Releases)
                 {
+                    updateMbCallback.CurrentAlbum = release;
+                    updateMbCallback.Progress++;
+                    callback?.Invoke(updateMbCallback);
+                    
                     if (!Guid.TryParse(release.Id, out var releaseId) ||
                         string.IsNullOrWhiteSpace(release.Title))
                     {
                         continue;
                     }
 
-                    updateMbCallback.CurrentAlbum = release;
-                    updateMbCallback.Progress++;
-                    callback?.Invoke(updateMbCallback);
+                    if (await _musicBrainzReleaseRepository.MusicBrainzReleaseIdExistsAsync(releaseId))
+                    {
+                        continue;
+                    }
                     
                     var releaseRecordings = await _musicBrainzApiService.GetReleasesWithRecordingsForArtistAsync(releaseId, BulkRequestLimit, 0);
                     

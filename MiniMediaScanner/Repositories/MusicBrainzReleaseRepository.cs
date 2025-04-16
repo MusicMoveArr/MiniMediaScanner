@@ -10,6 +10,8 @@ public class MusicBrainzReleaseRepository
     {
         _connectionString = connectionString;
     }
+    
+    
 
     public async Task<Guid> InsertMusicBrainzReleaseAsync(Guid musicBrainzArtistId, 
         Guid musicBrainzRemoteReleaseId, 
@@ -89,5 +91,22 @@ public class MusicBrainzReleaseRepository
                 Disambiguation = disambiguation,
                 Quality = quality
             });
+    }
+    
+    public async Task<bool> MusicBrainzReleaseIdExistsAsync(Guid releaseId)
+    {
+        string query = @"SELECT 1
+                         FROM musicbrainzrelease album
+                         where album.musicbrainzremotereleaseid = @releaseId
+                         limit 1";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn
+            .ExecuteScalarAsync<int?>(query,
+                param: new
+                {
+                    releaseId
+                })) == 1;
     }
 }
