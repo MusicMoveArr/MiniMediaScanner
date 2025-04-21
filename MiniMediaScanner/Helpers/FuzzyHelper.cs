@@ -4,7 +4,7 @@ namespace MiniMediaScanner.Helpers;
 
 public class FuzzyHelper
 {
-    public static bool ExactNumberMatch(string value1, string value2)
+    public static bool ExactNumberMatch(string? value1, string? value2)
     {
         if (string.IsNullOrWhiteSpace(value1) || 
             string.IsNullOrWhiteSpace(value2))

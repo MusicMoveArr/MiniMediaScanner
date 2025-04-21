@@ -78,6 +78,11 @@ public class TagMissingTidalMetadataCommandHandler
         
         var tidalTracks = await _tidalRepository.GetTrackByArtistIdAsync(tidalArtistId.Value, metadata.Album, metadata.Title);
 
+        tidalTracks = tidalTracks
+            .Where(track => FuzzyHelper.ExactNumberMatch(metadata.Title, track.TrackName))
+            .Where(track => FuzzyHelper.ExactNumberMatch(metadata.Album, track.AlbumName))
+            .ToList();
+        
         if (tidalTracks.Count == 0)
         {
             Console.WriteLine($"Nothing found for '{metadata.Album}', '{metadata.Title}'");

@@ -1,6 +1,7 @@
 using System.Xml.Schema;
 using ATL;
 using FuzzySharp;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Models.MusicBrainz;
 using MiniMediaScanner.Repositories;
@@ -101,7 +102,8 @@ public class GroupTaggingMBMetadataCommandHandler
             MusicBrainzReleaseMediaTrackModel? foundTrack = releaseCountry
                 ?.Media?.First()
                 ?.Tracks
-                ?.FirstOrDefault(t => Fuzz.Ratio(t.Title, track.Title) >= 90);
+                ?.Where(t => Fuzz.Ratio(t.Title, track.Title) >= 90)
+                ?.FirstOrDefault(t => FuzzyHelper.ExactNumberMatch(t.Title, track.Title));
 
             if (foundTrack == null)
             {
@@ -148,6 +150,7 @@ public class GroupTaggingMBMetadataCommandHandler
                         MatchedFor = Fuzz.Ratio(track.Title, t.Title)
                     })
                     .Where(t => t.MatchedFor >= 90)
+                    .Where(match => FuzzyHelper.ExactNumberMatch(track.Title, match.TrackTitle))
                     .OrderByDescending(t => t.MatchedFor)
                     .FirstOrDefault()
             }).ToList();
