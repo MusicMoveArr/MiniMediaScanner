@@ -244,3 +244,127 @@ CREATE INDEX idx_spotify_track_externalid_trackid ON public.spotify_track_extern
 
 
 CREATE INDEX idx_spotify_artist_name_lower ON public.spotify_artist (LOWER(name));
+
+CREATE TABLE public.tidal_artist (
+    ArtistId int NOT NULL,
+    Name text NOT NULL,
+    Popularity float8 NOT NULL,
+    lastsynctime timestamp DEFAULT current_timestamp,
+    CONSTRAINT tidal_artist_pkey PRIMARY KEY (ArtistId)
+);
+CREATE INDEX idx_tidal_artist_name_lower ON public.tidal_artist (LOWER(name));
+
+CREATE TABLE public.tidal_artist_image_link (
+    ArtistId int NOT NULL,
+    href text NOT NULL,
+    meta_width int NOT NULL,
+    meta_height int NOT NULL,
+    CONSTRAINT tidal_artist_image_link_pkey PRIMARY KEY (ArtistId, meta_width, meta_height)
+);
+CREATE INDEX idx_tidal_artist_image_link_artistid ON public.tidal_artist_image_link (ArtistId);
+
+CREATE TABLE public.tidal_artist_external_link (
+    ArtistId int NOT NULL,
+    href text NOT NULL,
+    meta_type text NOT NULL,
+    CONSTRAINT tidal_artist_external_link_pkey PRIMARY KEY (ArtistId, href, meta_type)
+);
+CREATE INDEX idx_tidal_artist_external_link_trackid ON public.tidal_artist_external_link (ArtistId);
+
+
+CREATE TABLE public.tidal_album (
+    AlbumId int NOT NULL,
+    ArtistId int NOT NULL,
+    Title text NOT NULL,
+    BarcodeId text NOT NULL,
+    NumberOfVolumes int NOT NULL,
+    NumberOfItems int NOT NULL,
+    Duration text NOT NULL,
+    Explicit bool NOT NULL,
+    ReleaseDate text NOT NULL,
+    Copyright text NOT NULL,
+    Popularity float8 NOT NULL,
+    Availability text NOT NULL,
+    MediaTags text NOT NULL,
+    
+    CONSTRAINT tidal_album_pkey PRIMARY KEY (AlbumId, ArtistId)
+);
+CREATE INDEX idx_tidal_album_id ON public.tidal_album (AlbumId);
+
+
+CREATE TABLE public.tidal_album_image_link (
+    AlbumId int NOT NULL,
+    href text NOT NULL,
+    meta_width int NOT NULL,
+    meta_height int NOT NULL,
+    CONSTRAINT tidal_album_image_link_pkey PRIMARY KEY (AlbumId, meta_width, meta_height)
+);
+CREATE INDEX idx_tidal_album_image_link_ablumid ON public.tidal_album_image_link (AlbumId);
+
+CREATE TABLE public.tidal_album_external_link (
+    AlbumId int NOT NULL,
+    href text NOT NULL,
+    meta_type text NOT NULL,
+    CONSTRAINT tidal_album_external_link_pkey PRIMARY KEY (AlbumId, href, meta_type)
+);
+CREATE INDEX idx_tidal_album_external_link_AlbumId ON public.tidal_album_external_link (AlbumId);
+
+
+CREATE TABLE public.tidal_track (
+    TrackId int NOT NULL,
+    AlbumId int NOT NULL,
+    Title text NOT NULL,
+    ISRC text NOT NULL,
+    Duration text NOT NULL,
+    Copyright text NOT NULL,
+    Explicit bool NOT NULL,
+    Popularity float8 NOT NULL,
+    Availability text NOT NULL,
+    MediaTags text NOT NULL,
+    VolumeNumber int NOT NULL,
+    TrackNumber int NOT NULL,
+    CONSTRAINT tidal_track_pkey PRIMARY KEY (TrackId, AlbumId)
+);
+CREATE INDEX idx_tidal_track_AlbumId ON public.tidal_track (AlbumId);
+
+CREATE TABLE public.tidal_track_external_link (
+    TrackId int NOT NULL,
+    href text NOT NULL,
+    meta_type text NOT NULL,
+    CONSTRAINT tidal_track_external_link_pkey PRIMARY KEY (TrackId, href, meta_type)
+);
+CREATE INDEX idx_tidal_track_external_link_trackid ON public.tidal_track_external_link (TrackId);
+
+
+CREATE TABLE public.tidal_track_image_link (
+    TrackId int NOT NULL,
+    href text NOT NULL,
+    meta_width int NOT NULL,
+    meta_height int NOT NULL,
+    CONSTRAINT tidal_track_image_link_pkey PRIMARY KEY (TrackId, meta_width, meta_height)
+);
+CREATE INDEX idx_tidal_track_image_link_trackid ON public.tidal_track_image_link (TrackId);
+
+
+CREATE TABLE public.tidal_provider (
+    ProviderId int NOT NULL,
+    name text NOT NULL,
+    CONSTRAINT tidal_provider_pkey PRIMARY KEY (ProviderId)
+);
+
+CREATE TABLE public.tidal_track_artist (
+    TrackId int NOT NULL,
+    ArtistId int NOT NULL,
+    CONSTRAINT tidal_track_artist_pkey PRIMARY KEY (TrackId, ArtistId)
+);
+CREATE INDEX idx_tidal_track_artist_trackid ON public.tidal_track_artist (TrackId);
+CREATE INDEX idx_tidal_track_artist_artistid ON public.tidal_track_artist (ArtistId);
+
+
+CREATE TABLE public.tidal_track_provider (
+    TrackId int NOT NULL,
+    ProviderId int NOT NULL,
+    CONSTRAINT tidal_track_provider_pkey PRIMARY KEY (TrackId, ProviderId)
+);
+CREATE INDEX idx_tidal_track_provider_trackid ON public.tidal_track_provider (TrackId);
+
