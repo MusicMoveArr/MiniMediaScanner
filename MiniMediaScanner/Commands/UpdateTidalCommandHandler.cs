@@ -29,8 +29,11 @@ public class UpdateTidalCommandHandler
                 {
                     if (callback.Status == UpdateTidalStatus.Updating)
                     {
-                        AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
-                        ctx.Status(Markup.Escape($"Updating Tidal Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}"));
+                        if (string.IsNullOrWhiteSpace(callback.ExtraInfo))
+                        {
+                            AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
+                        }
+                        ctx.Status(Markup.Escape($"Updating Tidal Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}{callback.ExtraInfo}"));
                     }
                     else if(callback.Status == UpdateTidalStatus.SkippedSyncedWithin)
                     {
@@ -54,8 +57,12 @@ public class UpdateTidalCommandHandler
                     {
                         if (callback.Status == UpdateTidalStatus.Updating)
                         {
-                            AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
-                            ctx.Status(Markup.Escape($"Updating Tidal Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}"));
+                            if (string.IsNullOrWhiteSpace(callback.ExtraInfo))
+                            {
+                                AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
+                            }
+                            
+                            ctx.Status(Markup.Escape($"Updating Tidal Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}{callback.ExtraInfo}"));
                         }
                         else if(callback.Status == UpdateTidalStatus.SkippedSyncedWithin)
                         {

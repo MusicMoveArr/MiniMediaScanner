@@ -12,6 +12,7 @@ public class UpdateTidalCallback
     public int AlbumCount { get; set; }
     public UpdateTidalStatus Status { get; set; }
     public int Progress { get; set; }
+    public string ExtraInfo { get; set; }
 
     public UpdateTidalCallback(
         int artistId,
@@ -19,7 +20,8 @@ public class UpdateTidalCallback
         string albumName,
         int albumCount,
         UpdateTidalStatus status,
-        int progress)
+        int progress,
+        string extraInfo = "")
     {
         this.ArtistId = artistId;
         this.ArtistName = artistName;
@@ -27,6 +29,17 @@ public class UpdateTidalCallback
         this.AlbumCount = albumCount;
         this.Status = status;
         this.Progress = progress;
+
+        if (progress > albumCount)
+        {
+            
+        }
+
+        if (extraInfo?.Length > 0)
+        {
+            extraInfo = ", " + extraInfo;
+        }
+        this.ExtraInfo = extraInfo;
     }
     
     public UpdateTidalCallback(
