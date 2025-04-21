@@ -1,4 +1,5 @@
 using Dapper;
+using MiniMediaScanner.Models.Tidal;
 using Npgsql;
 
 namespace MiniMediaScanner.Repositories;
@@ -382,5 +383,69 @@ public class TidalRepository
             trackId,
             providerId
         });
+    }
+    
+    public async Task<List<TidalTrackModel>> GetTrackByArtistIdAsync(int artistId, string albumName, string trackName)
+    {
+        string query = @"select
+                             track.title As TrackName,
+                             track.TrackId,
+                             track.AlbumId,
+                             track.VolumeNumber AS DiscNumber,
+                             cast(track.duration::interval as text) as Duration,
+                             track.Explicit,
+                             trackExtLink.href AS TrackHref,
+                             track.TrackNumber,
+                             track.isrc AS TrackISRC,
+                             album.barcodeid AS AlbumUPC,
+                             album.ReleaseDate,
+                             album.NumberOfItems AS TotalTracks,
+                             album.copyright as Copyright,
+                             album.title as AlbumName,
+                             albumExtLink.href as AlbumHref,
+                             artistExtLink.Href as ArtistHref,
+                             artist.name as ArtistName,
+                             artist.artistid as ArtistId
+                         from tidal_track track
+                         join tidal_album album on album.albumid = track.albumid
+                         join tidal_track_artist track_artist on track_artist.trackid = track.trackid
+                         join tidal_artist artist on artist.artistid = track_artist.artistid or artist.artistid = @artistId
+                         left join tidal_track_external_link trackExtLink on trackExtLink.trackid = track.trackid and trackExtLink.meta_type = 'TIDAL_SHARING'
+                         left join tidal_album_external_link albumExtLink on albumExtLink.albumid = album.albumid and albumExtLink.meta_type = 'TIDAL_SHARING'
+                         left join tidal_artist_external_link artistExtLink on artistExtLink.artistid = artist.artistid and artistExtLink.meta_type = 'TIDAL_SHARING'
+                         where   (length(@albumName) = 0 OR similarity(lower(album.title), lower(@albumName)) >= 0.8)
+	                         and (length(@trackName) = 0 OR similarity(lower(track.title), lower(@trackName)) >= 0.8)";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        
+        return (await conn
+            .QueryAsync<TidalTrackModel>(query,
+                param: new
+                {
+                    artistId,
+                    albumName,
+                    trackName
+                }))
+            .ToList();
+    }
+    
+    public async Task<List<string>> GetTrackArtistsAsync(int trackId, int orderByArtistId)
+    {
+        string query = @"SELECT artist.name
+                         FROM tidal_track_artist tta
+                         join tidal_artist artist on artist.artistid = tta.artistid
+                         where tta.trackid = @trackId
+                         order by CASE WHEN artist.artistid = @orderByArtistId THEN 0 ELSE 1 end asc";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        
+        return (await conn
+                .QueryAsync<string>(query,
+                    param: new
+                    {
+                        trackId,
+                        orderByArtistId
+                    }))
+            .ToList();
     }
 }

@@ -323,6 +323,67 @@ public class MetadataRepository
             }).ToList();
     }
     
+    public async Task<List<MetadataInfo>> GetMissingTidalMetadataRecordsAsync(string artistName)
+    {
+        string query = @$"SELECT m.MetadataId, 
+                                  m.Path, 
+                                  m.Title, 
+                                  m.AlbumId, 
+                                  m.MusicBrainzArtistId, 
+                                  m.MusicBrainzDiscId, 
+                                  m.MusicBrainzReleaseCountry, 
+                                  m.MusicBrainzReleaseId, 
+                                  m.MusicBrainzTrackId, 
+                                  m.MusicBrainzReleaseStatus, 
+                                  m.MusicBrainzReleaseType,
+                                  m.MusicBrainzReleaseArtistId,
+                                  m.MusicBrainzReleaseGroupId,
+                                  m.Tag_Subtitle, 
+                                  m.Tag_AlbumSort, 
+                                  m.Tag_Comment, 
+                                  m.Tag_Year, 
+                                  m.Tag_Track, 
+                                  m.Tag_TrackCount, 
+                                  m.Tag_Disc, 
+                                  m.Tag_DiscCount, 
+                                  m.Tag_Lyrics, 
+                                  m.Tag_Grouping, 
+                                  m.Tag_BeatsPerMinute, 
+                                  m.Tag_Conductor, 
+                                  m.Tag_Copyright, 
+                                  m.Tag_DateTagged, 
+                                  m.Tag_AmazonId,
+                                  m.Tag_ReplayGainTrackGain, 
+                                  m.Tag_ReplayGainTrackPeak, 
+                                  m.Tag_ReplayGainAlbumGain, 
+                                  m.Tag_ReplayGainAlbumPeak, 
+                                  m.Tag_InitialKey, 
+                                  m.Tag_RemixedBy, 
+                                  m.Tag_Publisher, 
+                                  m.Tag_ISRC, 
+                                  m.Tag_Length, 
+                                  m.Tag_AcoustIdFingerPrint, 
+                                  m.Tag_AcoustId,
+                                  m.Tag_AcoustIdFingerPrint_Duration,
+                                  album.title AS Album,
+                                  artist.name AS Artist,
+                                  artist.artistid AS ArtistId
+                        FROM metadata m
+                        JOIN albums album ON album.albumid = m.albumid
+                        JOIN artists artist ON artist.artistid = album.artistid
+                        where lower(artist.name) = lower(@artistName)
+                        and (tag_alljsontags->>'Tidal Track Id' is null or 
+                             tag_alljsontags->>'Tidal Album Id' is null)";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return conn
+            .Query<MetadataInfo>(query, new
+            {
+                artistName
+            }).ToList();
+    }
+    
     public async Task<List<MetadataInfo>> GetMetadataByTagRecordsAsync(string artistName, List<String> tagNames)
     {
         string query = @$"SELECT m.MetadataId, 
