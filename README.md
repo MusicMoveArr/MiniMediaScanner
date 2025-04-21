@@ -15,6 +15,7 @@ This roadmap will be ongoing as the project keeps going
 - [ ] Generate Replay gain
 - [ ] Generate Waveforms (maybe? need to see how/which servers can benefit from this)
 - [x] Implement Spotify's API for Tags (ongoing)
+- [x] Implement Tidal's API for Tags (ongoing)
 - [ ] Implement Discogs's API for Tags
 - [ ] Implement Beatport's API for Tags
 - [ ] Implement Deezer's API for Tags
@@ -26,8 +27,9 @@ This roadmap will be ongoing as the project keeps going
 2. Import Full/Partially your entire library multi-threaded
 3. MusicBrainz support (+cached in Postgres)
 4. Spotify support (+cached in Postgres)
-5. All commands are multi-threaded for performance
-6. Low memory footprint
+5. Tidal support (+cached in Postgres)
+6. All commands are multi-threaded for performance
+7. Low memory footprint
 
 # Commands
 1. Import - Import Full/Partially your entire library multi-threaded
@@ -60,6 +62,7 @@ This roadmap will be ongoing as the project keeps going
 19. Stats - Show basic stats of your database
 20. UpdateSpotify - Update/Add artists into the database from Spotify's API
 21. SplitTag - Split specific tag's into single value fields by specific seperator like ';'
+22. UpdateTidal - Update/Add artists into the database from Tidal's API
 
 # Examples
 ```
@@ -597,3 +600,21 @@ OPTIONS
   -h|--help         Shows help text. 
 ```
 
+
+# Update Tidal Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll updatetidal --connection-string <value> --tidal-client-id <value> --tidal-secret-id <value> [options]
+
+DESCRIPTION
+  Update Tidal metadata
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+* -c|--tidal-client-id  Tidal Client Id, to use for the Tidal API. Environment variable: UPDATETIDAL_TIDAL_CLIENT_ID. 
+* -s|--tidal-secret-id  Tidal Secret Id, to use for the Tidal API. Environment variable: UPDATETIDAL_TIDAL_SECRET_ID. 
+  -a|--artist       Artist filter to update. Environment variable: UPDATETIDAL_ARTIST. 
+  -G|--country-code  Tidal's CountryCode (e.g. US, FR, NL, DE etc). Environment variable: UPDATETIDAL_COUNTRY_CODE. Default: "US".
+  -h|--help         Shows help text. 
+
+```
