@@ -83,21 +83,6 @@ public class TagMissingTidalMetadataCommandHandler
             Console.WriteLine($"Nothing found for '{metadata.Album}', '{metadata.Title}'");
             return;
         }
-
-        if (tidalTracks.Count > 1)
-        {
-            tidalTracks = tidalTracks
-                .Where(tidalTrack => FuzzyHelper.ExactNumberMatch(metadata.Album, tidalTrack.AlbumName))
-                .Where(tidalTrack => FuzzyHelper.ExactNumberMatch(metadata.Title, tidalTrack.TrackName))
-                .Where(tidalTrack => FuzzyHelper.ExactNumberMatch(metadata.Tag_Length, tidalTrack.Duration))
-                .ToList();
-
-            if (tidalTracks.Count == 0)
-            {
-                Console.WriteLine($"Nothing found for '{metadata.Album}', '{metadata.Title}'");
-                return;
-            }
-        }
         
         if (tidalTracks.Count > 1)
         {

@@ -387,7 +387,7 @@ public class TidalRepository
     
     public async Task<List<TidalTrackModel>> GetTrackByArtistIdAsync(int artistId, string albumName, string trackName)
     {
-        string query = @"select
+        string query = @"select distinct on (track.isrc, album.barcodeid, album.title, artist.artistid)
                              track.title As TrackName,
                              track.TrackId,
                              track.AlbumId,
@@ -409,11 +409,12 @@ public class TidalRepository
                          from tidal_track track
                          join tidal_album album on album.albumid = track.albumid
                          join tidal_track_artist track_artist on track_artist.trackid = track.trackid
-                         join tidal_artist artist on artist.artistid = track_artist.artistid or artist.artistid = @artistId
+                         join tidal_artist artist on artist.artistid = track_artist.artistid
                          left join tidal_track_external_link trackExtLink on trackExtLink.trackid = track.trackid and trackExtLink.meta_type = 'TIDAL_SHARING'
                          left join tidal_album_external_link albumExtLink on albumExtLink.albumid = album.albumid and albumExtLink.meta_type = 'TIDAL_SHARING'
                          left join tidal_artist_external_link artistExtLink on artistExtLink.artistid = artist.artistid and artistExtLink.meta_type = 'TIDAL_SHARING'
-                         where   (length(@albumName) = 0 OR similarity(lower(album.title), lower(@albumName)) >= 0.8)
+                         where artist.artistid = @artistId
+                             and (length(@albumName) = 0 OR similarity(lower(album.title), lower(@albumName)) >= 0.8)
 	                         and (length(@trackName) = 0 OR similarity(lower(track.title), lower(@trackName)) >= 0.8)";
 
         await using var conn = new NpgsqlConnection(_connectionString);

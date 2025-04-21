@@ -30,11 +30,6 @@ public class UpdateTidalCallback
         this.Status = status;
         this.Progress = progress;
 
-        if (progress > albumCount)
-        {
-            
-        }
-
         if (extraInfo?.Length > 0)
         {
             extraInfo = ", " + extraInfo;
