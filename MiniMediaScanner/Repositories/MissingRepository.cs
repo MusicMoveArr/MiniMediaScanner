@@ -232,6 +232,44 @@ public class MissingRepository
 		    }, commandTimeout: 60))
 		    .ToList();
     }
+    
+    public async Task<List<MissingTrackModel>> GetMissingTracksByArtistTidalAsync(int tidalArtistId, string artistName)
+    {
+	    string query = @"WITH TidalData AS (
+						 	select artist.artistid, 
+						 		artist.name AS artist_name,
+						 		album.title AS album_name,
+						 		track.title AS track_name
+						 	from tidal_artist artist
+						 	join tidal_album album on album.artistid = artist.artistid
+						 	join tidal_track track on track.albumid = album.albumid
+						 	where artist.artistid = @tidalArtistId						     
+						 ),
+						 MusicLibrary as (
+						 	select distinct 
+						 		m.title as track_name,
+						 		album.title as album_name
+						 	from metadata m
+						 	join albums album on album.albumid = m.albumid
+						 	join artists artist on artist.artistid = album.artistid and lower(artist.name) = lower(@artistName)
+						 )
+
+						 select distinct td.artist_name AS Artist, td.album_name AS Album, td.track_name AS Track
+						 FROM TidalData td
+						 left join MusicLibrary ml on similarity(td.album_name, ml.album_name) >= 0.9 
+						 							and similarity(td.track_name, ml.track_name) >= 0.9 
+						 where ml.track_name is null";
+
+	    await using var conn = new NpgsqlConnection(_connectionString);
+        
+	    return (await conn
+			    .QueryAsync<MissingTrackModel>(query, new
+			    {
+				    tidalArtistId,
+				    artistName
+			    }, commandTimeout: 60))
+		    .ToList();
+    }
 
     public async Task<bool> TrackExistsAtAssociatedArtist(string artistName, string albumName, string trackName)
     {

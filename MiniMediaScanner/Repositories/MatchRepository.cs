@@ -58,5 +58,48 @@ public class MatchRepository
             });
     }
     
+    public async Task<int?> GetBestTidalMatchAsync(Guid artistId, string artistName)
+    {
+        string query = @"WITH MusicLibrary AS (
+                             SELECT distinct
+                                 a.artistid, 
+                                 a.name AS artist_name, 
+                                 al.albumid, 
+                                 al.title AS album_name
+                             FROM metadata m
+                             JOIN albums al ON m.albumid = al.albumid
+                             JOIN artists a ON al.artistid = a.artistid
+                             WHERE a.artistid = @artistId
+                         ),
+                         TidalData AS (
+                             select distinct
+                                 artist.artistid, 
+                                 artist.name AS artist_name,
+                                 album.title AS album_name
+                             from tidal_artist artist
+                             join tidal_album album on album.artistid = artist.artistid
+                             join tidal_track track on track.albumid = album.albumid
+                             WHERE lower(artist.name) = lower(@artistName)
+                         )
+                         SELECT 
+                             td.artistid,
+                             td.artist_name,
+                             ROUND(100.0 * COUNT(DISTINCT td.album_name) / NULLIF((SELECT COUNT(DISTINCT album_name) FROM MusicLibrary ml), 0), 2) AS match_percentage
+                         FROM TidalData td
+                         LEFT JOIN MusicLibrary ml 
+                             ON lower(td.album_name) = lower(ml.album_name)
+                         GROUP BY td.artistid, td.artist_name
+                         ORDER BY match_percentage desc
+                         limit 1";
+        
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .QueryFirstOrDefaultAsync<int>(query, param: new
+            {
+                artistId,
+                artistName
+            });
+    }
     
 }

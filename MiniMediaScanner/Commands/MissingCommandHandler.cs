@@ -41,6 +41,19 @@ public class MissingCommandHandler
                     }
                 }
             }
+            else if (provider.ToLower() == "tidal")
+            {
+                var artistIds = await _metadataRepository.GetArtistIdByMetadataAsync(artistName);
+                Guid? artistId = artistIds.FirstOrDefault(track => track.HasValue);
+                if (GuidHelper.GuidHasValue(artistId))
+                {
+                    int? tidalArtistId = await _matchRepository.GetBestTidalMatchAsync(artistId.Value, artistName);
+                    if (tidalArtistId > 0)
+                    {
+                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistTidalAsync(tidalArtistId.Value, artistName);
+                    }
+                }
+            }
             else
             {
                 tempMissingTracks = await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(artistName);
