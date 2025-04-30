@@ -23,8 +23,7 @@ public class ImportCommand : ICommand
 
     [CommandOption("update-mb", 'M',
         Description = "Update MusicBrainz.",
-        EnvironmentVariable = "IMPORT_UPDATE_MB",
-        IsRequired = true)]
+        EnvironmentVariable = "IMPORT_UPDATE_MB")]
     public bool UpdateMb { get; set; } = true;
     
     public async ValueTask ExecuteAsync(IConsole console)
