@@ -73,7 +73,7 @@ public class ImportCommandHandler
                     
                     foreach (var file in allFilePaths)
                     {
-                        await ProcessFileAsync(file, updateMb);
+                        await ProcessFileAsync(file, false, updateMb);
                         task.Value++;
                     }
                 });
