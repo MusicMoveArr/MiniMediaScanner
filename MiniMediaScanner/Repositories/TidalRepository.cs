@@ -212,7 +212,8 @@ public class TidalRepository
         string availability,
         string mediaTags,
         int volumeNumber,
-        int trackNumber)
+        int trackNumber,
+        string version)
     {
         string query = @"
             INSERT INTO tidal_track (TrackId, 
@@ -226,11 +227,12 @@ public class TidalRepository
                                   Availability, 
                                   MediaTags, 
                                   VolumeNumber, 
-                                  TrackNumber)
+                                  TrackNumber,
+                                  Version)
             VALUES (@trackId, @albumId, @title, @isrc, 
                     @duration, @copyright, @_explicit, 
                     @popularity, @availability, @mediaTags, 
-                    @volumeNumber, @trackNumber)
+                    @volumeNumber, @trackNumber, @version)
             ON CONFLICT (TrackId, AlbumId)
             DO UPDATE SET
                 Title = EXCLUDED.Title,
@@ -242,7 +244,8 @@ public class TidalRepository
                 Availability = EXCLUDED.Availability,
                 MediaTags = EXCLUDED.MediaTags,
                 VolumeNumber = EXCLUDED.VolumeNumber,
-                TrackNumber = EXCLUDED.TrackNumber";
+                TrackNumber = EXCLUDED.TrackNumber,
+                Version = EXCLUDED.Version";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         
@@ -259,7 +262,8 @@ public class TidalRepository
             availability, 
             mediaTags,
             volumeNumber,
-            trackNumber
+            trackNumber,
+            version
         });
     }
     
@@ -306,22 +310,23 @@ public class TidalRepository
         });
     }
     
-    public async Task<bool> TidalAlbumIdExistsAsync(int albumId, int artistId)
+    public async Task<int> GetTidalAlbumTrackCountAsync(int albumId, int artistId)
     {
-        string query = @"SELECT 1
+        string query = @"SELECT count(track.trackid)
                          FROM tidal_album album
+                         join tidal_track track on track.albumid = album.albumid
                          where album.albumid = @albumId and album.artistId = @artistId
                          limit 1";
 
         await using var conn = new NpgsqlConnection(_connectionString);
 
-        return (await conn
-            .ExecuteScalarAsync<int?>(query,
+        return await conn
+            .ExecuteScalarAsync<int>(query,
                 param: new
                 {
                     albumId,
                     artistId
-                })) == 1;
+                });
     }
     
     public async Task<List<int>> GetAllTidalArtistIdsAsync()
@@ -389,6 +394,7 @@ public class TidalRepository
     {
         string query = @"select distinct on (track.isrc, album.barcodeid, album.title, artist.artistid)
                              track.title As TrackName,
+                             track.version As TrackVersion,
                              track.TrackId,
                              track.AlbumId,
                              track.VolumeNumber AS DiscNumber,

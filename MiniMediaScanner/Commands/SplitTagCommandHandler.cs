@@ -109,12 +109,12 @@ public class SplitTagCommandHandler
         Track track = new Track(metadata.Path);
         
         string newWriteTagValue = updateWriteTagOriginalValue ? mediaTargetTag.Value.Value : splitValue.First();
-        UpdateTag(track, writetag, newWriteTagValue, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, writetag, newWriteTagValue, ref trackInfoUpdated, overwriteTagValue);
 
         if (updateReadTag && !string.Equals(tag, writetag))
         {
             string newReadTagValue = updateReadTagOriginalValue ? mediaTargetTag.Value.Value : splitValue.First();
-            UpdateTag(track, tag, newReadTagValue, ref trackInfoUpdated, overwriteTagValue);
+            _mediaTagWriteService.UpdateTag(track, tag, newReadTagValue, ref trackInfoUpdated, overwriteTagValue);
         }
         
         if (!trackInfoUpdated)
@@ -135,39 +135,6 @@ public class SplitTagCommandHandler
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
-        }
-    }
-
-    private void UpdateTag(Track track, string tagName, string? value, ref bool trackInfoUpdated, bool overwriteTagValue)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        if (int.TryParse(value, out int intValue) && intValue == 0)
-        {
-            return;
-        }
-        
-        tagName = _mediaTagWriteService.GetFieldName(track, tagName);
-        value = _normalizerService.ReplaceInvalidCharacters(value);
-        
-        if (!overwriteTagValue &&
-            (track.AdditionalFields.ContainsKey(tagName) ||
-             !string.IsNullOrWhiteSpace(track.AdditionalFields[tagName])))
-        {
-            return;
-        }
-
-        string orgValue = string.Empty;
-        bool tempIsUpdated = false;
-        _mediaTagWriteService.UpdateTrackTag(track, tagName, value, ref tempIsUpdated, ref orgValue);
-
-        if (tempIsUpdated)
-        {
-            Console.WriteLine($"Updating tag '{tagName}' value '{orgValue}' => '{value}'");
-            trackInfoUpdated = true;
         }
     }
 }

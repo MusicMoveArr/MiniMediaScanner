@@ -92,19 +92,19 @@ public class SplitArtistCommandHandler
                 bool trackInfoUpdated = false;
                 if (string.Equals(track.AlbumArtist, artist, StringComparison.OrdinalIgnoreCase))
                 {
-                    UpdateTag(track, "AlbumArtist", newArtistName, ref trackInfoUpdated, true);
+                    _mediaTagWriteService.UpdateTag(track, "AlbumArtist", newArtistName, ref trackInfoUpdated, true);
                 }
                 if (string.Equals(track.Artist, artist, StringComparison.OrdinalIgnoreCase))
                 {
-                    UpdateTag(track, "Artist", newArtistName, ref trackInfoUpdated, true);
+                    _mediaTagWriteService.UpdateTag(track, "Artist", newArtistName, ref trackInfoUpdated, true);
                 }
                 if (string.Equals(track.SortArtist, artist, StringComparison.OrdinalIgnoreCase))
                 {
-                    UpdateTag(track, "SortArtist", newArtistName, ref trackInfoUpdated, true);
+                    _mediaTagWriteService.UpdateTag(track, "SortArtist", newArtistName, ref trackInfoUpdated, true);
                 }
                 if (string.Equals(track.SortAlbumArtist, artist, StringComparison.OrdinalIgnoreCase))
                 {
-                    UpdateTag(track, "SortAlbumArtist", newArtistName, ref trackInfoUpdated, true);
+                    _mediaTagWriteService.UpdateTag(track, "SortAlbumArtist", newArtistName, ref trackInfoUpdated, true);
                 }
                 
                 if (trackInfoUpdated && await _mediaTagWriteService.SafeSaveAsync(track))
@@ -112,39 +112,6 @@ public class SplitArtistCommandHandler
                     await _importCommandHandler.ProcessFileAsync(metadataAlbum.Path);
                 }
             }
-        }
-    }
-
-    private void UpdateTag(Track track, string tagName, string? value, ref bool trackInfoUpdated, bool overwriteTagValue)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        if (int.TryParse(value, out int intValue) && intValue == 0)
-        {
-            return;
-        }
-        
-        tagName = _mediaTagWriteService.GetFieldName(track, tagName);
-        value = _normalizerService.ReplaceInvalidCharacters(value);
-        
-        if (!overwriteTagValue &&
-            (track.AdditionalFields.ContainsKey(tagName) ||
-             !string.IsNullOrWhiteSpace(track.AdditionalFields[tagName])))
-        {
-            return;
-        }
-        
-        string orgValue = string.Empty;
-        bool tempIsUpdated = false;
-        _mediaTagWriteService.UpdateTrackTag(track, tagName, value, ref tempIsUpdated, ref orgValue);
-
-        if (tempIsUpdated)
-        {
-            Console.WriteLine($"Updating tag '{tagName}' value '{orgValue}' => '{value}'");
-            trackInfoUpdated = true;
         }
     }
 }

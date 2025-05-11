@@ -4,6 +4,13 @@ namespace MiniMediaScanner.Services;
 
 public class MediaTagWriteService
 {
+    private readonly StringNormalizerService _normalizerService;
+
+    public MediaTagWriteService()
+    {
+        _normalizerService = new StringNormalizerService();
+    }
+    
     public async Task<bool> SaveAsync(FileInfo targetFile, string artistName, string albumName, string title)
     {
         string orgValue = string.Empty;
@@ -389,7 +396,7 @@ public class MediaTagWriteService
         return !string.Equals(track.AdditionalFields[GetFieldName(track, fieldName)], oldValues[GetFieldName(track, fieldName)]);
     }
 
-    private string GetDictionaryValue(Track track, string fieldName)
+    public string GetDictionaryValue(Track track, string fieldName)
     {
         fieldName = GetFieldName(track, fieldName);
         if (track.AdditionalFields.TryGetValue(fieldName, out string value))
@@ -459,5 +466,38 @@ public class MediaTagWriteService
         }
 
         return success;
+    }
+    
+    public void UpdateTag(Track track, string tagName, string? value, ref bool trackInfoUpdated, bool overwriteTagValue)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (int.TryParse(value, out int intValue) && intValue == 0)
+        {
+            return;
+        }
+        
+        tagName = GetFieldName(track, tagName);
+        value = _normalizerService.ReplaceInvalidCharacters(value);
+        
+        if (!overwriteTagValue &&
+            (track.AdditionalFields.ContainsKey(tagName) ||
+             !string.IsNullOrWhiteSpace(track.AdditionalFields[tagName])))
+        {
+            return;
+        }
+        
+        string orgValue = string.Empty;
+        bool tempIsUpdated = false;
+        UpdateTrackTag(track, tagName, value, ref tempIsUpdated, ref orgValue);
+
+        if (tempIsUpdated)
+        {
+            Console.WriteLine($"Updating tag '{tagName}' value '{orgValue}' =>  '{value}'");
+            trackInfoUpdated = true;
+        }
     }
 }

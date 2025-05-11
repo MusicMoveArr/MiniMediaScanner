@@ -198,7 +198,10 @@ public class MissingRepository
 						 	select artist.id as artist_id, 
 						 	       artist.name AS artist_name, 
 						 	       album.name AS album_name, 
-						 	       track.name AS track_name
+						 	       track.name AS track_name,
+								   'https://open.spotify.com/artist/' || artist.id AS ArtistUrl,
+								   'https://open.spotify.com/album/' || album.albumid AS AlbumUrl,
+								   'https://open.spotify.com/track/' || track.trackid AS TrackUrl
 						 	from spotify_track track
 						 	 join spotify_album album on album.albumid = track.albumid and album.albumgroup in ('album', 'single') and album.albumtype in ('album', 'single')
 						 	 join spotify_track_artist track_artist on track_artist.trackid = track.trackid
@@ -216,7 +219,13 @@ public class MissingRepository
 						 	join artists artist on artist.artistid = album.artistid and lower(artist.name) = lower(@artistName)
 						 )
  
-						 select distinct sd.artist_name AS Artist, sd.album_name AS Album, sd.track_name AS Track
+						 select distinct 
+									sd.artist_name AS Artist, 
+									sd.album_name AS Album, 
+									sd.track_name AS Track,
+									sd.ArtistUrl,
+									sd.TrackUrl,
+									sd.AlbumUrl
 						 FROM SpotifyData sd
 						 left join MusicLibrary ml on similarity(sd.album_name, ml.album_name) >= 0.9 
 						 							and similarity(sd.track_name, ml.track_name) >= 0.9 
@@ -239,11 +248,17 @@ public class MissingRepository
 						 	select artist.artistid, 
 						 		artist.name AS artist_name,
 						 		album.title AS album_name,
-						 		track.title AS track_name
+						 		track.title AS track_name,
+						 		taael.href AS ArtistUrl,
+						 		ttel.href AS TrackUrl,
+						 		tael.href AS AlbumUrl
 						 	from tidal_artist artist
 						 	join tidal_album album on album.artistid = artist.artistid
 						 	join tidal_track track on track.albumid = album.albumid
-						 	where artist.artistid = @tidalArtistId						     
+							left join tidal_album_external_link tael on tael.albumid = album.albumid and tael.meta_type = 'TIDAL_SHARING'
+							left join tidal_track_external_link ttel on ttel.trackid = track.trackid and ttel.meta_type = 'TIDAL_SHARING'
+							left join tidal_artist_external_link taael on taael.artistid = artist.artistid and taael.meta_type = 'TIDAL_SHARING'
+						 	where artist.artistid = @tidalArtistId
 						 ),
 						 MusicLibrary as (
 						 	select distinct 
@@ -254,7 +269,13 @@ public class MissingRepository
 						 	join artists artist on artist.artistid = album.artistid and lower(artist.name) = lower(@artistName)
 						 )
 
-						 select distinct td.artist_name AS Artist, td.album_name AS Album, td.track_name AS Track
+						 select distinct 
+									td.artist_name AS Artist, 
+									td.album_name AS Album, 
+									td.track_name AS Track,
+									td.ArtistUrl,
+									td.TrackUrl,
+									td.AlbumUrl
 						 FROM TidalData td
 						 left join MusicLibrary ml on similarity(td.album_name, ml.album_name) >= 0.9 
 						 							and similarity(td.track_name, ml.track_name) >= 0.9 

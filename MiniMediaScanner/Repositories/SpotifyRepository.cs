@@ -84,7 +84,7 @@ public class SpotifyRepository
         }
     }
     
-    public async Task InsertOrUpdateAlbumAsync(FullAlbum album, string albumGroup)
+    public async Task InsertOrUpdateAlbumAsync(FullAlbum album, string albumGroup, string artistId)
     {
         string query = @"
             INSERT INTO spotify_album (AlbumId, 
@@ -97,11 +97,12 @@ public class SpotifyRepository
                                   Type, 
                                   Uri, 
                                   Label, 
-                                  Popularity)
+                                  Popularity,
+                                  ArtistId)
             VALUES (@AlbumId, @AlbumGroup, @AlbumType, @Name, @ReleaseDate, 
                     @ReleaseDatePrecision, @TotalTracks, @Type, @Uri,
-                    @Label, @Popularity)
-            ON CONFLICT (AlbumId)
+                    @Label, @Popularity, @artistId)
+            ON CONFLICT (AlbumId, ArtistId)
             DO UPDATE SET
                 AlbumGroup = EXCLUDED.AlbumGroup,
                 AlbumType = EXCLUDED.AlbumType,
@@ -112,7 +113,8 @@ public class SpotifyRepository
                 Type = EXCLUDED.Type,
                 Uri = EXCLUDED.Uri,
                 Label = EXCLUDED.Label,
-                Popularity = EXCLUDED.Popularity";
+                Popularity = EXCLUDED.Popularity,
+                ArtistId = EXCLUDED.ArtistId";
 
         await using var conn = new NpgsqlConnection(_connectionString);
 
@@ -128,7 +130,8 @@ public class SpotifyRepository
             Type = album.Type,
             Uri = album.Uri,
             Label = album.Label,
-            Popularity = album.Popularity
+            Popularity = album.Popularity,
+            artistId
         });
     }
     
@@ -493,5 +496,23 @@ public class SpotifyRepository
                 {
                     albumId
                 })) == 1;
+    }
+    
+    public async Task<int> GetAlbumTrackCountAsync(string albumId)
+    {
+        string query = @"SELECT count(track.trackid)
+                         FROM spotify_album album
+                         join spotify_track track on track.albumid = album.albumid
+                         where album.albumid = @albumId
+                         limit 1";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .ExecuteScalarAsync<int>(query,
+                param: new
+                {
+                    albumId
+                });
     }
 }

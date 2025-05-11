@@ -35,7 +35,7 @@ public class MissingCommand : ICommand
     
     
     [CommandOption("output", 'o', 
-        Description = "Output format, tags available: {Artist} {Album} {Track}.", 
+        Description = "Output format, tags available: {Artist} {Album} {Track} {ArtistUrl} {AlbumUrl} {TrackUrl}.", 
         IsRequired = false,
         EnvironmentVariable = "MISSING_OUTPUT")]
     public string Output { get; set; } = "{Artist} - {Album} - {Track}";

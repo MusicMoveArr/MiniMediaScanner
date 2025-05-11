@@ -13,6 +13,10 @@ public class MusicBrainzService
     private readonly MusicBrainzArtistRepository _musicBrainzArtistRepository;
     private readonly MusicBrainzReleaseRepository _musicBrainzReleaseRepository;
     private readonly MusicBrainzReleaseTrackRepository _musicBrainzReleaseTrackRepository;
+    private readonly MusicBrainzAreaRepository _musicBrainzAreaRepository;
+    private readonly MusicBrainzLabelRepository _musicBrainzLabelRepository;
+    private readonly MusicBrainzReleaseArtistRepository _musicBrainzReleaseArtistRepository;
+    private readonly MusicBrainzReleaseLabelRepository _musicBrainzReleaseLabelRepository;
     
     public MusicBrainzService(string connectionString)
     {
@@ -20,6 +24,10 @@ public class MusicBrainzService
         _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
         _musicBrainzReleaseRepository = new MusicBrainzReleaseRepository(connectionString);
         _musicBrainzReleaseTrackRepository = new MusicBrainzReleaseTrackRepository(connectionString);
+        _musicBrainzAreaRepository = new MusicBrainzAreaRepository(connectionString);
+        _musicBrainzLabelRepository = new MusicBrainzLabelRepository(connectionString);
+        _musicBrainzReleaseArtistRepository = new MusicBrainzReleaseArtistRepository(connectionString);
+        _musicBrainzReleaseLabelRepository = new MusicBrainzReleaseLabelRepository(connectionString);
     }
 
     public async Task InsertMissingMusicBrainzArtistAsync(MetadataInfo metadataInfo,
@@ -76,7 +84,6 @@ public class MusicBrainzService
             }
             
             DateTime lastSyncTime = await _musicBrainzArtistRepository.GetBrainzArtistLastSyncTimeAsync(musicBrainzArtistGuid);
-
             if (DateTime.Now.Subtract(lastSyncTime).TotalDays < 7)
             {
                 callback?.Invoke(new UpdateMBCallback(musicBrainzArtistGuid, UpdateMBStatus.SkippedSyncedWithin));
@@ -101,7 +108,8 @@ public class MusicBrainzService
                 musicBrainzArtistInfo.Type,
                 musicBrainzArtistInfo.Country,
                 musicBrainzArtistInfo.SortName,
-                musicBrainzArtistInfo.Disambiguation);
+                musicBrainzArtistInfo.Disambiguation,
+                DateTime.Now);
 
 
             UpdateMBCallback updateMbCallback = new UpdateMBCallback(musicBrainzArtistGuid, UpdateMBStatus.Updating);
@@ -121,7 +129,6 @@ public class MusicBrainzService
                 offset += BulkRequestLimit;
                 
                 updateMbCallback.Albums.AddRange(releases.Releases);
-                
             
                 foreach (var release in releases.Releases)
                 {
@@ -145,20 +152,87 @@ public class MusicBrainzService
                     await _musicBrainzReleaseRepository.InsertMusicBrainzReleaseAsync(artistDbId.Value, releaseId, release.Title, release.Status, 
                         release.StatusId, release.Date, release.Barcode, release.Country, release.Disambiguation, release.Quality);
 
-                    foreach (var media in releaseRecordings.Media)
+                    if (releaseRecordings?.LabeLInfo != null)
                     {
-                        foreach (var track in media.Tracks)
+                        foreach (var label in releaseRecordings.LabeLInfo)
+                        {
+                            if (!Guid.TryParse(label.Label.Id, out var labelId))
+                            {
+                                continue;
+                            }
+
+                            await _musicBrainzReleaseLabelRepository.InsertMusicBrainzReleaseLabelAsync(releaseId, labelId);
+
+                            if (await _musicBrainzLabelRepository.LabelExistsAsync(labelId))
+                            {
+                                continue;
+                            }
+                            var allLabelInfo = await _musicBrainzApiService.GetLabelByIdAsync(labelId);
+
+                            if (!Guid.TryParse(allLabelInfo.Area.Id, out var areaId))
+                            {
+                                continue;
+                            }
+
+                            await _musicBrainzLabelRepository.InsertMusicBrainzLabelAsync(labelId,
+                                areaId,
+                                allLabelInfo.Name,
+                                allLabelInfo.Disambiguation ?? string.Empty,
+                                allLabelInfo.LabelCode ?? 0,
+                                allLabelInfo.Type ?? string.Empty,
+                                allLabelInfo.LifeSpan?.Begin ?? string.Empty,
+                                allLabelInfo.LifeSpan?.End ?? string.Empty,
+                                allLabelInfo.LifeSpan?.Ended ?? false,
+                                allLabelInfo.SortName ?? string.Empty,
+                                allLabelInfo.TypeId ?? string.Empty,
+                                allLabelInfo.Country ?? string.Empty
+                            );
+
+                            await _musicBrainzAreaRepository.InsertMusicBrainzAreaAsync(areaId,
+                                allLabelInfo.Area.Name,
+                                allLabelInfo.Area.Type,
+                                allLabelInfo.Area.TypeId,
+                                allLabelInfo.Area.SortName,
+                                allLabelInfo.Area.Disambiguation);
+                        }
+                    }
+                    
+                    foreach (var media in releaseRecordings?.Media ?? [])
+                    {
+                        foreach (var track in media?.Tracks ?? [])
                         {
                             if (!Guid.TryParse(track.Id, out var trackId) ||
                                 !Guid.TryParse(track?.Recording?.Id, out var trackRecordingId))
                             {
                                 continue;
                             }
+
+                            int index = 0;
+                            foreach(var credit in track.Recording.ArtistCredit)
+                            {
+                                if (Guid.TryParse(credit.Artist?.Id, out var artistId))
+                                {
+                                    if (!await _musicBrainzArtistRepository.ArtistExistsByRemoteIdAsync(artistId))
+                                    {
+                                        await _musicBrainzArtistRepository.InsertMusicBrainzArtistAsync(artistId,
+                                            credit.Artist.Name ?? string.Empty,
+                                            credit.Artist.Type,
+                                            credit.Artist.Country,
+                                            credit.Artist.SortName,
+                                            credit.Artist.Disambiguation,
+                                            new DateTime(2000, 1, 1)); //day in the past so we can sync if we want
+                                    }
+                                    
+                                    await _musicBrainzReleaseArtistRepository.InsertMusicBrainzReleaseTrackArtistAsync(
+                                        trackId, artistId, credit.JoinPhrase, index);
+                                }
+                                index++;
+                            }
                             
                             await _musicBrainzReleaseTrackRepository.InsertMusicBrainzReleaseTrackAsync(trackId, 
                                                                                              trackRecordingId, 
                                                                                              track.Title ?? string.Empty, 
-                                                                                             release.Status, 
+                                                                                             release?.Status ?? string.Empty, 
                                                                                              releaseId,
                                                                                              track.Length ?? 0,
                                                                                              track.Number ?? 0,
@@ -167,11 +241,11 @@ public class MusicBrainzService
                                                                                              track.Recording.Length ?? 0,
                                                                                              track.Recording.Title ?? string.Empty,
                                                                                              track.Recording.Video,
-                                                                                             media.TrackCount ?? 0,
-                                                                                             media.Format ?? string.Empty,
-                                                                                             media.Title ?? string.Empty,
-                                                                                             media.Position ?? 0,
-                                                                                             media.TrackOffset ?? 0);
+                                                                                             media?.TrackCount ?? 0,
+                                                                                             media?.Format ?? string.Empty,
+                                                                                             media?.Title ?? string.Empty,
+                                                                                             media?.Position ?? 0,
+                                                                                             media?.TrackOffset ?? 0);
                         }
                     }
                 }

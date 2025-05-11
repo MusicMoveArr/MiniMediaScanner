@@ -1,4 +1,3 @@
-using ATL;
 using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;

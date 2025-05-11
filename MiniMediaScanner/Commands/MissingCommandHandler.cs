@@ -68,8 +68,9 @@ public class MissingCommandHandler
                     missingTracks.Add(track);
                 }
             }
-            
+
             missingTracks
+                .Where(track => filterOut?.Count == 0 || !filterOut.Any(filter => $"{track.Album} - {track.Track}".ToLower().Contains(filter.ToLower())))
                 .Select(track => SmartFormat.Smart.Format(output, track))
                 .Where(track => filterOut?.Count == 0 || !filterOut.Any(filter => track.ToLower().Contains(filter.ToLower())))
                 .Distinct()

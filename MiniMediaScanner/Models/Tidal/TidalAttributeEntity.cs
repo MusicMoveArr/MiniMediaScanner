@@ -5,6 +5,7 @@ public class TidalAttributeEntity
     public string? Id { get; set; }
     public string? Title { get; set; }
     public string? Name { get; set; }
+    public string? Version { get; set; }
     public string? BarcodeId { get; set; }
     public int NumberOfVolumes { get; set; }
     public int NumberOfItems { get; set; }
@@ -13,8 +14,8 @@ public class TidalAttributeEntity
     public string? ReleaseDate { get; set; }
     public string? Copyright { get; set; }
     public float Popularity { get; set; }
-    public List<string> Availability { get; set; }
-    public List<string> MediaTags { get; set; }
+    public List<string>? Availability { get; set; }
+    public List<string>? MediaTags { get; set; }
     public string? Type { get; set; }
     public string? ISRC { get; set; }
     

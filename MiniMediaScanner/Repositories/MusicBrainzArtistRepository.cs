@@ -81,7 +81,8 @@ public class MusicBrainzArtistRepository
         string? artistType,
         string? country,
         string? sortName,
-        string? disambiguation)
+        string? disambiguation,
+        DateTime lastSyncTime)
     {
         if (string.IsNullOrWhiteSpace(artistType))
         {
@@ -101,8 +102,8 @@ public class MusicBrainzArtistRepository
         }
         
         string query = @"INSERT INTO MusicBrainzArtist (MusicBrainzArtistId, 
-                               MusicBrainzRemoteId, Name, Type, Country, SortName, Disambiguation)
-                         VALUES (@id, @MusicBrainzRemoteId, @name, @type, @Country, @SortName, @Disambiguation)
+                               MusicBrainzRemoteId, Name, Type, Country, SortName, Disambiguation,  LastSyncTime)
+                         VALUES (@id, @MusicBrainzRemoteId, @name, @type, @Country, @SortName, @Disambiguation, @lastSyncTime)
                          ON CONFLICT (MusicBrainzRemoteId) 
                          DO UPDATE SET 
                              Name = EXCLUDED.Name, 
@@ -110,7 +111,7 @@ public class MusicBrainzArtistRepository
                              Country = EXCLUDED.Country, 
                              SortName = EXCLUDED.SortName, 
                              Disambiguation = EXCLUDED.Disambiguation,
-                             lastsynctime = current_timestamp
+                             lastsynctime = @lastSyncTime
                          RETURNING MusicBrainzArtistId";
         Guid artistId = Guid.NewGuid();
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -123,7 +124,8 @@ public class MusicBrainzArtistRepository
                 type = artistType,
                 Country = country,
                 SortName = sortName,
-                Disambiguation = disambiguation
+                Disambiguation = disambiguation,
+                lastSyncTime
             });
     }
     
@@ -334,5 +336,22 @@ public class MusicBrainzArtistRepository
         }
         
         return artistModel;
+    }
+    
+    public async Task<bool> ArtistExistsByRemoteIdAsync(Guid artistId)
+    {
+        string query = @"SELECT 1
+                         FROM musicbrainzartist artist
+                         where artist.musicbrainzremoteid = @artistId
+                         limit 1";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn
+            .ExecuteScalarAsync<int?>(query,
+                param: new
+                {
+                    artistId
+                })) == 1;
     }
 }

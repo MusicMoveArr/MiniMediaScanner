@@ -122,7 +122,7 @@ public class MusicBrainzAPIService
     public async Task<MusicBrainzArtistReleaseModel?> GetReleasesWithRecordingsForArtistAsync(Guid releaseId, int limit, int offset)
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
-        var url = $"https://musicbrainz.org/ws/2/release/{releaseId}?inc=recordings&fmt=json&limit={limit}&offset={offset}";
+        var url = $"https://musicbrainz.org/ws/2/release/{releaseId}?inc=recordings+labels+artists&fmt=json&limit={limit}&offset={offset}";
 
         Debug.WriteLine($"Requesting MusicBrainz Releases by release id '{releaseId}', limit '{limit}', offset '{offset}'");
         using RestClient client = new RestClient(url);
@@ -130,7 +130,23 @@ public class MusicBrainzAPIService
         return await retryPolicy.ExecuteAsync(async () =>
         {
             RestRequest request = new RestRequest();
+            
             return await client.GetAsync<MusicBrainzArtistReleaseModel>(request);
+        });
+    }
+    public async Task<MusicBrainzLabelInfoLabelModel?> GetLabelByIdAsync(Guid labelId)
+    {
+        AsyncRetryPolicy retryPolicy = GetRetryPolicy();
+        var url = $"https://musicbrainz.org/ws/2/label/{labelId}?fmt=json";
+
+        Debug.WriteLine($"Requesting MusicBrainz Label by id '{labelId}'");
+        using RestClient client = new RestClient(url);
+
+        return await retryPolicy.ExecuteAsync(async () =>
+        {
+            RestRequest request = new RestRequest();
+            
+            return await client.GetAsync<MusicBrainzLabelInfoLabelModel>(request);
         });
     }
 

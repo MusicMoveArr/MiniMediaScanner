@@ -11,14 +11,13 @@ namespace MiniMediaScanner.Services;
 public class TidalService
 {
     private const int PreventUpdateWithinDays = 7; 
-    private const int ApiDelay = 5000;
-    private readonly TidalAPIService _tidalAPIService;
+    private readonly TidalAPICacheLayerService _tidalAPIService;
     private readonly TidalRepository _tidalRepository;
 
     public TidalService(string connectionString, string clientId, string clientSecret, string countryCode)
     {
         _tidalRepository = new TidalRepository(connectionString);
-        _tidalAPIService = new TidalAPIService(clientId, clientSecret, countryCode);
+        _tidalAPIService = new TidalAPICacheLayerService(clientId, clientSecret, countryCode);
     }
 
     private async Task RefreshTokenAsync()
@@ -35,7 +34,6 @@ public class TidalService
         Action<UpdateTidalCallback>? callback = null)
     {
         await RefreshTokenAsync();
-        Thread.Sleep(ApiDelay);
         var searchResult = await _tidalAPIService.SearchResultsArtistsAsync(artistName);
 
         if (searchResult?.Included?.Any() == true)
@@ -73,6 +71,11 @@ public class TidalService
         //get artist information
         var artistInfo = await InsertArtistInfoAsync(artistId, true);
 
+        if (artistInfo == null)
+        {
+            return;
+        }
+
         //fetch all the albums available of the artist
         //by going through the next page cursor
         //populating the artist object
@@ -81,7 +84,6 @@ public class TidalService
             string? nextPage = artistInfo.Data.RelationShips.Albums.Links.Next;
             while (!string.IsNullOrWhiteSpace(nextPage))
             {
-                Thread.Sleep(ApiDelay);
                 var nextArtistInfo = await _tidalAPIService.GetArtistNextInfoByIdAsync(artistId, nextPage);
 
                 if (nextArtistInfo?.Data?.Count > 0)
@@ -112,15 +114,9 @@ public class TidalService
                 albums.Count,
                 UpdateTidalStatus.Updating,
                 progress));
-
-
-            if (await _tidalRepository.TidalAlbumIdExistsAsync(int.Parse(album.Id), artistId))
-            {
-                continue;
-            }
             
-            string albumAvailability = string.Join(',', album.Attributes.Availability);
-            string albumMediaTags = string.Join(',', album.Attributes.MediaTags);
+            string albumAvailability = string.Join(',', album.Attributes?.Availability ?? []);
+            string albumMediaTags = string.Join(',', album.Attributes?.MediaTags ?? []);
 
             //insert album info
             await _tidalRepository.UpsertAlbumAsync(int.Parse(album.Id),
@@ -156,12 +152,18 @@ public class TidalService
                         externalLink.Meta.Type);
                 }
             }
-
-            Thread.Sleep(ApiDelay);
+            
+            int dbTrackCount = await _tidalRepository.GetTidalAlbumTrackCountAsync(int.Parse(album.Id), artistId);
+            if (dbTrackCount == album.Attributes.NumberOfItems)
+            {
+                progress++;
+                continue;
+            }
             
             //fetch all tracks of the album by using the page cursor
             //Tidal's API limit is 20 by default so only try if NumberOfItems is more than 20
             var tracks = await _tidalAPIService.GetTracksByAlbumIdAsync(int.Parse(album.Id));
+            
             if (tracks.Data.Attributes.NumberOfItems >= 20)
             {
                 callback?.Invoke(new UpdateTidalCallback(artistId, 
@@ -175,7 +177,6 @@ public class TidalService
                 string? nextPage = tracks.Data.RelationShips?.Items?.Links?.Next;
                 while (!string.IsNullOrWhiteSpace(nextPage))
                 {
-                    Thread.Sleep(ApiDelay);
                     var tempTracks = await _tidalAPIService.GetTracksNextByAlbumIdAsync(int.Parse(album.Id), nextPage);
 
                     if (tempTracks?.Included?.Count > 0)
@@ -193,7 +194,6 @@ public class TidalService
                     }
                     nextPage = tempTracks?.Links?.Next;
                 }
-
             }
 
             //grab all the artists associated with the track (feat. etc)
@@ -223,7 +223,6 @@ public class TidalService
                     progress,
                     $"Checking associated artists of tracks, {trackOffset} of {totalTracks} processed"));
 
-                Thread.Sleep(ApiDelay);
                 var trackArtists = await _tidalAPIService.GetTrackArtistsByTrackIdAsync(trackids);
 
                 if (trackArtists == null)
@@ -302,8 +301,8 @@ public class TidalService
                 //for some reason Tidal does always give back our own ArtistId in the artists list
                 _tidalRepository.UpsertTrackArtistIdAsync(int.Parse(track.Id), artistId);
                 
-                string trackAvailability = string.Join(',', track.Attributes.Availability);
-                string trackMediaTags = string.Join(',', track.Attributes.MediaTags);
+                string trackAvailability = string.Join(',', track?.Attributes?.Availability ?? []);
+                string trackMediaTags = string.Join(',', track?.Attributes?.MediaTags ?? []);
 
                 if (track?.Attributes?.ExternalLinks?.Any() == true)
                 {
@@ -337,7 +336,8 @@ public class TidalService
                     trackAvailability,
                     trackMediaTags,
                     trackNumber.Meta.VolumeNumber,
-                    trackNumber.Meta.TrackNumber);
+                    trackNumber.Meta.TrackNumber,
+                    track.Attributes.Version ?? string.Empty);
             }
 
             progress++;
@@ -355,11 +355,11 @@ public class TidalService
             }
         }
         
-        Thread.Sleep(ApiDelay);
         var artistInfo = await _tidalAPIService.GetArtistInfoByIdAsync(artistId);
 
         if (artistInfo == null || 
-            artistInfo?.Data == null)
+            artistInfo?.Data == null || 
+            artistInfo?.Included == null)
         {
             return null;
         }

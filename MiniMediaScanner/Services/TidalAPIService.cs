@@ -57,7 +57,7 @@ public class TidalAPIService
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal SearchResults '{searchTerm}'");
-        using RestClient client = new RestClient(SearchResultArtistsUrl + searchTerm);
+        using RestClient client = new RestClient(SearchResultArtistsUrl + Uri.EscapeDataString(searchTerm));
 
         return await retryPolicy.ExecuteAsync(async () =>
         {

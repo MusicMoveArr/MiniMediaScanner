@@ -20,4 +20,14 @@ public class TidalTrackModel
     public int ArtistId { get; set; }
     public string TrackISRC { get; set; }
     public string AlbumUPC { get; set; }
+    public string TrackVersion { get; set; }
+
+    public string FullTrackName
+    {
+        get
+        {
+            string _version = !string.IsNullOrWhiteSpace(TrackVersion) ? $" ({TrackVersion})" : string.Empty;
+            return $"{TrackName}{_version}";
+        }
+    }
 }

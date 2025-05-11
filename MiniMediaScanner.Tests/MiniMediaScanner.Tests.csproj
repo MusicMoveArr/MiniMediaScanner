@@ -8,6 +8,10 @@
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
     </PropertyGroup>
+    
+    <PropertyGroup>
+        <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+    </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="FluentAssertions" Version="7.0.0" />
