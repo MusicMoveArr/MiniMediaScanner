@@ -63,6 +63,7 @@ This roadmap will be ongoing as the project keeps going
 20. UpdateSpotify - Update/Add artists into the database from Spotify's API
 21. SplitTag - Split specific tag's into single value fields by specific seperator like ';'
 22. UpdateTidal - Update/Add artists into the database from Tidal's API
+23. FixCollections - Fix collections by adding the missing artist to the Artists tag
 
 # Examples
 ```
@@ -367,6 +368,25 @@ OPTIONS
 * -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
   -a|--artist       Artistname Environment variable: FINGERPRINT_ARTIST. 
   -b|--album        target Album Environment variable: FINGERPRINT_ALBUM. 
+  -h|--help         Shows help text. 
+```
+
+# Fix Collections Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll fixcollections --connection-string <value> [options]
+
+DESCRIPTION
+  Fix collections by adding the missing artist to the Artists tag
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: FIXCOLLECTIONS_ARTIST. 
+  -l|--label        Target label to find songs belonging to a collection Environment variable: FIXCOLLECTIONS_LABEL. 
+  -H|--copyright    Target copyright to find songs belonging to a collection. Environment variable: FIXCOLLECTIONS_COPYRIGHT.
+  -b|--albumregex   Target album(s) with regex. Environment variable: FIXCOLLECTIONS_ALBUMREGEX. 
+  -W|--addartist    Add the missing artist to the Artists tag.  Environment variable: FIXCOLLECTIONS_ADDARTIST. 
+  -y|--confirm      Always confirm automatically. Environment variable: FIXCOLLECTIONS_CONFIRM. Default: "False".
   -h|--help         Shows help text. 
 ```
 
