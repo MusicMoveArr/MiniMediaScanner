@@ -65,6 +65,16 @@ This roadmap will be ongoing as the project keeps going
 22. UpdateTidal - Update/Add artists into the database from Tidal's API
 23. FixCollections - Fix collections by adding the missing artist to the Artists tag
 
+# FAQ
+### Why is there no confirm question on tagging files
+Unlike MusicBrainz Picard and other tools, this projects truly respects the already existing tags
+
+Tagging with the databases of MusicBrainz, Spotify, Tidal there must be a +80% match against the Artist, Album, track title
+
+When an Album/Track contains a number, there must have a 100% match because "Best of 2020" can match "Best of 2021", same for year/volume numbers etc
+
+So far tagging with a lot of files I have not found a single mismatch by this approach
+
 # Examples
 ```
 dotnet MiniMediaScanner.dll import --connection-string "Host=192.168.1.2;Username=postgres;Password=postgres;Database=minimedia" --path "~/Music" 
