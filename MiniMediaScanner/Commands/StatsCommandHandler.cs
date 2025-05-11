@@ -31,5 +31,9 @@ public class StatsCommandHandler
         Console.WriteLine($"Cached Spotify Albums: {await _statsRepository.GetGenericCountAsync("spotify_album")}");
         Console.WriteLine($"Cached Spotify Tracks: {await _statsRepository.GetGenericCountAsync("spotify_track")}");
         
+        Console.WriteLine($"Cached Tidal Artists: {await _statsRepository.GetGenericCountAsync("tidal_artist")}");
+        Console.WriteLine($"Cached Tidal Albums: {await _statsRepository.GetGenericCountAsync("tidal_album")}");
+        Console.WriteLine($"Cached Tidal Tracks: {await _statsRepository.GetGenericCountAsync("tidal_track")}");
+        
     }
 }
