@@ -517,7 +517,54 @@ public class MetadataRepository
         }).ToList();
     }
     
-    
+    public async Task<List<MetadataModel>> GetMetadataByTagMissingArtistAsync(
+        string artistFilter,
+        string searchTag, 
+        string labelName, 
+        string artistName, 
+        string albumRegex)
+    {
+        string query = @"select m.MetadataId, 
+                              m.Path, 
+                              m.Title, 
+                              m.AlbumId,
+                              tag_alljsontags,
+                              album.title AS AlbumName,
+                              tag_track,
+                              tag_trackcount,
+                              tag_disc,
+                              tag_disccount,
+                              artist.name AS ArtistName,
+                              m.MusicBrainzArtistId,
+                              m.tag_acoustid,
+                              m.Tag_AllJsonTags,
+                              artist.ArtistId
+                         from metadata m
+                         JOIN albums album ON album.albumid = m.albumid
+                         JOIN artists artist ON artist.artistid = album.artistid
+                         JOIN LATERAL (
+	                         SELECT jsonb_object_keys(m.tag_alljsontags) AS key
+                         ) artistskey ON LOWER(artistskey.key) LIKE 'artists'
+                         JOIN LATERAL (
+	                         SELECT jsonb_object_keys(m.tag_alljsontags) AS key
+                         ) labelkey ON LOWER(labelkey.key) = @searchTag
+                         where 
+                             (@artistFilter is null or length(@artistFilter) = 0 or similarity(lower(artist.name), lower(@artistFilter)) >= 0.8)
+                             and regexp_like(album.Title,  @albumRegex)
+                             and LOWER(m.tag_alljsontags->>labelkey.key) ILIKE '%' || @labelName || '%'
+                             and not LOWER(m.tag_alljsontags->>artistskey.key) ILIKE '%' || @artistName || '%'";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn.Query<MetadataModel>(query, new
+        {
+            artistFilter,
+            searchTag,
+            labelName,
+            artistName,
+            albumRegex
+        }).ToList();
+    }
     
     public async Task<List<Guid?>> GetArtistIdByMetadataAsync(string artistName)
     {
@@ -646,6 +693,8 @@ public class MetadataRepository
         }
         return canUpdate;
     }
+    
+    
     
     public async Task InsertOrUpdateMetadataAsync(MetadataInfo metadata, Guid albumId)
     {
