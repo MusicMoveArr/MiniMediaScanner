@@ -137,6 +137,43 @@ CREATE INDEX idx_metadata_albumid ON metadata (albumid);
 CREATE INDEX idx_metadata_albumfoldername_filename
     ON metadata (albumid, REGEXP_REPLACE(Path, '^.*/([^/]*/[^/]+)$', '\1', 'g'));
 
+CREATE TABLE public.musicbrainz_label (
+    musicbrainzlabelid uuid NOT NULL,
+    musicbrainzareaid uuid NULL,
+    Name text NOT NULL,
+    Disambiguation text NOT NULL,
+    LabelCode int NOT NULL,
+    Type text NOT NULL,
+    LifeSpanBegin text NOT NULL,
+    LifeSpanEnd text NOT NULL,
+    LifeSpanEnded text NOT NULL,
+    SortName text NOT NULL,
+    TypeId text NOT NULL,
+    Country text NOT NULL,
+    CONSTRAINT musicbrainzlabelid_pkey PRIMARY KEY (musicbrainzlabelid)
+);
+CREATE TABLE public.musicbrainz_area (
+    musicbrainzareaid uuid NOT NULL,
+    Name text NOT NULL,
+    Type text NOT NULL,
+    TypeId text NOT NULL,
+    SortName text NOT NULL,
+    Disambiguation text NOT NULL,
+    CONSTRAINT musicbrainzareaid_pkey PRIMARY KEY (musicbrainzareaid)
+);
+CREATE TABLE public.musicbrainz_release_track_artist (
+    musicbrainzreleasetrackid uuid NOT NULL,
+    musicbrainzartistid uuid NOT NULL,
+    JoinPhrase text NOT NULL,
+    index int NOT NULL,
+    CONSTRAINT musicbrainzreleasetrackartist_pkey PRIMARY KEY (musicbrainzreleasetrackid, musicbrainzartistid)
+);
+
+CREATE TABLE public.musicbrainz_release_label (
+    musicbrainzreleaseid uuid NOT NULL,
+    musicbrainzlabelid uuid NOT NULL,
+    CONSTRAINT musicbrainzreleaselabel_pkey PRIMARY KEY (musicbrainzreleaseid, musicbrainzlabelid)
+);
 
 CREATE TABLE public.spotify_artist (
     Id text NOT NULL,
@@ -171,8 +208,10 @@ CREATE TABLE public.spotify_album (
     Uri text NOT NULL,
     Label text NOT NULL,
     Popularity int NOT NULL,
-    CONSTRAINT spotify_album_pkey PRIMARY KEY (AlbumId)
+    ArtistId text  NOT NULL,
+    CONSTRAINT spotify_album_pkey PRIMARY KEY (AlbumId,ArtistId)
 );
+alter table spotify_album add column ArtistId text
 
 CREATE TABLE public.spotify_album_image (
     AlbumId text NOT NULL,
@@ -211,6 +250,8 @@ CREATE TABLE public.spotify_track (
     Uri text NOT NULL,
     CONSTRAINT spotify_track_pkey PRIMARY KEY (TrackId, AlbumId)
 );
+CREATE UNIQUE INDEX tidal_track_trackid_idx ON public.tidal_track (trackid);
+
 
 CREATE TABLE public.spotify_track_artist (
     TrackId text NOT NULL,
@@ -270,6 +311,7 @@ CREATE TABLE public.tidal_artist_external_link (
     CONSTRAINT tidal_artist_external_link_pkey PRIMARY KEY (ArtistId, href, meta_type)
 );
 CREATE INDEX idx_tidal_artist_external_link_trackid ON public.tidal_artist_external_link (ArtistId);
+CREATE INDEX idx_tidal_artist_external_link_trackid_meta ON public.tidal_artist_external_link (ArtistId, meta_type);
 
 
 CREATE TABLE public.tidal_album (
@@ -308,6 +350,7 @@ CREATE TABLE public.tidal_album_external_link (
     CONSTRAINT tidal_album_external_link_pkey PRIMARY KEY (AlbumId, href, meta_type)
 );
 CREATE INDEX idx_tidal_album_external_link_AlbumId ON public.tidal_album_external_link (AlbumId);
+CREATE INDEX idx_tidal_album_external_link_AlbumId_meta ON public.tidal_album_external_link (AlbumId, meta_type);
 
 
 CREATE TABLE public.tidal_track (
@@ -323,6 +366,7 @@ CREATE TABLE public.tidal_track (
     MediaTags text NOT NULL,
     VolumeNumber int NOT NULL,
     TrackNumber int NOT NULL,
+    Version text NOT NULL,
     CONSTRAINT tidal_track_pkey PRIMARY KEY (TrackId, AlbumId)
 );
 CREATE INDEX idx_tidal_track_AlbumId ON public.tidal_track (AlbumId);
@@ -334,6 +378,7 @@ CREATE TABLE public.tidal_track_external_link (
     CONSTRAINT tidal_track_external_link_pkey PRIMARY KEY (TrackId, href, meta_type)
 );
 CREATE INDEX idx_tidal_track_external_link_trackid ON public.tidal_track_external_link (TrackId);
+CREATE INDEX idx_tidal_track_external_link_trackid_meta ON public.tidal_track_external_link (TrackId, meta_type);
 
 
 CREATE TABLE public.tidal_track_image_link (
