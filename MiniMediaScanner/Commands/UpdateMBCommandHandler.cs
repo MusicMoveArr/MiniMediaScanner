@@ -21,7 +21,7 @@ public class UpdateMBCommandHandler
     
     public async Task UpdateMusicBrainzArtistsByNameAsync(string artistName)
     {
-        var artistIds = await _musicBrainzArtistRepository.GetMusicBrainzArtistRemoteIdsByNameAsync(artistName);
+        var artistIds = await _musicBrainzArtistRepository.GetArtistIdsByNameAsync(artistName);
 
         if (artistIds?.Count == 0)
         {
@@ -39,7 +39,7 @@ public class UpdateMBCommandHandler
             {
                 foreach (var artistId in artistIds)
                 {
-                    await _musicBrainzService.UpdateMusicBrainzArtistAsync(artistId, true, callback =>
+                    await _musicBrainzService.UpdateMusicBrainzArtistAsync(artistId, callback =>
                     {
                         if (callback.Status == UpdateMBStatus.Updating)
                         {
@@ -57,7 +57,7 @@ public class UpdateMBCommandHandler
     
     public async Task UpdateAllMusicBrainzArtistsAsync()
     {
-        var artistIds = await _musicBrainzArtistRepository.GetAllMusicBrainzArtistRemoteIdsAsync();
+        var artistIds = await _musicBrainzArtistRepository.GetAllArtistIdsAsync();
         
         await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
@@ -65,7 +65,7 @@ public class UpdateMBCommandHandler
             {
                 foreach (var artistId in artistIds)
                 {
-                    await _musicBrainzService.UpdateMusicBrainzArtistAsync(artistId, true, callback =>
+                    await _musicBrainzService.UpdateMusicBrainzArtistAsync(artistId, callback =>
                     {
                         if (callback.Status == UpdateMBStatus.Updating)
                         {

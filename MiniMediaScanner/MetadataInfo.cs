@@ -53,6 +53,7 @@ public class MetadataInfo
     public DateTime File_LastWriteTime { get; set; }
     public DateTime File_CreationTime { get; set; }
     public string Tag_AllJsonTags { get; set; }
+    public Dictionary<string, string> MediaTags { get; set; }
 
     public void NonNullableValues()
     {

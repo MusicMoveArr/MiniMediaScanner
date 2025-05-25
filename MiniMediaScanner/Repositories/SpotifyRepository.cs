@@ -13,7 +13,7 @@ public class SpotifyRepository
         _connectionString = connectionString;
     }
     
-    public async Task InsertOrUpdateArtistAsync(FullArtist artist)
+    public async Task UpsertArtistAsync(FullArtist artist)
     {
         string query = @"
             INSERT INTO spotify_artist (Id, 
@@ -58,7 +58,7 @@ public class SpotifyRepository
         });
     }
     
-    public async Task InsertOrUpdateArtistImageAsync(FullArtist artist)
+    public async Task UpsertArtistImageAsync(FullArtist artist)
     {
         string query = @"
             INSERT INTO spotify_artist_image (ArtistId, 
@@ -84,7 +84,7 @@ public class SpotifyRepository
         }
     }
     
-    public async Task InsertOrUpdateAlbumAsync(FullAlbum album, string albumGroup, string artistId)
+    public async Task UpsertAlbumAsync(FullAlbum album, string albumGroup, string artistId)
     {
         string query = @"
             INSERT INTO spotify_album (AlbumId, 
@@ -135,7 +135,7 @@ public class SpotifyRepository
         });
     }
     
-    public async Task InsertOrUpdateAlbumImageAsync(FullAlbum album)
+    public async Task UpsertAlbumImageAsync(FullAlbum album)
     {
         string query = @"
             INSERT INTO spotify_album_image (AlbumId, 
@@ -161,7 +161,7 @@ public class SpotifyRepository
         }
     }
     
-    public async Task InsertOrUpdateAlbumArtistAsync(FullAlbum album)
+    public async Task UpsertAlbumArtistAsync(FullAlbum album)
     {
         string query = @"
             INSERT INTO spotify_album_artist (AlbumId, 
@@ -185,7 +185,7 @@ public class SpotifyRepository
         }
     }
     
-    public async Task InsertOrUpdateAlbumExternalIdAsync(FullAlbum album)
+    public async Task UpsertAlbumExternalIdAsync(FullAlbum album)
     {
         string query = @"
             INSERT INTO spotify_album_externalid (AlbumId, 
@@ -209,7 +209,7 @@ public class SpotifyRepository
         }
     }
     
-    public async Task InsertOrUpdateTrackAsync(FullTrack track)
+    public async Task UpsertTrackAsync(FullTrack track)
     {
         string query = @"
             INSERT INTO spotify_track (TrackId, 
@@ -259,7 +259,7 @@ public class SpotifyRepository
         });
     }
     
-    public async Task InsertOrUpdateTrack_ArtistAsync(FullTrack track)
+    public async Task UpsertTrack_ArtistAsync(FullTrack track)
     {
         string query = @"
             INSERT INTO spotify_track_artist (TrackId, 
@@ -293,7 +293,7 @@ public class SpotifyRepository
         });
     }
     
-    public async Task InsertOrUpdateTrackExternalIdAsync(FullTrack track)
+    public async Task UpsertTrackExternalIdAsync(FullTrack track)
     {
         string query = @"
             INSERT INTO spotify_track_externalid (TrackId, 

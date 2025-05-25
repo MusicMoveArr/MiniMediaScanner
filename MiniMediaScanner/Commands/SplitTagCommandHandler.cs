@@ -11,25 +11,19 @@ namespace MiniMediaScanner.Commands;
 
 public class SplitTagCommandHandler
 {
-    private readonly AcoustIdService _acoustIdService;
-    private readonly MusicBrainzAPIService _musicBrainzAPIService;
     private readonly MetadataRepository _metadataRepository;
     private readonly ArtistRepository _artistRepository;
     private readonly MediaTagWriteService _mediaTagWriteService;
     private readonly ImportCommandHandler _importCommandHandler;
-    private readonly StringNormalizerService _normalizerService;
-    private readonly MusicBrainzArtistRepository _musicBrainzArtistRepository;
+    private readonly FileMetaDataService _fileMetaDataService;
 
     public SplitTagCommandHandler(string connectionString)
     {
-        _acoustIdService = new AcoustIdService();
-        _musicBrainzAPIService = new MusicBrainzAPIService();
         _metadataRepository = new MetadataRepository(connectionString);
         _artistRepository = new ArtistRepository(connectionString);
         _mediaTagWriteService = new MediaTagWriteService();
         _importCommandHandler = new ImportCommandHandler(connectionString);
-        _normalizerService = new StringNormalizerService();
-        _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
+        _fileMetaDataService = new FileMetaDataService();
     }
     
     public async Task SplitTagsAsync(string album, string tag, bool confirm, string writetag, 
@@ -107,14 +101,15 @@ public class SplitTagCommandHandler
         }
 
         Track track = new Track(metadata.Path);
+        var metadataInfo = _fileMetaDataService.GetMetadataInfo(new FileInfo(track.Path));
         
         string newWriteTagValue = updateWriteTagOriginalValue ? mediaTargetTag.Value.Value : splitValue.First();
-        _mediaTagWriteService.UpdateTag(track, writetag, newWriteTagValue, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, writetag, newWriteTagValue, ref trackInfoUpdated, overwriteTagValue);
 
         if (updateReadTag && !string.Equals(tag, writetag))
         {
             string newReadTagValue = updateReadTagOriginalValue ? mediaTargetTag.Value.Value : splitValue.First();
-            _mediaTagWriteService.UpdateTag(track, tag, newReadTagValue, ref trackInfoUpdated, overwriteTagValue);
+            _mediaTagWriteService.UpdateTag(track, metadataInfo, tag, newReadTagValue, ref trackInfoUpdated, overwriteTagValue);
         }
         
         if (!trackInfoUpdated)

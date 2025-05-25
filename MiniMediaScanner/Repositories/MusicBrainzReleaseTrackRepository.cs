@@ -11,12 +11,13 @@ public class MusicBrainzReleaseTrackRepository
         _connectionString = connectionString;
     }
 
-    public async Task<Guid> InsertMusicBrainzReleaseTrackAsync(
-        Guid musicBrainzRemoteReleaseTrackId, 
-        Guid musicBrainzRemoteRecordingTrackId, 
+    public async Task<Guid> UpsertReleaseTrackAsync(
+        Guid releaseTrackId, 
+        Guid recordingTrackId, 
         string title, 
         string status,
-        Guid musicBrainzRemoteReleaseId,
+        string statusId,
+        Guid releaseId,
         int length,
         int number,
         int position,
@@ -35,19 +36,19 @@ public class MusicBrainzReleaseTrackRepository
             status = string.Empty;
         }
         
-        string query = @"INSERT INTO MusicBrainzReleaseTrack (MusicBrainzReleaseTrackId, MusicBrainzRemoteReleaseTrackId, 
-                                     MusicBrainzRemoteRecordingTrackId, Title, Status, StatusId, MusicBrainzRemoteReleaseId,
+        string query = @"INSERT INTO MusicBrainz_Release_Track (ReleaseTrackId, RecordingTrackId, 
+                                     Title, Status, StatusId, ReleaseId,
                                      length, number, position, recordingid, recordinglength, recordingtitle, recordingvideo, mediatrackcount,
                                      mediaformat, mediatitle, mediaposition, mediatrackoffset)
-                         VALUES (@id, @MusicBrainzRemoteReleaseTrackId, @MusicBrainzRemoteRecordingTrackId, @Title, @Status, @StatusId, @MusicBrainzRemoteReleaseId,
+                         VALUES (@releaseTrackId, @recordingTrackId, @title, @status, @statusId, @releaseId,
                                  @length, @number, @position, @recordingId, @recordingLength, @recordingTitle, @recordingvideo, @mediaTrackCount,
                                  @mediaFormat, @mediaTitle, @mediaPosition, @mediatrackoffset)
-                         ON CONFLICT (MusicBrainzRemoteReleaseTrackId) 
+                         ON CONFLICT (ReleaseTrackId) 
                          DO UPDATE SET 
                              Title = EXCLUDED.Title, 
                              Status = EXCLUDED.Status, 
                              StatusId = EXCLUDED.StatusId, 
-                             MusicBrainzRemoteRecordingTrackId = EXCLUDED.MusicBrainzRemoteRecordingTrackId,
+                             RecordingTrackId = EXCLUDED.RecordingTrackId,
                              length = EXCLUDED.length,
                              number = EXCLUDED.number,
                              position = EXCLUDED.position,
@@ -60,21 +61,18 @@ public class MusicBrainzReleaseTrackRepository
                              mediatitle = EXCLUDED.mediatitle,
                              mediaposition = EXCLUDED.mediaposition,
                              mediatrackoffset = EXCLUDED.mediatrackoffset
-                         RETURNING MusicBrainzReleaseTrackId";
+                         RETURNING ReleaseTrackId";
         
-        Guid releaseId = Guid.NewGuid();
-
         await using var conn = new NpgsqlConnection(_connectionString);
         
         return await conn.ExecuteScalarAsync<Guid>(query, new
             {
-                Id = releaseId,
-                MusicBrainzRemoteReleaseTrackId = musicBrainzRemoteReleaseTrackId,
-                MusicBrainzRemoteRecordingTrackId = musicBrainzRemoteRecordingTrackId,
-                Title = title,
-                Status = status,
-                StatusId = status,
-                MusicBrainzRemoteReleaseId = musicBrainzRemoteReleaseId,
+                releaseTrackId,
+                recordingTrackId,
+                title,
+                status,
+                statusId,
+                releaseId,
                 length,
                 number,
                 position,

@@ -170,10 +170,13 @@ CREATE TABLE public.musicbrainz_release_track_artist (
 );
 
 CREATE TABLE public.musicbrainz_release_label (
-    musicbrainzreleaseid uuid NOT NULL,
-    musicbrainzlabelid uuid NOT NULL,
-    CONSTRAINT musicbrainzreleaselabel_pkey PRIMARY KEY (musicbrainzreleaseid, musicbrainzlabelid)
+    releaseid uuid NOT NULL,
+    labelid uuid NOT NULL,
+    catalognumber text NOT NULL,
+    CONSTRAINT musicbrainzreleaselabel_pkey PRIMARY KEY (releaseid, labelid, catalognumber)
 );
+
+
 
 CREATE TABLE public.spotify_artist (
     Id text NOT NULL,
@@ -332,6 +335,7 @@ CREATE TABLE public.tidal_album (
     CONSTRAINT tidal_album_pkey PRIMARY KEY (AlbumId, ArtistId)
 );
 CREATE INDEX idx_tidal_album_id ON public.tidal_album (AlbumId);
+CREATE INDEX idx_tidal_artist_id ON public.tidal_album (ArtistId);
 
 
 CREATE TABLE public.tidal_album_image_link (
@@ -412,4 +416,49 @@ CREATE TABLE public.tidal_track_provider (
     CONSTRAINT tidal_track_provider_pkey PRIMARY KEY (TrackId, ProviderId)
 );
 CREATE INDEX idx_tidal_track_provider_trackid ON public.tidal_track_provider (TrackId);
+
+--update Musicbrainz tables
+ALTER TABLE musicbrainzartist RENAME TO musicbrainz_artist;
+ALTER TABLE musicbrainzrelease RENAME TO musicbrainz_release;
+ALTER TABLE musicbrainzreleasetrack RENAME TO musicbrainz_release_track;
+
+ALTER TABLE public.musicbrainz_artist DROP CONSTRAINT musicbrainzartist_pkey;
+ALTER TABLE public.musicbrainz_artist DROP COLUMN musicbrainzartistid;
+ALTER TABLE public.musicbrainz_artist RENAME COLUMN musicbrainzremoteid TO artistid;
+
+
+UPDATE musicbrainzrelease r
+SET musicbrainzartistid = a.musicbrainzremoteid
+FROM musicbrainzartist a
+WHERE a.musicbrainzartistid = r.musicbrainzartistid;
+
+ALTER TABLE public.musicbrainz_release DROP CONSTRAINT musicbrainzrelease_pkey1;
+ALTER TABLE public.musicbrainz_release DROP COLUMN musicbrainzreleaseid;
+ALTER TABLE public.musicbrainz_release RENAME COLUMN musicbrainzremotereleaseid TO releaseid;
+ALTER TABLE public.musicbrainz_release RENAME COLUMN musicbrainzartistid TO artistid;
+ALTER TABLE public.musicbrainz_release DROP CONSTRAINT musicbrainzrelease_musicbrainzremotereleaseid_key1;
+ALTER TABLE public.musicbrainz_release ADD CONSTRAINT musicbrainz_release_artist_release UNIQUE (releaseid,artistid);
+
+ALTER TABLE public.musicbrainz_release_track DROP CONSTRAINT musicbrainzrelease_pkey;
+ALTER TABLE public.musicbrainz_release_track DROP COLUMN musicbrainzreleasetrackid;
+ALTER TABLE public.musicbrainz_release_track RENAME COLUMN musicbrainzremotereleasetrackid TO releasetrackid;
+ALTER TABLE public.musicbrainz_release_track RENAME COLUMN musicbrainzremoterecordingtrackid TO recordingtrackid;
+ALTER TABLE public.musicbrainz_release_track RENAME COLUMN musicbrainzremotereleaseid TO releaseid;
+
+ALTER TABLE public.musicbrainz_release_track_artist RENAME COLUMN musicbrainzartistid TO artistid;
+ALTER TABLE public.musicbrainz_release_track_artist RENAME COLUMN musicbrainzreleasetrackid TO releasetrackid;
+
+ALTER TABLE public.musicbrainz_area RENAME COLUMN musicbrainzareaid TO areaid;
+
+ALTER TABLE public.musicbrainz_label RENAME COLUMN musicbrainzlabelid TO labelid;
+ALTER TABLE public.musicbrainz_label RENAME COLUMN musicbrainzareaid TO areaid;
+
+ALTER TABLE public.musicbrainz_release_label RENAME COLUMN musicbrainzreleaseid TO releaseid;
+ALTER TABLE public.musicbrainz_release_label RENAME COLUMN musicbrainzlabelid TO labelid;
+
+
+
+
+
+
 

@@ -12,6 +12,7 @@ public class FixCollectionsCommandHandler
     private readonly MetadataRepository _metadataRepository;
     private readonly MediaTagWriteService _mediaTagWriteService;
     private readonly ImportCommandHandler _importCommandHandler;
+    private readonly FileMetaDataService _fileMetaDataService;
 
     private const int BulkProcess = 100;
     private const int FuzzyMatchRatio = 80;
@@ -21,6 +22,7 @@ public class FixCollectionsCommandHandler
         _metadataRepository = new MetadataRepository(connectionString);
         _mediaTagWriteService = new MediaTagWriteService();
         _importCommandHandler = new ImportCommandHandler(connectionString);
+        _fileMetaDataService = new FileMetaDataService();
     }
 
     public async Task FindMissingArtistsAsync(string artist, string targetLabel, string targetCopyright, string albumRegex, string addArtist, bool confirm)
@@ -66,6 +68,7 @@ public class FixCollectionsCommandHandler
                         continue;
                     }
                     Track track = new Track(metadata.Path);
+                    var metadataInfo = _fileMetaDataService.GetMetadataInfo(fileInfo);
 
                     string artistsValue = _mediaTagWriteService.GetDictionaryValue(track, "artists");
 
@@ -91,7 +94,7 @@ public class FixCollectionsCommandHandler
                     }
                     
                     bool trackInfoUpdated = false;
-                    _mediaTagWriteService.UpdateTag(track, "artists", artistsValue, ref trackInfoUpdated, true);
+                    _mediaTagWriteService.UpdateTag(track, metadataInfo, "artists", artistsValue, ref trackInfoUpdated, true);
                     if (trackInfoUpdated)
                     {
                         Console.WriteLine($"Setting tag of file '{metadata.Path}'");

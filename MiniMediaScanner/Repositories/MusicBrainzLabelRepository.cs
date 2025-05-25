@@ -11,8 +11,8 @@ public class MusicBrainzLabelRepository
         _connectionString = connectionString;
     }
     
-    public async Task InsertMusicBrainzLabelAsync(
-        Guid musicBrainzLabelId, 
+    public async Task UpsertLabelAsync(
+        Guid labelId, 
         Guid areaId, 
         string name,
         string disambiguation,
@@ -54,8 +54,8 @@ public class MusicBrainzLabelRepository
             country = string.Empty;
         }
         
-        string query = @"INSERT INTO musicbrainz_label (musicbrainzlabelid, 
-                               musicbrainzareaid, 
+        string query = @"INSERT INTO MusicBrainz_Label (labelid, 
+                               areaid, 
                                Name, 
                                Disambiguation, 
                                LabelCode, 
@@ -66,12 +66,12 @@ public class MusicBrainzLabelRepository
                                SortName, 
                                TypeId, 
                                Country)
-                         VALUES (@musicBrainzLabelId, @areaId, @name, @disambiguation, @labelCode, 
+                         VALUES (@labelId, @areaId, @name, @disambiguation, @labelCode, 
                                  @type, @lifeSpanBegin, @lifeSpanEnd, @lifeSpanEnded, 
                                  @sortName, @typeId, @country)
-                         ON CONFLICT (musicbrainzlabelid) 
+                         ON CONFLICT (labelid) 
                          DO UPDATE SET 
-                             musicbrainzareaid = EXCLUDED.musicbrainzareaid, 
+                             areaid = EXCLUDED.areaid, 
                              Name = EXCLUDED.Name, 
                              Disambiguation = EXCLUDED.Disambiguation, 
                              LabelCode = EXCLUDED.LabelCode, 
@@ -87,7 +87,7 @@ public class MusicBrainzLabelRepository
 
         await conn.ExecuteAsync(query, new
             {
-                musicBrainzLabelId,
+                labelId,
                 areaId, 
                 name,
                 disambiguation,
@@ -105,8 +105,8 @@ public class MusicBrainzLabelRepository
     public async Task<bool> LabelExistsAsync(Guid labelId)
     {
         string query = @"SELECT 1
-                         FROM musicbrainz_label label
-                         where label.musicbrainzlabelid = @labelId
+                         FROM MusicBrainz_Label label
+                         where label.labelid = @labelId
                          limit 1";
 
         await using var conn = new NpgsqlConnection(_connectionString);

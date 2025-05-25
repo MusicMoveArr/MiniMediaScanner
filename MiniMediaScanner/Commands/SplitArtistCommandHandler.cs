@@ -14,16 +14,16 @@ public class SplitArtistCommandHandler
     private readonly MetadataRepository _metadataRepository;
     private readonly MediaTagWriteService _mediaTagWriteService;
     private readonly ImportCommandHandler _importCommandHandler;
-    private readonly StringNormalizerService _normalizerService;
     private readonly MusicBrainzArtistRepository _musicBrainzArtistRepository;
+    private readonly FileMetaDataService _fileMetaDataService;
 
     public SplitArtistCommandHandler(string connectionString)
     {
         _metadataRepository = new MetadataRepository(connectionString);
         _mediaTagWriteService = new MediaTagWriteService();
         _importCommandHandler = new ImportCommandHandler(connectionString);
-        _normalizerService = new StringNormalizerService();
         _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
+        _fileMetaDataService = new FileMetaDataService();
     }
     
     public async Task SplitArtistAsync(string artist, string artistFormat, bool autoConfirm)
@@ -31,7 +31,7 @@ public class SplitArtistCommandHandler
         var metadata = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .ToList();
 
-        var musicBrainzArtists = await _musicBrainzArtistRepository.GetSplitBrainzArtistAsync(artist);
+        var musicBrainzArtists = await _musicBrainzArtistRepository.GetSplitArtistAsync(artist);
         
         Console.WriteLine($"Checking artist '{artist}' ");
 
@@ -89,22 +89,23 @@ public class SplitArtistCommandHandler
             foreach (var metadataAlbum in album)
             {
                 Track track = new Track(metadataAlbum.Path);
+                var metadataInfo = _fileMetaDataService.GetMetadataInfo(new FileInfo(track.Path));
                 bool trackInfoUpdated = false;
                 if (string.Equals(track.AlbumArtist, artist, StringComparison.OrdinalIgnoreCase))
                 {
-                    _mediaTagWriteService.UpdateTag(track, "AlbumArtist", newArtistName, ref trackInfoUpdated, true);
+                    _mediaTagWriteService.UpdateTag(track, metadataInfo, "AlbumArtist", newArtistName, ref trackInfoUpdated, true);
                 }
                 if (string.Equals(track.Artist, artist, StringComparison.OrdinalIgnoreCase))
                 {
-                    _mediaTagWriteService.UpdateTag(track, "Artist", newArtistName, ref trackInfoUpdated, true);
+                    _mediaTagWriteService.UpdateTag(track, metadataInfo, "Artist", newArtistName, ref trackInfoUpdated, true);
                 }
                 if (string.Equals(track.SortArtist, artist, StringComparison.OrdinalIgnoreCase))
                 {
-                    _mediaTagWriteService.UpdateTag(track, "SortArtist", newArtistName, ref trackInfoUpdated, true);
+                    _mediaTagWriteService.UpdateTag(track, metadataInfo, "SortArtist", newArtistName, ref trackInfoUpdated, true);
                 }
                 if (string.Equals(track.SortAlbumArtist, artist, StringComparison.OrdinalIgnoreCase))
                 {
-                    _mediaTagWriteService.UpdateTag(track, "SortAlbumArtist", newArtistName, ref trackInfoUpdated, true);
+                    _mediaTagWriteService.UpdateTag(track, metadataInfo, "SortAlbumArtist", newArtistName, ref trackInfoUpdated, true);
                 }
                 
                 if (trackInfoUpdated && await _mediaTagWriteService.SafeSaveAsync(track))

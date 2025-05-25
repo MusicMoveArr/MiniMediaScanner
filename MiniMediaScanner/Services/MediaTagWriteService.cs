@@ -258,6 +258,11 @@ public class MediaTagWriteService
                 track.AdditionalFields[GetFieldName(track, "Acoustid Fingerprint")] = value;
                 updated = IsDictionaryUpdated(track, oldValues, "Acoustid Fingerprint");
                 return true;
+            case "acoustid fingerprint duration":
+                orgValue = GetDictionaryValue(track, "Acoustid Fingerprint Duration");
+                track.AdditionalFields[GetFieldName(track, "Acoustid Fingerprint Duration")] = value;
+                updated = IsDictionaryUpdated(track, oldValues, "Acoustid Fingerprint Duration");
+                return true;
             case "isrc":
                 orgValue = track.ISRC;
                 updated = !string.Equals(track.ISRC, value);
@@ -381,6 +386,20 @@ public class MediaTagWriteService
         return false;
     }
 
+    private bool IsDictionaryUpdated(Dictionary<string, string> mediaTags, 
+        Dictionary<string, string> oldValues,
+        string tagName)
+    {
+        string fieldName = GetFieldName(mediaTags, tagName);
+
+        if (mediaTags.ContainsKey(fieldName) &&
+            !oldValues.ContainsKey(fieldName))
+        {
+            return true;
+        }
+        
+        return !string.Equals(mediaTags[GetFieldName(mediaTags, fieldName)], oldValues[GetFieldName(mediaTags, fieldName)]);
+    }
     private bool IsDictionaryUpdated(Track track, 
         Dictionary<string, string> oldValues,
         string tagName)
@@ -396,6 +415,15 @@ public class MediaTagWriteService
         return !string.Equals(track.AdditionalFields[GetFieldName(track, fieldName)], oldValues[GetFieldName(track, fieldName)]);
     }
 
+    public string GetDictionaryValue(Dictionary<string, string> mediaTags, string fieldName)
+    {
+        fieldName = GetFieldName(mediaTags, fieldName);
+        if (mediaTags.TryGetValue(fieldName, out string value))
+        {
+            return value;
+        }
+        return string.Empty;
+    }
     public string GetDictionaryValue(Track track, string fieldName)
     {
         fieldName = GetFieldName(track, fieldName);
@@ -406,6 +434,14 @@ public class MediaTagWriteService
         return string.Empty;
     }
     
+    public string GetFieldName(Dictionary<string, string> mediaTags, string field)
+    {
+        if (mediaTags.Keys.Any(key => key.ToLower() == field.ToLower()))
+        {
+            return mediaTags.First(pair => pair.Key.ToLower() == field.ToLower()).Key;
+        }
+        return field;
+    }
     public string GetFieldName(Track track, string field)
     {
         if (track.AdditionalFields.Keys.Any(key => key.ToLower() == field.ToLower()))
@@ -415,6 +451,16 @@ public class MediaTagWriteService
         return field;
     }
 
+    public string GetTagValue(Dictionary<string, string> mediaTags, string tagName)
+    {
+        string fieldName = GetFieldName(mediaTags, tagName);
+        if (mediaTags.ContainsKey(fieldName))
+        {
+            return mediaTags[fieldName];
+        }
+
+        return string.Empty;
+    }
     public string GetTagValue(Track track, string tagName)
     {
         string fieldName = GetFieldName(track, tagName);
@@ -468,7 +514,12 @@ public class MediaTagWriteService
         return success;
     }
     
-    public void UpdateTag(Track track, string tagName, string? value, ref bool trackInfoUpdated, bool overwriteTagValue)
+    public void UpdateTag(Track track,
+        MetadataInfo metadataInfo,
+        string tagName, 
+        string? value, 
+        ref bool trackInfoUpdated, 
+        bool overwriteTagValue)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -480,12 +531,12 @@ public class MediaTagWriteService
             return;
         }
         
-        tagName = GetFieldName(track, tagName);
+        tagName = GetFieldName(metadataInfo.MediaTags, tagName);
         value = _normalizerService.ReplaceInvalidCharacters(value);
         
         if (!overwriteTagValue &&
-            (track.AdditionalFields.ContainsKey(tagName) ||
-             !string.IsNullOrWhiteSpace(track.AdditionalFields[tagName])))
+            metadataInfo.MediaTags.ContainsKey(tagName) &&
+            !string.IsNullOrWhiteSpace(metadataInfo.MediaTags[tagName]))
         {
             return;
         }
@@ -494,7 +545,14 @@ public class MediaTagWriteService
         bool tempIsUpdated = false;
         UpdateTrackTag(track, tagName, value, ref tempIsUpdated, ref orgValue);
 
-        if (tempIsUpdated)
+        //double check incase the same check above somehow failed (because of tag typos etc)
+        //write back the original value
+        if (!overwriteTagValue && tempIsUpdated && !string.IsNullOrWhiteSpace(orgValue))
+        {
+            UpdateTrackTag(track, tagName, orgValue, ref tempIsUpdated, ref orgValue);
+        }
+        
+        if (tempIsUpdated && !string.Equals(orgValue, value))
         {
             Console.WriteLine($"Updating tag '{tagName}' value '{orgValue}' =>  '{value}'");
             trackInfoUpdated = true;

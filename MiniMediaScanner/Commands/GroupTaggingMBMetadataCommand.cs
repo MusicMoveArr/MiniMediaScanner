@@ -36,7 +36,7 @@ public class GroupTaggingMBMetadataCommand : ICommand
         Description = "Overwrite existing tag values.", 
         IsRequired = false,
         EnvironmentVariable = "GROUPTAGGINGMETADATA_OVERWRITE_TAG")]
-    public bool OverwriteTag { get; set; } = true;
+    public bool OverwriteTag { get; set; }
     
     public async ValueTask ExecuteAsync(IConsole console)
     {

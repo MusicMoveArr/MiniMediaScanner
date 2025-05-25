@@ -11,8 +11,8 @@ public class MusicBrainzReleaseArtistRepository
         _connectionString = connectionString;
     }
     
-    public async Task<Guid> InsertMusicBrainzReleaseTrackArtistAsync(
-        Guid musicBrainzReleaseTrackId, 
+    public async Task<Guid> UpsertReleaseTrackArtistAsync(
+        Guid releaseTrackId, 
         Guid artistId, 
         string? joinPhrase,
         int index)
@@ -22,12 +22,12 @@ public class MusicBrainzReleaseArtistRepository
             joinPhrase = string.Empty;
         }
         
-        string query = @"INSERT INTO musicbrainz_release_track_artist (musicbrainzreleasetrackid, 
-                               musicbrainzartistid, 
+        string query = @"INSERT INTO MusicBrainz_Release_Track_Artist (releasetrackid, 
+                               artistid, 
                                JoinPhrase, 
                                index)
-                         VALUES (@musicBrainzReleaseTrackId, @artistId, @joinPhrase, @index)
-                         ON CONFLICT (MusicBrainzReleaseTrackId, musicbrainzartistid) 
+                         VALUES (@releaseTrackId, @artistId, @joinPhrase, @index)
+                         ON CONFLICT (ReleaseTrackId, artistid) 
                          DO UPDATE SET 
                              JoinPhrase = EXCLUDED.JoinPhrase, 
                              index = EXCLUDED.index";
@@ -36,7 +36,7 @@ public class MusicBrainzReleaseArtistRepository
 
         return await conn.ExecuteScalarAsync<Guid>(query, new
             {
-                musicBrainzReleaseTrackId,
+                releaseTrackId,
                 artistId, 
                 joinPhrase,
                 index

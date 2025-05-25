@@ -56,8 +56,8 @@ public class SpotifyService
             artist = await _cacheLayerService.GetArtistAsync(artistId);
         }
         
-        await _spotifyRepository.InsertOrUpdateArtistAsync(artist);
-        await _spotifyRepository.InsertOrUpdateArtistImageAsync(artist);
+        await _spotifyRepository.UpsertArtistAsync(artist);
+        await _spotifyRepository.UpsertArtistImageAsync(artist);
         
         List<SimpleAlbum> simpleAlbums = new List<SimpleAlbum>();
         await foreach (var simpleAlbum in _cacheLayerService.SpotifyClient.Paginate(
@@ -79,10 +79,10 @@ public class SpotifyService
             
             var album = await _cacheLayerService.GetAlbumAsync(simpleAlbum.Id);
             
-            await _spotifyRepository.InsertOrUpdateAlbumAsync(album, simpleAlbum?.AlbumGroup ?? string.Empty, artistId);
-            await _spotifyRepository.InsertOrUpdateAlbumArtistAsync(album);
-            await _spotifyRepository.InsertOrUpdateAlbumImageAsync(album);
-            await _spotifyRepository.InsertOrUpdateAlbumExternalIdAsync(album);
+            await _spotifyRepository.UpsertAlbumAsync(album, simpleAlbum?.AlbumGroup ?? string.Empty, artistId);
+            await _spotifyRepository.UpsertAlbumArtistAsync(album);
+            await _spotifyRepository.UpsertAlbumImageAsync(album);
+            await _spotifyRepository.UpsertAlbumExternalIdAsync(album);
             
             TracksRequest req = new TracksRequest(album.Tracks.Items.Take(50).Select(track => track.Id).ToList());
             var fullTracks = await _cacheLayerService.SpotifyClient.Tracks.GetSeveral(req);
@@ -94,17 +94,17 @@ public class SpotifyService
             
             foreach (var track in fullTracks.Tracks)
             {
-                await _spotifyRepository.InsertOrUpdateTrackAsync(track);
-                await _spotifyRepository.InsertOrUpdateTrack_ArtistAsync(track);
-                await _spotifyRepository.InsertOrUpdateTrackExternalIdAsync(track);
+                await _spotifyRepository.UpsertTrackAsync(track);
+                await _spotifyRepository.UpsertTrack_ArtistAsync(track);
+                await _spotifyRepository.UpsertTrackExternalIdAsync(track);
 
                 foreach (var artistAssociated in track.Artists)
                 {
                     var extraArtist = await _cacheLayerService.GetArtistAsync(artistAssociated.Id);
                     if (extraArtist != null)
                     {
-                        await _spotifyRepository.InsertOrUpdateArtistAsync(extraArtist);
-                        await _spotifyRepository.InsertOrUpdateArtistImageAsync(extraArtist);
+                        await _spotifyRepository.UpsertArtistAsync(extraArtist);
+                        await _spotifyRepository.UpsertArtistImageAsync(extraArtist);
                     }
                 }
             }

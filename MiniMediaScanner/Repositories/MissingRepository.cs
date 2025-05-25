@@ -19,11 +19,11 @@ public class MissingRepository
                                 lower(track.title) as TrackTitle, 
                                 lower(re.status) as Status, 
                                 track.recordingid
-                         FROM musicbrainzartist ar
-                         JOIN musicbrainzrelease re ON re.musicbrainzartistid = ar.musicbrainzartistid
+                         FROM MusicBrainz_Artist ar
+                         JOIN MusicBrainz_Release re ON re.musicbrainzartistid = ar.musicbrainzartistid
                                                     --AND lower(re.country) = lower(ar.country)
                          AND (lower(re.status) = 'official' OR LENGTH(re.status) = 0)
-                         JOIN musicbrainzreleasetrack track ON track.musicbrainzremotereleaseid = re.musicbrainzremotereleaseid
+                         JOIN MusicBrainz_Release_Track track ON track.musicbrainzremotereleaseid = re.musicbrainzremotereleaseid
                          where lower(ar.name) = lower(@artistName)
                          	and track.title not like '%(%'";
         
@@ -102,12 +102,12 @@ public class MissingRepository
                                         PARTITION BY lower(track.title), lower(re.title), lower(ar.name), lower(track.title)
                                     ) AS rn
                                     
-                               FROM musicbrainzartist ar
-                                 JOIN musicbrainzrelease re 
+                               FROM MusicBrainz_Artist ar
+                                 JOIN MusicBrainz_Release re 
                                      ON re.musicbrainzartistid = ar.musicbrainzartistid
                                      --AND lower(re.country) = lower(ar.country)
                                       AND (lower(re.status) = 'official' OR LENGTH(re.status) = 0)
-                                 JOIN musicbrainzreleasetrack track 
+                                 JOIN MusicBrainz_Release_Track track 
                                      ON track.musicbrainzremotereleaseid = re.musicbrainzremotereleaseid
                          ) AS subquery
                              WHERE rn = 1
@@ -168,9 +168,9 @@ public class MissingRepository
 						        mr.title AS album_name, 
 						        mrt.musicbrainzreleasetrackid, 
 						        mrt.title AS track_name 
-						    FROM musicbrainzreleasetrack mrt
-						    JOIN musicbrainzrelease mr ON mrt.musicbrainzremotereleaseid = mr.musicbrainzremotereleaseid
-						    JOIN musicbrainzartist ma ON mr.musicbrainzartistid = ma.musicbrainzartistid
+						    FROM MusicBrainz_Release_Track mrt
+						    JOIN MusicBrainz_Release mr ON mrt.musicbrainzremotereleaseid = mr.musicbrainzremotereleaseid
+						    JOIN MusicBrainz_Artist ma ON mr.musicbrainzartistid = ma.musicbrainzartistid
 						    where lower(ma.name) = lower(@artistName)
 						)
 						SELECT distinct mb.artist_name AS Artist, mb.album_name AS Album, mb.track_name AS Track
@@ -253,12 +253,13 @@ public class MissingRepository
 						 		ttel.href AS TrackUrl,
 						 		tael.href AS AlbumUrl
 						 	from tidal_artist artist
-						 	join tidal_album album on album.artistid = artist.artistid
-						 	join tidal_track track on track.albumid = album.albumid
+						 	join tidal_album album on album.artistid = artist.artistid and length(album.Availability) > 0
+						 	join tidal_track track on track.albumid = album.albumid and length(track.Availability) > 0
 							left join tidal_album_external_link tael on tael.albumid = album.albumid and tael.meta_type = 'TIDAL_SHARING'
 							left join tidal_track_external_link ttel on ttel.trackid = track.trackid and ttel.meta_type = 'TIDAL_SHARING'
 							left join tidal_artist_external_link taael on taael.artistid = artist.artistid and taael.meta_type = 'TIDAL_SHARING'
 						 	where artist.artistid = @tidalArtistId
+
 						 ),
 						 MusicLibrary as (
 						 	select distinct 
@@ -288,7 +289,7 @@ public class MissingRepository
 			    {
 				    tidalArtistId,
 				    artistName
-			    }, commandTimeout: 60))
+			    }, commandTimeout: 300))
 		    .ToList();
     }
 

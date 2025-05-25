@@ -79,12 +79,12 @@ public class MetadataRepository
                                         PARTITION BY track.title, lower(re.title), lower(ar.name)
                                     ) AS rn
                                     
-                               FROM musicbrainzartist ar
-                                 JOIN musicbrainzrelease re 
+                               FROM MusicBrainz_Artist ar
+                                 JOIN MusicBrainz_Release re 
                                      ON re.musicbrainzartistid = ar.musicbrainzartistid
                                      --AND lower(re.country) = lower(ar.country)
                                       AND (lower(re.status) = 'official' OR LENGTH(re.status) = 0)
-                                 JOIN musicbrainzreleasetrack track 
+                                 JOIN MusicBrainz_Release_Track track 
                                      ON track.musicbrainzremotereleaseid = re.musicbrainzremotereleaseid
                          ) AS subquery
                              WHERE rn = 1

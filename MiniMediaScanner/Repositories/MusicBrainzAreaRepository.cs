@@ -11,7 +11,7 @@ public class MusicBrainzAreaRepository
         _connectionString = connectionString;
     }
     
-    public async Task<Guid> InsertMusicBrainzAreaAsync(
+    public async Task<Guid> UpsertAreaAsync(
         Guid areaId, 
         string name,
         string? type,
@@ -36,12 +36,12 @@ public class MusicBrainzAreaRepository
             disambiguation = string.Empty;
         }
         
-        string query = @"INSERT INTO musicbrainz_area (musicbrainzareaid, 
+        string query = @"INSERT INTO musicbrainz_area (areaid, 
                                Name, Type, TypeId,
                                SortName, Disambiguation)
                          VALUES (@areaId, @name, @type,
                                  @typeId, @sortName, @disambiguation)
-                         ON CONFLICT (musicbrainzareaid) 
+                         ON CONFLICT (areaid) 
                          DO UPDATE SET 
                              Name = EXCLUDED.Name, 
                              Type = EXCLUDED.Type, 

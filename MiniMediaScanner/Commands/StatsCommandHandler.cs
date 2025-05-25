@@ -23,9 +23,9 @@ public class StatsCommandHandler
         Console.WriteLine($"Tracks added last 1day: {await _statsRepository.GetTracksAddedCountAsync(1)}");
         Console.WriteLine($"Tracks added last 7days: {await _statsRepository.GetTracksAddedCountAsync(7)}");
         
-        Console.WriteLine($"Cached MusicBrainz Artists: {await _statsRepository.GetGenericCountAsync("musicbrainzartist")}");
-        Console.WriteLine($"Cached MusicBrainz Albums: {await _statsRepository.GetGenericCountAsync("musicbrainzrelease")}");
-        Console.WriteLine($"Cached MusicBrainz Tracks: {await _statsRepository.GetGenericCountAsync("musicbrainzreleasetrack")}");
+        Console.WriteLine($"Cached MusicBrainz Artists: {await _statsRepository.GetGenericCountAsync("musicbrainz_artist")}");
+        Console.WriteLine($"Cached MusicBrainz Albums: {await _statsRepository.GetGenericCountAsync("musicbrainz_release")}");
+        Console.WriteLine($"Cached MusicBrainz Tracks: {await _statsRepository.GetGenericCountAsync("musicbrainz_release_track")}");
         
         Console.WriteLine($"Cached Spotify Artists: {await _statsRepository.GetGenericCountAsync("spotify_artist")}");
         Console.WriteLine($"Cached Spotify Albums: {await _statsRepository.GetGenericCountAsync("spotify_album")}");

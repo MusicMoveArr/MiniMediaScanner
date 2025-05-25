@@ -13,8 +13,8 @@ public class MusicBrainzReleaseRepository
     
     
 
-    public async Task<Guid> InsertMusicBrainzReleaseAsync(Guid musicBrainzArtistId, 
-        Guid musicBrainzRemoteReleaseId, 
+    public async Task<Guid> UpsertReleaseAsync(Guid artistId, 
+        Guid releaseId, 
         string title, 
         string? status, 
         string? statusId,
@@ -53,17 +53,17 @@ public class MusicBrainzReleaseRepository
             quality = string.Empty;
         }
         
-        string query = @"INSERT INTO MusicBrainzRelease (MusicBrainzReleaseId, MusicBrainzArtistId, MusicBrainzRemoteReleaseId, 
+        string query = @"INSERT INTO MusicBrainz_Release (ArtistId, ReleaseId,
                                 Title, Status, StatusId,
                                 Date,
                                 Barcode,
                                 Country,
                                 Disambiguation,
                                 Quality)
-
-                         VALUES (@id, @MusicBrainzArtistId, @MusicBrainzRemoteReleaseId, @Title, @Status, @StatusId, @Date, @Barcode, @Country, @Disambiguation, @Quality)
-                         ON CONFLICT (MusicBrainzRemoteReleaseId) 
-                         DO UPDATE SET Title = EXCLUDED.Title, 
+                         VALUES (@artistId, @releaseId, @Title, @Status, @StatusId, @Date, @Barcode, @Country, @Disambiguation, @Quality)
+                         ON CONFLICT (ArtistId, ReleaseId) 
+                         DO UPDATE SET 
+                             Title = EXCLUDED.Title, 
                              Status = EXCLUDED.Status, 
                              StatusId = EXCLUDED.StatusId, 
                              Date = EXCLUDED.Date, 
@@ -71,17 +71,14 @@ public class MusicBrainzReleaseRepository
                              Country = EXCLUDED.Country, 
                              Disambiguation = EXCLUDED.Disambiguation, 
                              Quality = EXCLUDED.Quality
-                         RETURNING MusicBrainzReleaseId";
+                         RETURNING ReleaseId";
         
-        Guid releaseId = Guid.NewGuid();
-
         await using var conn = new NpgsqlConnection(_connectionString);
         
         return await conn.ExecuteScalarAsync<Guid>(query, new
             {
-                id = releaseId,
-                MusicBrainzArtistId = musicBrainzArtistId,
-                MusicBrainzRemoteReleaseId = musicBrainzRemoteReleaseId,
+                artistId,
+                releaseId,
                 Title = title,
                 Status = status,
                 StatusId = statusId,
@@ -93,11 +90,11 @@ public class MusicBrainzReleaseRepository
             });
     }
     
-    public async Task<bool> MusicBrainzReleaseIdExistsAsync(Guid releaseId)
+    public async Task<bool> ReleaseIdExistsAsync(Guid releaseId)
     {
         string query = @"SELECT 1
-                         FROM musicbrainzrelease album
-                         where album.musicbrainzremotereleaseid = @releaseId
+                         FROM MusicBrainz_Release album
+                         where album.ReleaseId = @releaseId
                          limit 1";
 
         await using var conn = new NpgsqlConnection(_connectionString);
