@@ -39,8 +39,7 @@ public class SpotifyRepository
                 Uri = EXCLUDED.Uri,
                 TotalFollowers = EXCLUDED.TotalFollowers,
                 Href = EXCLUDED.Href,
-                Genres = EXCLUDED.Genres,
-                lastsynctime = EXCLUDED.lastsynctime";
+                Genres = EXCLUDED.Genres";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         
@@ -54,7 +53,7 @@ public class SpotifyRepository
             TotalFollowers = artist.Followers.Total,
             Href = artist.Href,
             Genres = string.Join(',', artist.Genres),
-            lastsynctime = DateTime.Now
+            lastsynctime = new DateTime(2000, 1,1)
         });
     }
     
@@ -290,6 +289,19 @@ public class SpotifyRepository
         return await conn.ExecuteScalarAsync<DateTime>(query, new
         {
             id = artistId
+        });
+    }
+    
+    public async Task<DateTime?> SetArtistLastSyncTimeAsync(string artistId)
+    {
+        string query = @"UPDATE spotify_artist SET lastsynctime = @lastsynctime WHERE Id = @id";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn.ExecuteScalarAsync<DateTime>(query, new
+        {
+            id = artistId,
+            lastsynctime = DateTime.Now
         });
     }
     

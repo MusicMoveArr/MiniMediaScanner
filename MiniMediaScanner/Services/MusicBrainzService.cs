@@ -101,8 +101,7 @@ public class MusicBrainzService
             musicBrainzArtistInfo.Type,
             musicBrainzArtistInfo.Country,
             musicBrainzArtistInfo.SortName,
-            musicBrainzArtistInfo.Disambiguation,
-            DateTime.Now);
+            musicBrainzArtistInfo.Disambiguation);
 
 
         UpdateMBCallback updateMbCallback = new UpdateMBCallback(musicBrainzArtistGuid, UpdateMBStatus.Updating);
@@ -217,8 +216,7 @@ public class MusicBrainzService
                                         credit.Artist.Type,
                                         credit.Artist.Country,
                                         credit.Artist.SortName,
-                                        credit.Artist.Disambiguation,
-                                        new DateTime(2000, 1, 1)); //day in the past so we can sync if we want
+                                        credit.Artist.Disambiguation);
                                 }
                                 
                                 await _musicBrainzReleaseArtistRepository.UpsertReleaseTrackArtistAsync(
@@ -255,5 +253,7 @@ public class MusicBrainzService
                 break;
             }
         }
+
+        await _musicBrainzArtistRepository.SetArtistLastSyncTimeAsync(musicBrainzArtistGuid);
     }
 }

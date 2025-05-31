@@ -61,7 +61,6 @@ public class TidalService
         await RefreshTokenAsync();
 
         DateTime? lastSyncTime = await _tidalRepository.GetArtistLastSyncTimeAsync(artistId);
-
         if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < PreventUpdateWithinDays)
         {
             callback?.Invoke(new UpdateTidalCallback(artistId, UpdateTidalStatus.SkippedSyncedWithin));
@@ -342,6 +341,8 @@ public class TidalService
 
             progress++;
         }
+
+        await _tidalRepository.SetArtistLastSyncTimeAsync(artistId);
     }
 
     private async Task<TidalSearchResponse?> InsertArtistInfoAsync(int artistId, bool ignorePeventCheck = false)

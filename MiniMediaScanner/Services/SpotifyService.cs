@@ -109,5 +109,7 @@ public class SpotifyService
                 }
             }
         }
+
+        await _spotifyRepository.SetArtistLastSyncTimeAsync(artistId);
     }
 }

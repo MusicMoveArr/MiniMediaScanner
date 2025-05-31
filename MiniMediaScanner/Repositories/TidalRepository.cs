@@ -24,6 +24,19 @@ public class TidalRepository
         });
     }
     
+    public async Task<DateTime?> SetArtistLastSyncTimeAsync(int artistId)
+    {
+        string query = @"UPDATE tidal_artist SET lastsynctime = @lastsynctime WHERE ArtistId = @id";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn.ExecuteScalarAsync<DateTime>(query, new
+        {
+            id = artistId,
+            lastsynctime = DateTime.Now
+        });
+    }
+    
     public async Task UpsertArtistAsync(int artistId, string name, float popularity)
     {
         string query = @"
@@ -35,8 +48,7 @@ public class TidalRepository
             ON CONFLICT (ArtistId)
             DO UPDATE SET
                 Name = EXCLUDED.Name,
-                Popularity = EXCLUDED.Popularity,
-                lastsynctime = EXCLUDED.lastsynctime";
+                Popularity = EXCLUDED.Popularity";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         
@@ -45,7 +57,7 @@ public class TidalRepository
             artistId,
             name,
             popularity,
-            lastsynctime = DateTime.Now
+            lastsynctime = new DateTime(2000, 1, 1)
         });
     }
     

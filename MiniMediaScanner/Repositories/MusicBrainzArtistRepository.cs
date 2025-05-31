@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices.JavaScript;
 using Dapper;
 using MiniMediaScanner.Models.MusicBrainz;
 using MiniMediaScanner.Models.MusicBrainz.MusicBrainzRecordings;
@@ -58,8 +59,7 @@ public class MusicBrainzArtistRepository
         string? artistType,
         string? country,
         string? sortName,
-        string? disambiguation,
-        DateTime lastSyncTime)
+        string? disambiguation)
     {
         if (string.IsNullOrWhiteSpace(artistType))
         {
@@ -87,8 +87,7 @@ public class MusicBrainzArtistRepository
                              Type = EXCLUDED.Type, 
                              Country = EXCLUDED.Country, 
                              SortName = EXCLUDED.SortName, 
-                             Disambiguation = EXCLUDED.Disambiguation,
-                             lastsynctime = @lastSyncTime
+                             Disambiguation = EXCLUDED.Disambiguation
                          RETURNING ArtistId";
         
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -101,7 +100,7 @@ public class MusicBrainzArtistRepository
                 Country = country,
                 SortName = sortName,
                 Disambiguation = disambiguation,
-                lastSyncTime
+                lastSyncTime = new DateTime(2000, 1, 1)
             });
     }
     
@@ -114,6 +113,19 @@ public class MusicBrainzArtistRepository
         return await conn.ExecuteScalarAsync<DateTime>(query, new
         {
             artistId
+        });
+    }
+    
+    public async Task<DateTime> SetArtistLastSyncTimeAsync(Guid artistId)
+    {
+        string query = @"UPDATE MusicBrainz_Artist SET lastsynctime = @lastsynctime WHERE ArtistId = @artistId";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn.ExecuteScalarAsync<DateTime>(query, new
+        {
+            artistId,
+            lastsynctime = DateTime.Now
         });
     }
 
