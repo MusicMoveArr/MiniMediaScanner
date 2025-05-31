@@ -517,6 +517,42 @@ public class MetadataRepository
         }).ToList();
     }
     
+    public async Task<List<MetadataModel>> GetUntaggedMetadataByArtistAsync(string artistName)
+    {
+        string query = @$"SELECT m.MetadataId, 
+                                 m.Path, 
+                                 m.Title, 
+                                 m.AlbumId,
+                                 tag_alljsontags,
+                                 album.title AS AlbumName,
+                                 tag_track,
+                                 tag_trackcount,
+                                 tag_disc,
+                                 tag_disccount,
+                                 artist.name AS ArtistName,
+                                 m.MusicBrainzArtistId,
+                                 m.tag_acoustid,
+                                 m.Tag_AllJsonTags,
+                                 artist.ArtistId
+                        FROM metadata m
+                        JOIN albums album ON album.albumid = m.albumid
+                        JOIN artists artist ON artist.artistid = album.artistid
+                        left JOIN LATERAL (
+	                         SELECT jsonb_object_keys(m.tag_alljsontags) AS key
+	                     ) subquery ON lower(subquery.key) ilike lower('MusicBrainz%')
+	 			                    or lower(subquery.key) ilike lower('Tidal%')
+	 			                    or lower(subquery.key) ilike lower('Spotify%')
+                        where lower(artist.name) = lower(@artistName)
+                              and subquery.key is null ";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn.Query<MetadataModel>(query, new
+        {
+            artistName
+        }).ToList();
+    }
+    
     public async Task<List<MetadataModel>> GetMetadataByTagMissingArtistAsync(
         string artistFilter,
         string searchTag, 
