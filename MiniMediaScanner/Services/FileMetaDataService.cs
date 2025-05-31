@@ -138,8 +138,6 @@ public class FileMetaDataService
             artist = sortArtist;
         }
 
-        artist = GetWithoutFeat(artist);
-
         if (string.IsNullOrWhiteSpace(artist))
         {
             artist = "[Unknown]";
@@ -254,36 +252,5 @@ public class FileMetaDataService
             return string.Empty;
         }
         return dictionary[key];
-    }
-
-    private string GetWithoutFeat(string artist)
-    {
-        if (string.IsNullOrWhiteSpace(artist))
-        {
-            return string.Empty;
-        }
-        
-        var splitCharacters = new string[]
-        {
-            ",",
-            "&",
-            "+",
-            "/",
-            " feat",
-            ";"
-        };
-
-        string? newArtistName = splitCharacters
-            .Where(splitChar => artist.Contains(splitChar))
-            .Select(splitChar => artist.Substring(0, artist.IndexOf(splitChar)).Trim())
-            .OrderBy(split => split.Length)
-            .FirstOrDefault();
-
-        if (!string.IsNullOrWhiteSpace(newArtistName))
-        {
-            return newArtistName;
-        }
-
-        return artist;
     }
 }
