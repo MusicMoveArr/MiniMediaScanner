@@ -34,7 +34,7 @@ public class ImportCommandHandler
         _albumRepository =  new AlbumRepository(connectionString);
     }
     
-    public async Task ProcessDirectoryAsync(string directoryPath, bool updateMb)
+    public async Task ProcessDirectoryAsync(string directoryPath, bool forceImport, bool updateMb)
     {
         try
         {
@@ -44,39 +44,39 @@ public class ImportCommandHandler
                 .OrderBy(dir => dir)
                 .ToList();
 
-        await AnsiConsole.Progress()
-            .HideCompleted(true)
-            .AutoClear(true)
-            .Columns(new ProgressColumn[]
-            {
-                new TaskDescriptionColumn()
+            await AnsiConsole.Progress()
+                .HideCompleted(true)
+                .AutoClear(true)
+                .Columns(new ProgressColumn[]
                 {
-                    Alignment = Justify.Left
-                },
-                new ProgressBarColumn(),
-                new PercentageColumn(),
-                new RemainingTimeColumn(),
-            })
-            .StartAsync(async ctx =>
-            {
-                int threads = updateMb ? 1 : 8;
-                await ParallelHelper.ForEachAsync(sortedTopDirectories, threads, async dir =>
-                {
-                    var task = ctx.AddTask(Markup.Escape($"Importing {dir}"));
-
-                    var allFilePaths = Directory
-                        .EnumerateFileSystemEntries(dir, "*.*", SearchOption.AllDirectories)
-                        .Where(file => !new DirectoryInfo(file).Name.StartsWith("."))
-                        .ToList();
-
-                    task.MaxValue = allFilePaths.Count;
-                    
-                    foreach (var file in allFilePaths)
+                    new TaskDescriptionColumn()
                     {
-                        await ProcessFileAsync(file, false, updateMb);
-                        task.Value++;
-                    }
-                });
+                        Alignment = Justify.Left
+                    },
+                    new ProgressBarColumn(),
+                    new PercentageColumn(),
+                    new RemainingTimeColumn(),
+                })
+                .StartAsync(async ctx =>
+                {
+                    int threads = updateMb ? 1 : 8;
+                    await ParallelHelper.ForEachAsync(sortedTopDirectories, threads, async dir =>
+                    {
+                        var task = ctx.AddTask(Markup.Escape($"Importing {dir}"));
+
+                        var allFilePaths = Directory
+                            .EnumerateFileSystemEntries(dir, "*.*", SearchOption.AllDirectories)
+                            .Where(file => !new DirectoryInfo(file).Name.StartsWith("."))
+                            .ToList();
+
+                        task.MaxValue = allFilePaths.Count;
+                        
+                        foreach (var file in allFilePaths)
+                        {
+                            await ProcessFileAsync(file, forceImport, updateMb);
+                            task.Value++;
+                        }
+                    });
             });
         }
         catch (Exception e)

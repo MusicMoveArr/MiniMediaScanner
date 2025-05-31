@@ -25,10 +25,15 @@ public class ImportCommand : ICommand
         Description = "Update MusicBrainz.",
         EnvironmentVariable = "IMPORT_UPDATE_MB")]
     public bool UpdateMb { get; set; } = true;
+
+    [CommandOption("force", 'f',
+        Description = "Force import even if files did not change on disk.",
+        EnvironmentVariable = "IMPORT_FORCE")]
+    public bool Force { get; set; } = false;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new ImportCommandHandler(ConnectionString);
-        await handler.ProcessDirectoryAsync(Path, UpdateMb);
+        await handler.ProcessDirectoryAsync(Path, Force, UpdateMb);
     }
 }
