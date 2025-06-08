@@ -233,6 +233,79 @@ services:
       - ~/Music:~/Music
 ```
 
+# Quickstart with docker
+A bit of a simplistic guide to get you started quick
+
+This example does not use persistant storage for postgres, please host it somewhere with persistant storage otherwise you will need to re-import when postgres shutsdown
+
+```
+# install docker (on ArchLinux)
+sudo pacman -Syy docker docker-compose docker-buildx
+sudo usermod -aG docker $USER
+sudo systemctl enable docker
+sudo systemctl start docker
+
+# create internal docker network
+sudo docker network create -d bridge net-minimedia
+```
+start the following command where db.sql is or change $(pwd) with the directory where db.sql is
+```
+# start postgres (start in a different shell)
+sudo docker run --rm -it \
+--network net-minimedia \
+--hostname postgres \
+-e POSTGRES_PASSWORD=mysecretpassword \
+-v $(pwd)/db.sql:/docker-entrypoint-initdb.d/init.sql \
+postgres
+```
+Import your music, change the directory at /music (before :) to your music directory
+```
+# import /music
+sudo docker run --rm -it --network net-minimedia --name minimediascanner \
+-e CONNECTIONSTRING="Host=postgres;Username=postgres;Password=mysecretpassword;Database=postgres;Pooling=true;MinPoolSize=5;MaxPoolSize=100;" \
+-e COMMAND="import" \
+-e IMPORT_PATH="/music" \
+-v ~/nfs_share_music/Pendulum/:/music \
+musicmovearr/minimediascanner:main
+```
+Get artist information from MusicBrainz incase it wasn't done by importing the music
+
+In the following example it will get artist information of artist "Pendulum"
+```
+# get MusicBrainz data (it tagging fails)
+sudo docker run --rm -it --network net-minimedia --name minimediascanner \
+-e CONNECTIONSTRING="Host=postgres;Username=postgres;Password=mysecretpassword;Database=postgres;Pooling=true;MinPoolSize=5;MaxPoolSize=100;" \
+-e COMMAND="updatemb" \
+-e UPDATEMB_ARTIST="Pendulum" \
+musicmovearr/minimediascanner:main
+```
+Example of tagging music with MusicBrainz, get your own AcoustId ApiKey at https://acoustid.org to replace the "xxxxxxx"
+```
+# tag music with MusicBrainz
+sudo docker run --rm -it --network net-minimedia --name minimediascanner \
+-e CONNECTIONSTRING="Host=postgres;Username=postgres;Password=mysecretpassword;Database=postgres;Pooling=true;MinPoolSize=5;MaxPoolSize=100;" \
+-e COMMAND="tagmissingmetadata" \
+-e TAGMISSINGMETADATA_ACOUSTID="xxxxxxx" \
+-e TAGMISSINGMETADATA_WRITE="true" \
+-v ~/nfs_share_music/Pendulum/:/music \
+musicmovearr/minimediascanner:main
+```
+Some other commands for example,
+```
+# get cover art
+sudo docker run --rm -it --network net-minimedia --name minimediascanner \
+-e CONNECTIONSTRING="Host=postgres;Username=postgres;Password=mysecretpassword;Database=postgres;Pooling=true;MinPoolSize=5;MaxPoolSize=100;" \
+-e COMMAND="coverartarchive" \
+-v ~/nfs_share_music/Pendulum/:/music \
+musicmovearr/minimediascanner:main
+```
+```
+# show some stats
+sudo docker run --rm -it --network net-minimedia --name minimediascanner \
+-e CONNECTIONSTRING="Host=postgres;Username=postgres;Password=mysecretpassword;Database=postgres;Pooling=true;MinPoolSize=5;MaxPoolSize=100;" \
+-e COMMAND="stats" \
+musicmovearr/minimediascanner:main
+```
 
 # Convert Command
 ```
