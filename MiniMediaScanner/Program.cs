@@ -53,7 +53,7 @@ public class Program
                 await new CliApplicationBuilder()
                     .AddCommandsFromThisAssembly()
                     .Build()
-                    .RunAsync(args);
+                    .RunAsync(ConsoleArguments);
             }
             catch (Exception e)
             {
