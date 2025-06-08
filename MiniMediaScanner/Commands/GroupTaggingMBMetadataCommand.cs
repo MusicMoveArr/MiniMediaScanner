@@ -29,7 +29,7 @@ public class GroupTaggingMBMetadataCommand : ICommand
     [CommandOption("confirm", 'y', 
         Description = "Always confirm automatically.", 
         IsRequired = false,
-        EnvironmentVariable = "REMOVETAG_CONFIRM")]
+        EnvironmentVariable = "GROUPTAGGINGMETADATA_CONFIRM")]
     public bool Confirm { get; set; } = false;
 
     [CommandOption("overwrite-tag", 'o', 
