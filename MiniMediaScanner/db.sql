@@ -1,3 +1,5 @@
+CREATE EXTENSION pg_trgm;
+
 CREATE TABLE public.artists (
     artistid uuid NOT NULL,
     "name" text NULL,
