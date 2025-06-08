@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using FuzzySharp;
 using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -28,7 +29,7 @@ public class UpdateMBCommandHandler
             artistIds = (await _musicBrainzAPIService
                 .SearchArtistAsync(artistName))
                 ?.Artists?
-                .Where(artist => artist.Name.ToLower().Contains(artistName.ToLower()))
+                .Where(artist => Fuzz.Ratio(artist.Name.ToLower(), artistName.ToLower()) > 80)
                 .Select(artist => artist.Id)
                 .ToList();
         }
