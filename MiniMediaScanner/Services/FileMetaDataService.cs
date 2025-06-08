@@ -17,10 +17,19 @@ public class FileMetaDataService
         "RVA2",
         "EO"
     };
-    
+
     public MetadataInfo GetMetadataInfo(FileInfo fileInfo)
     {
-        Track trackInfo = new Track(fileInfo.FullName);
+        return GetMetadataInfo(new Track(fileInfo.FullName), fileInfo);
+    }
+
+    public MetadataInfo GetMetadataInfo(Track trackInfo)
+    {
+        return GetMetadataInfo(trackInfo, new FileInfo(trackInfo.Path));
+    }
+    
+    public MetadataInfo GetMetadataInfo(Track trackInfo, FileInfo fileInfo)
+    {
         var mediaTags = trackInfo.AdditionalFields
             .Where(tag => !ignoreTags.Any(ignoreTag => tag.Key.ToLower().StartsWith(ignoreTag.ToLower())))
             .GroupBy(pair => pair.Key.ToLower())
