@@ -248,7 +248,11 @@ public class MissingRepository
 						 	select artist.artistid, 
 						 		artist.name AS artist_name,
 						 		album.title AS album_name,
-						 		track.title AS track_name,
+								case when length(track.version) > 0 then 
+									track.title || ' (' || track.version || ')'
+								else
+									track.title
+								end AS track_name,
 						 		taael.href AS ArtistUrl,
 						 		ttel.href AS TrackUrl,
 						 		tael.href AS AlbumUrl
