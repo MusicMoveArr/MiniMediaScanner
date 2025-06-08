@@ -214,7 +214,7 @@ CREATE TABLE public.spotify_album (
     ArtistId text  NOT NULL,
     CONSTRAINT spotify_album_pkey PRIMARY KEY (AlbumId,ArtistId)
 );
-alter table spotify_album add column ArtistId text
+alter table spotify_album add column ArtistId text;
 
 CREATE TABLE public.spotify_album_image (
     AlbumId text NOT NULL,
