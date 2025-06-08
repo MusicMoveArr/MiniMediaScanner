@@ -250,6 +250,12 @@ sudo docker network create -d bridge net-minimedia
 ```
 start the following command where db.sql is or change $(pwd) with the directory where db.sql is
 ```
+#pull source code
+cd /tmp
+git clone https://github.com/MusicMoveArr/MiniMediaScanner.git
+cd /tmp/MiniMediaScanner/MiniMediaScanner
+```
+```
 # start postgres (start in a different shell)
 sudo docker run --rm -it \
 --network net-minimedia \
