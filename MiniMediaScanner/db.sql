@@ -214,7 +214,6 @@ CREATE TABLE public.spotify_album (
     ArtistId text  NOT NULL,
     CONSTRAINT spotify_album_pkey PRIMARY KEY (AlbumId,ArtistId)
 );
-alter table spotify_album add column ArtistId text;
 
 CREATE TABLE public.spotify_album_image (
     AlbumId text NOT NULL,
@@ -253,7 +252,6 @@ CREATE TABLE public.spotify_track (
     Uri text NOT NULL,
     CONSTRAINT spotify_track_pkey PRIMARY KEY (TrackId, AlbumId)
 );
-CREATE UNIQUE INDEX tidal_track_trackid_idx ON public.tidal_track (trackid);
 
 
 CREATE TABLE public.spotify_track_artist (
@@ -374,6 +372,7 @@ CREATE TABLE public.tidal_track (
     CONSTRAINT tidal_track_pkey PRIMARY KEY (TrackId, AlbumId)
 );
 CREATE INDEX idx_tidal_track_AlbumId ON public.tidal_track (AlbumId);
+CREATE UNIQUE INDEX tidal_track_trackid_idx ON public.tidal_track (trackid);
 
 CREATE TABLE public.tidal_track_external_link (
     TrackId int NOT NULL,
@@ -418,6 +417,12 @@ CREATE TABLE public.tidal_track_provider (
 CREATE INDEX idx_tidal_track_provider_trackid ON public.tidal_track_provider (TrackId);
 
 --update Musicbrainz tables
+UPDATE musicbrainzrelease r
+SET musicbrainzartistid = a.musicbrainzremoteid
+    FROM musicbrainzartist a
+WHERE a.musicbrainzartistid = r.musicbrainzartistid;
+
+
 ALTER TABLE musicbrainzartist RENAME TO musicbrainz_artist;
 ALTER TABLE musicbrainzrelease RENAME TO musicbrainz_release;
 ALTER TABLE musicbrainzreleasetrack RENAME TO musicbrainz_release_track;
@@ -427,10 +432,6 @@ ALTER TABLE public.musicbrainz_artist DROP COLUMN musicbrainzartistid;
 ALTER TABLE public.musicbrainz_artist RENAME COLUMN musicbrainzremoteid TO artistid;
 
 
-UPDATE musicbrainzrelease r
-SET musicbrainzartistid = a.musicbrainzremoteid
-FROM musicbrainzartist a
-WHERE a.musicbrainzartistid = r.musicbrainzartistid;
 
 ALTER TABLE public.musicbrainz_release DROP CONSTRAINT musicbrainzrelease_pkey1;
 ALTER TABLE public.musicbrainz_release DROP COLUMN musicbrainzreleaseid;
@@ -453,8 +454,6 @@ ALTER TABLE public.musicbrainz_area RENAME COLUMN musicbrainzareaid TO areaid;
 ALTER TABLE public.musicbrainz_label RENAME COLUMN musicbrainzlabelid TO labelid;
 ALTER TABLE public.musicbrainz_label RENAME COLUMN musicbrainzareaid TO areaid;
 
-ALTER TABLE public.musicbrainz_release_label RENAME COLUMN musicbrainzreleaseid TO releaseid;
-ALTER TABLE public.musicbrainz_release_label RENAME COLUMN musicbrainzlabelid TO labelid;
 
 
 
