@@ -433,7 +433,8 @@ public class TidalRepository
                          left join tidal_artist_external_link artistExtLink on artistExtLink.artistid = artist.artistid and artistExtLink.meta_type = 'TIDAL_SHARING'
                          where artist.artistid = @artistId
                              and (length(@albumName) = 0 OR similarity(lower(album.title), lower(@albumName)) >= 0.8)
-	                         and (length(@trackName) = 0 OR similarity(lower(track.title), lower(@trackName)) >= 0.8)";
+	                         and (length(@trackName) = 0 OR similarity(lower(track.title), lower(@trackName)) >= 0.8)
+	                         and (length(track.availability) > 0 or length(track.mediatags) > 0)";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         
