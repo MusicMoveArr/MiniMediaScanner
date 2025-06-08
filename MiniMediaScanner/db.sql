@@ -461,4 +461,3 @@ ALTER TABLE public.musicbrainz_release_label RENAME COLUMN musicbrainzlabelid TO
 
 
 
-

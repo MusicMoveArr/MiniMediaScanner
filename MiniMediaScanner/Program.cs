@@ -1,4 +1,5 @@
 ﻿using CliFx;
+using DbUp;
 using MiniMediaScanner.Jobs;
 using Quartz;
 using Quartz.Impl;
@@ -21,6 +22,21 @@ public class Program
         {
             ConsoleArguments = [ commandEnvironmentValue ];
         }
+
+        string? connectionString = GetConnectionString(args);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            Console.WriteLine("Connection String is required");
+            return;
+        }
+        
+        var upgradeEngine = DeployChanges.To
+            .PostgresqlDatabase(connectionString)
+            .WithScriptsFromFileSystem("./DbScripts")
+            .LogToConsole()
+            .Build();
+
+        var result = upgradeEngine.PerformUpgrade();
         
         if (!string.IsNullOrWhiteSpace(cronExpression))
         {
@@ -44,6 +60,19 @@ public class Program
                 Console.WriteLine(e.Message);
             }
         }
+    }
+
+    static string? GetConnectionString(string[] args)
+    {
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "--connection-string")
+            {
+                return args.Skip(i + 1).FirstOrDefault();
+            }
+        }
+
+        return Environment.GetEnvironmentVariable("CONNECTIONSTRING");
     }
 
     static async Task CreateSchedulerAsync(string cronExpression)
