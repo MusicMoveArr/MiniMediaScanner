@@ -50,6 +50,7 @@ public class GroupTaggingTidalMetadataCommandHandler
         var metadata = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || 
                                string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
+            .Where(metadata => new FileInfo(metadata.Path).Exists)
             .ToList();
 
         Console.WriteLine($"Checking artist '{artist}', found {metadata.Count} tracks to process");
@@ -87,7 +88,6 @@ public class GroupTaggingTidalMetadataCommandHandler
             }
         }
 
-
         if (tidalArtistId == 0)
         {
             Console.WriteLine($"No match found for Tidal metadata, artist '{artist}'");
@@ -120,46 +120,76 @@ public class GroupTaggingTidalMetadataCommandHandler
                 allTidalTracks = result;
             }
         }
-        
-        
-        List<MetadataModel> missingTracks = new List<MetadataModel>();
-        
-        int updateSuccess = 0;
-        await ParallelHelper.ForEachAsync(metadataModels, confirm ? 4 : 1, async metadata =>
-        {
-            FileInfo fileInfo = new FileInfo(metadata.Path);
-            if (!fileInfo.Exists)
+
+        //match Tidal Tracks against our database
+        //sort descending album's by the amount of matches
+        //this method will prevent getting different AlbumId's for each track
+        var matchedAlbums = tidalTracks
+            .GroupBy(track => track.AlbumId)
+            .Select(tracks => new
             {
-                return;
-            }
-            
-            TidalTrackModel? foundTrack = tidalTracks
-                .Select(tidalTrack => new
+                AlbumId = tracks.Key,
+                Matches = tracks.Select(track => new
                 {
-                    TidalTrack = tidalTrack,
-                    MatchedFor = Fuzz.Ratio(metadata.Title, tidalTrack.FullTrackName)
+                    Track = track,
+                    MetadataTracks = metadataModels.Select(metadata => new
+                    {
+                        MetadataTrack = metadata,
+                        TidalTrack = track,
+                        MatchedFor = Fuzz.Ratio(metadata.Title, track.FullTrackName)
+                    })
+                    .Where(match => match.MatchedFor >= 90)
+                    .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.Title, match.TidalTrack.FullTrackName))
+                    .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.AlbumName, match.TidalTrack.AlbumName))
+                    .OrderByDescending(match => match.MatchedFor)
+                    .ToList()
+                        
                 })
-                .Where(match => match.MatchedFor >= 90)
-                .Where(match => FuzzyHelper.ExactNumberMatch(metadata.Title, match.TidalTrack.FullTrackName))
-                .Where(match => FuzzyHelper.ExactNumberMatch(metadata.AlbumName, match.TidalTrack.AlbumName))
-                .OrderByDescending(match => match.MatchedFor)
-                .Select(match => match.TidalTrack)
-                .FirstOrDefault();
-
-            if (foundTrack == null)
+            })
+            .OrderByDescending(tracks => tracks.Matches.Sum(matches => matches.MetadataTracks.Count))
+            .ToList();
+        
+        List<Guid> processedMetadataIds = new List<Guid>();
+        
+        foreach(var matchedAlbum in matchedAlbums)
+        {
+            foreach (var matchedTrack in matchedAlbum.Matches)
             {
-                missingTracks.Add(metadata);
-
-                //handle incorrectly tagged albums
-                foundTrack = await GetSecondBestTrackMatchAsync(allTidalTracks, metadata.Title, metadata.AlbumName);
-
-                if (foundTrack == null)
+                foreach (var metadata in matchedTrack.MetadataTracks)
                 {
-                    Console.WriteLine($"Could not find Track title '{metadata.Title}' of album '{album}' in our Tidal database");
-                    return;
+                    if (processedMetadataIds.Contains(metadata.MetadataTrack.MetadataId!.Value))
+                    {
+                        continue;
+                    }
+                    
+                    try
+                    {
+                        await ProcessFileAsync(metadata.MetadataTrack, metadata.TidalTrack, overwriteTagValue, 
+                                               confirm, overwriteAlbumTag, tidalArtistId);
+                        processedMetadataIds.Add(metadata.MetadataTrack.MetadataId!.Value);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
                 }
             }
+        }
+        
+        var notProcessed = metadataModels
+            .Where(metadata => !processedMetadataIds.Contains(metadata.MetadataId!.Value))
+            .ToList();
 
+        foreach (var metadata in notProcessed)
+        {
+            //handle incorrectly tagged albums
+            var foundTrack = GetSecondBestTrackMatch(allTidalTracks, metadata.Title, metadata.AlbumName);
+            if (foundTrack == null)
+            {
+                Console.WriteLine($"Could not find Track title '{metadata.Title}' of album '{album}' in our Tidal database");
+                continue;
+            }
+            
             try
             {
                 await ProcessFileAsync(metadata, foundTrack, overwriteTagValue, confirm, overwriteAlbumTag, tidalArtistId);
@@ -168,12 +198,10 @@ public class GroupTaggingTidalMetadataCommandHandler
             {
                 Console.WriteLine(e.Message);
             }
-
-            updateSuccess++;
-        });
+        }
     }
     
-    private async Task<TidalTrackModel?> GetSecondBestTrackMatchAsync(List<TidalTrackModel> tidalTracks, 
+    private TidalTrackModel? GetSecondBestTrackMatch(List<TidalTrackModel> tidalTracks, 
         string trackTitle,
         string albumTitle)
     {
@@ -205,7 +233,7 @@ public class GroupTaggingTidalMetadataCommandHandler
         , int tidalArtistId)
     {
         Track track = new Track(metadata.Path);
-        var metadataInfo = _fileMetaDataService.GetMetadataInfo(new FileInfo(track.Path));
+        var metadataInfo = _fileMetaDataService.GetMetadataInfo(track);
         
         bool trackInfoUpdated = false;
         var trackArtists = await _tidalRepository.GetTrackArtistsAsync(tidalTrack.TrackId, tidalArtistId);

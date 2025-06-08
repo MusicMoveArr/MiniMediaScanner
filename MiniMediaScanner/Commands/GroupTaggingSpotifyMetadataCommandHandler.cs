@@ -48,6 +48,7 @@ public class GroupTaggingSpotifyMetadataCommandHandler
         var metadata = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || 
                                string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
+            .Where(metadata => new FileInfo(metadata.Path).Exists)
             .ToList();
 
         Console.WriteLine($"Checking artist '{artist}', found {metadata.Count} tracks to process");
@@ -96,84 +97,124 @@ public class GroupTaggingSpotifyMetadataCommandHandler
             return;
         }
         
-        List<MetadataModel> missingTracks = new List<MetadataModel>();
-        
-        int updateSuccess = 0;
-        foreach (MetadataModel metadata in metadataModels)
-        {
-            Track track = new Track(metadata.Path);
-
-            SpotifyTrackModel? foundTrack = spotifyTracks
-                .Select(spotifyTrack => new
-                {
-                    SpotifyTrack = spotifyTrack,
-                    MatchedFor = Fuzz.Ratio(track.Title, spotifyTrack.TrackName)
-                })
-                .Where(match => match.MatchedFor >= 90)
-                .Where(match => FuzzyHelper.ExactNumberMatch(track.Title, match.SpotifyTrack.TrackName))
-                .Where(match => FuzzyHelper.ExactNumberMatch(track.Album, match.SpotifyTrack.AlbumName))
-                .OrderByDescending(match => match.MatchedFor)
-                .Select(match => match.SpotifyTrack)
-                .FirstOrDefault();
-
-            if (foundTrack == null)
+        //match Spotify Tracks against our database
+        //sort descending album's by the amount of matches
+        //this method will prevent getting different AlbumId's for each track
+        var matchedAlbums = spotifyTracks
+            .GroupBy(track => track.AlbumId)
+            .Select(tracks => new
             {
-                missingTracks.Add(metadata);
-                
-                //handle incorrectly tagged albums
-                foundTrack = await GetSecondBestTrackMatchAsync(allSpotifyTracks, track.Title);
-
-                if (foundTrack == null)
+                AlbumId = tracks.Key,
+                Matches = tracks.Select(track => new
                 {
-                    Console.WriteLine($"Could not find Track title '{track.Title}' of album '{album}' in our Spotify database");
-                    continue;
+                    Track = track,
+                    MetadataTracks = metadataModels.Select(metadata => new
+                    {
+                        MetadataTrack = metadata,
+                        SpotifyTrack = track,
+                        MatchedFor = Fuzz.Ratio(metadata.Title, track.TrackName)
+                    })
+                    .Where(match => match.MatchedFor >= 90)
+                    .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.Title, match.SpotifyTrack.TrackName))
+                    .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.AlbumName, match.SpotifyTrack.AlbumName))
+                    .OrderByDescending(match => match.MatchedFor)
+                    .ToList()
+                        
+                })
+            })
+            .OrderByDescending(tracks => tracks.Matches.Sum(matches => matches.MetadataTracks.Count))
+            .ToList();
+        
+        List<Guid> processedMetadataIds = new List<Guid>();
+        
+        foreach(var matchedAlbum in matchedAlbums)
+        {
+            foreach (var matchedTrack in matchedAlbum.Matches)
+            {
+                foreach (var metadata in matchedTrack.MetadataTracks)
+                {
+                    if (processedMetadataIds.Contains(metadata.MetadataTrack.MetadataId!.Value))
+                    {
+                        continue;
+                    }
+                    
+                    try
+                    {
+                        await ProcessFileAsync(metadata.MetadataTrack, metadata.SpotifyTrack, 
+                                               overwriteTagValue, confirm, overwriteAlbumTag);
+                        processedMetadataIds.Add(metadata.MetadataTrack.MetadataId!.Value);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
                 }
             }
+        }
+        
+        var notProcessed = metadataModels
+            .Where(metadata => !processedMetadataIds.Contains(metadata.MetadataId!.Value))
+            .ToList();
 
+        foreach (var metadata in notProcessed)
+        {
+            //handle incorrectly tagged albums
+            var foundTrack = GetSecondBestTrackMatch(allSpotifyTracks, metadata.Title, metadata.AlbumName);
+            if (foundTrack == null)
+            {
+                Console.WriteLine($"Could not find Track title '{metadata.Title}' of album '{album}' in our Tidal database");
+                continue;
+            }
+            
             try
             {
-                await ProcessFileAsync(track, metadata, foundTrack, overwriteTagValue, confirm, overwriteAlbumTag);
+                await ProcessFileAsync(metadata, foundTrack, overwriteTagValue, confirm, overwriteAlbumTag);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
             }
-            updateSuccess++;
         }
     }
     
-    private async Task<SpotifyTrackModel?> GetSecondBestTrackMatchAsync(List<SpotifyTrackModel> spotifyTracks, string trackTitle)
+    private SpotifyTrackModel? GetSecondBestTrackMatch(List<SpotifyTrackModel> spotifyTracks, 
+        string trackTitle,
+        string albumTitle)
     {
         var foundTracks = spotifyTracks
             .Select(spotifyTrack => new
             {
                 SpotifyTrack = spotifyTrack,
-                MatchedFor = Fuzz.Ratio(trackTitle, spotifyTrack.TrackName)
+                TrackMatchedFor = Fuzz.Ratio(trackTitle, spotifyTrack.TrackName),
+                AlbumMatchedFor = Fuzz.Ratio(albumTitle, spotifyTrack.AlbumName)
             })
-            .Where(match => match.MatchedFor >= 80)
+            .Where(match => match.TrackMatchedFor >= 80)
+            .Where(match => match.AlbumMatchedFor >= 80)
             .Where(match => FuzzyHelper.ExactNumberMatch(trackTitle, match.SpotifyTrack.TrackName))
-            .OrderByDescending(match => match.MatchedFor)
+            .Where(match => FuzzyHelper.ExactNumberMatch(albumTitle, match.SpotifyTrack.AlbumName))
+            .OrderByDescending(match => match.TrackMatchedFor)
+            .ThenByDescending(match => match.AlbumMatchedFor)
             .Select(match => match.SpotifyTrack)
             .ToList();
 
         return foundTracks.FirstOrDefault();
     }
 
-    private async Task ProcessFileAsync(Track track
-        , MetadataModel metadata
+    private async Task ProcessFileAsync(
+        MetadataModel metadata
         , SpotifyTrackModel spotifyTrack
         , bool overwriteTagValue
         , bool autoConfirm
         , bool overwriteAlbumTag)
     {
-        var metadataInfo = _fileMetaDataService.GetMetadataInfo(new FileInfo(track.Path));
+        Track track = new Track(metadata.Path);
+        var metadataInfo = _fileMetaDataService.GetMetadataInfo(track);
         
         bool trackInfoUpdated = false;
         var externalAlbumInfo = await _spotifyRepository.GetAlbumExternalValuesAsync(spotifyTrack.AlbumId);
         var externalTrackInfo = await _spotifyRepository.GetTrackExternalValuesAsync(spotifyTrack.TrackId);
         var trackArtists = await _spotifyRepository.GetTrackArtistsAsync(spotifyTrack.TrackId);
 
-        
         if (string.IsNullOrWhiteSpace(track.Title) || overwriteTagValue)
         {
             _mediaTagWriteService.UpdateTag(track, metadataInfo, "Title", spotifyTrack.TrackName, ref trackInfoUpdated, overwriteTagValue);
