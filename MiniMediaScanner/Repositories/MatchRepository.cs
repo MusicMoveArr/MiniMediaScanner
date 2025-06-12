@@ -102,4 +102,49 @@ public class MatchRepository
             });
     }
     
+    
+    public async Task<long?> GetBestDeezerMatchAsync(Guid artistId, string artistName)
+    {
+        string query = @"WITH MusicLibrary AS (
+                             SELECT 
+                                 a.artistid, 
+                                 a.name AS artist_name, 
+                                 al.albumid, 
+                                 al.title AS album_name
+                             FROM albums al
+                             JOIN artists a ON a.artistid = al.artistid
+                             where a.artistid = @artistId
+                         ),
+                         DeezerData AS (
+                            SELECT 
+                                artist.artistid AS artist_id, 
+                                artist.name AS artist_name, 
+                                album.title AS album_name
+                            FROM deezer_artist artist
+                            JOIN deezer_album album ON album.artistid = artist.artistid
+                            left JOIN deezer_track_artist track_artist ON track_artist.artistid = artist.artistid
+                            left JOIN deezer_album_artist album_artist ON album_artist.albumid = album.albumid 
+                            WHERE lower(artist.name) = lower(@artistName)
+                         )
+                         SELECT 
+                             dd.artist_id,
+                             dd.artist_name,
+                             ROUND(100.0 * COUNT(DISTINCT dd.album_name) / NULLIF((SELECT COUNT(DISTINCT album_name) FROM MusicLibrary ml), 0), 2) AS match_percentage
+                         FROM DeezerData dd
+                         LEFT JOIN MusicLibrary ml 
+                             ON lower(dd.album_name) = lower(ml.album_name)
+                         GROUP BY dd.artist_id, dd.artist_name
+                         ORDER BY match_percentage desc
+                         limit 1";
+        
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .QueryFirstOrDefaultAsync<long>(query, param: new
+            {
+                artistId,
+                artistName
+            });
+    }
+    
 }

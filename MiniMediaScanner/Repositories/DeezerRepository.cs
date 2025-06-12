@@ -448,4 +448,56 @@ public class DeezerRepository
                     artistId
                 })) == 1;
     }
+    
+    public async Task<string?> GetHighestQualityArtistCoverUrlAsync(long artistId)
+    {
+        string query = @"SELECT dail.href
+                         FROM deezer_artist_image_link dail
+                         where dail.artistid = @artistId
+                         and dail.type != 'picture'
+ 
+                         order by 
+                             CASE WHEN dail.type = 'xl' THEN 0 
+                                  WHEN dail.type = 'big' THEN 1
+                                  WHEN dail.type = 'medium' THEN 2
+                                  WHEN dail.type = 'small' THEN 3
+                             ELSE 4 end asc
+                         limit 1";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .QueryFirstOrDefaultAsync<string>(query,
+                param: new
+                {
+                    artistId
+                });
+    }
+    
+    public async Task<string?> GetHighestQualityAlbumCoverUrlAsync(long artistId, string albumName)
+    {
+        string query = @"SELECT dail.href
+                         FROM deezer_album_image_link dail
+                         join deezer_album album on album.albumid = dail.albumid and lower(album.title) = lower(@albumName)
+                         join deezer_album_artist saa on saa.artistid = @artistId and saa.albumid = dail.albumid
+                         where dail.type != 'picture'
+ 
+                         order by 
+                             CASE WHEN dail.type = 'xl' THEN 0 
+                                  WHEN dail.type = 'big' THEN 1
+                                  WHEN dail.type = 'medium' THEN 2
+                                  WHEN dail.type = 'small' THEN 3
+                             ELSE 4 end asc
+                         limit 1";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .QueryFirstOrDefaultAsync<string>(query,
+                param: new
+                {
+                    artistId,
+                    albumName
+                });
+    }
 }
