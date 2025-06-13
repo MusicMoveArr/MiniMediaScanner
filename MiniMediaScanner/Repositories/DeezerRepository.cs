@@ -1,4 +1,5 @@
 using Dapper;
+using MiniMediaScanner.Models.Deezer;
 using Npgsql;
 
 namespace MiniMediaScanner.Repositories;
@@ -413,7 +414,7 @@ public class DeezerRepository
             .ToList();
     }
     
-    public async Task<List<string>> GetTrackArtistsAsync(long trackId, int orderByArtistId)
+    public async Task<List<string>> GetTrackArtistsAsync(long trackId, long orderByArtistId)
     {
         string query = @"SELECT artist.name
                          FROM deezer_track_artist tta
@@ -499,5 +500,47 @@ public class DeezerRepository
                     artistId,
                     albumName
                 });
+    }
+    
+        public async Task<List<DeezerTrackDbModel>> GetTrackByArtistIdAsync(long artistId, string albumName, string trackName)
+    {
+        string query = @"select distinct on (track.isrc, album.upc, album.title, artist.artistid)
+                             track.title As TrackName,
+                             track.TrackId,
+                             track.AlbumId,
+                             track.disknumber AS DiscNumber,
+                             track.duration * interval '1 sec' as Duration,
+                             track.ExplicitLyrics,
+                             'https://www.deezer.com/track/' || track.TrackId AS TrackHref,
+                             track.TrackPosition,
+                             track.isrc AS TrackISRC,
+                             album.upc AS AlbumUPC,
+                             album.ReleaseDate as AlbumReleaseDate,
+                             album.nbtracks AS AlbumTotalTracks,
+                             album.label as Label,
+                             album.title as AlbumName,
+                             'https://www.deezer.com/album/' || album.albumid as AlbumHref,
+                             'https://www.deezer.com/artist/' || artist.artistid as ArtistHref,
+                             artist.name as ArtistName,
+                             artist.artistid as ArtistId
+                         from deezer_track track
+                         join deezer_album album on album.albumid = track.albumid
+                         join deezer_track_artist track_artist on track_artist.trackid = track.trackid
+                         join deezer_artist artist on artist.artistid = track_artist.artistid
+                         where artist.artistid = @artistId
+                             and (length(@albumName) = 0 OR similarity(lower(album.title), lower(@albumName)) >= 0.8)
+	                         and (length(@trackName) = 0 OR similarity(lower(track.title), lower(@trackName)) >= 0.8)";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        
+        return (await conn
+            .QueryAsync<DeezerTrackDbModel>(query,
+                param: new
+                {
+                    artistId,
+                    albumName,
+                    trackName
+                }))
+            .ToList();
     }
 }
