@@ -43,7 +43,10 @@ public class ProxyManagerService
         
         ProxyModel? proxy = await GetProxyAsync();
         options.Proxy = proxy?.Proxy;
-        options.Credentials = proxy?.Credentials;
+        if (options.Proxy != null)
+        {
+            options.Proxy.Credentials = proxy?.Credentials;
+        }
 
         if (!string.Equals(_currentProxyUri, proxy?.ProxyUri))
         {
