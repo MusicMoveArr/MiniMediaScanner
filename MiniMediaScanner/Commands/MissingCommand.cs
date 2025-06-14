@@ -11,7 +11,8 @@ public class MissingCommand : ICommand
     {
         "musicbrainz",
         "spotify",
-        "tidal"
+        "tidal",
+        "deezer"
     };
 
 [CommandOption("connection-string", 
@@ -51,7 +52,7 @@ public class MissingCommand : ICommand
         if (string.IsNullOrWhiteSpace(Provider) ||
             !providers.Any(p => string.Equals(p, Provider, StringComparison.CurrentCultureIgnoreCase)))
         {
-            Console.WriteLine("Provider must be either 'musicbrainz', 'spotify' or 'tidal'.");
+            Console.WriteLine("Provider must be either 'musicbrainz', 'spotify', 'tidal' or 'deezer'.");
             return;
         }
         var handler = new MissingCommandHandler(ConnectionString);

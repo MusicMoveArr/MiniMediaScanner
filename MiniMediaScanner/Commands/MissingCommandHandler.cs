@@ -13,13 +13,15 @@ public class MissingCommandHandler
     private readonly MetadataRepository _metadataRepository;
     private readonly MissingRepository _missingRepository;
     private readonly MatchRepository _matchRepository;
-
+    private readonly TidalRepository _tidalRepository;
+    
     public MissingCommandHandler(string connectionString)
     {
         _artistRepository = new ArtistRepository(connectionString);
         _metadataRepository = new MetadataRepository(connectionString);
         _missingRepository = new MissingRepository(connectionString);
         _matchRepository = new MatchRepository(connectionString);
+        _tidalRepository = new TidalRepository(connectionString);
     }
     
     public async Task CheckMissingTracksByArtistAsync(string artistName, string provider, string output, List<string>? filterOut)
@@ -38,6 +40,19 @@ public class MissingCommandHandler
                     if (!string.IsNullOrWhiteSpace(spotifyArtistId))
                     {
                         tempMissingTracks = await _missingRepository.GetMissingTracksByArtistSpotify2Async(spotifyArtistId, artistName);
+                    }
+                }
+            }
+            else if (provider.ToLower() == "deezer")
+            {
+                var artistIds = await _metadataRepository.GetArtistIdByMetadataAsync(artistName);
+                Guid? artistId = artistIds.FirstOrDefault(track => track.HasValue);
+                if (GuidHelper.GuidHasValue(artistId))
+                {
+                    long? deezerArtistId = await _matchRepository.GetBestDeezerMatchAsync(artistId.Value, artistName);
+                    if (deezerArtistId > 0)
+                    {
+                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistDeezerAsync(deezerArtistId.Value, artistName);
                     }
                 }
             }

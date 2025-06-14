@@ -296,6 +296,52 @@ public class MissingRepository
 			    }, commandTimeout: 300))
 		    .ToList();
     }
+    
+    public async Task<List<MissingTrackModel>> GetMissingTracksByArtistDeezerAsync(long deezerArtistId, string artistName)
+    {
+	    string query = @"WITH DeezerData AS (
+ 							select artist.artistid, 
+ 								artist.name AS artist_name,
+ 								album.title AS album_name,
+								track.title AS track_name,
+ 								'https://www.deezer.com/artist/' || artist.artistid AS ArtistUrl,
+ 								'https://www.deezer.com/track/' || track.TrackId AS TrackUrl,
+ 								'https://www.deezer.com/album/' || album.albumid AS AlbumUrl
+ 							from deezer_artist artist
+ 							join deezer_album album on album.artistid = artist.artistid
+ 							join deezer_track track on track.albumid = album.albumid
+						 	where artist.artistid = @deezerArtistId
+						 ),
+						 MusicLibrary as (
+						 	select distinct 
+						 		m.title as track_name,
+						 		album.title as album_name
+						 	from metadata m
+						 	join albums album on album.albumid = m.albumid
+						 	join artists artist on artist.artistid = album.artistid and lower(artist.name) = lower(@artistName)
+						 )
+						 select distinct 
+									dd.artist_name AS Artist, 
+									dd.album_name AS Album, 
+									dd.track_name AS Track,
+									dd.ArtistUrl,
+									dd.TrackUrl,
+									dd.AlbumUrl
+						 FROM DeezerData dd
+						 left join MusicLibrary ml on similarity(dd.album_name, ml.album_name) >= 0.9 
+						 							and similarity(dd.track_name, ml.track_name) >= 0.9 
+						 where ml.track_name is null";
+
+	    await using var conn = new NpgsqlConnection(_connectionString);
+        
+	    return (await conn
+			    .QueryAsync<MissingTrackModel>(query, new
+			    {
+				    deezerArtistId,
+				    artistName
+			    }, commandTimeout: 300))
+		    .ToList();
+    }
 
     public async Task<bool> TrackExistsAtAssociatedArtist(string artistName, string albumName, string trackName)
     {
