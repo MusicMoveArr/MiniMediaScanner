@@ -1,3 +1,4 @@
+using ListRandomizer;
 using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -50,22 +51,29 @@ public class UpdateDeezerCommandHandler
             {
                 foreach (var artistId in artistIds)
                 {
-                    await _deezerService.UpdateArtistByIdAsync(artistId, callback =>
+                    try
                     {
-                        if (callback.Status == UpdateDeezerStatus.Updating)
+                        await _deezerService.UpdateArtistByIdAsync(artistId, callback =>
                         {
-                            if (string.IsNullOrWhiteSpace(callback.ExtraInfo))
+                            if (callback.Status == UpdateDeezerStatus.Updating)
                             {
-                                AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
-                            }
+                                if (string.IsNullOrWhiteSpace(callback.ExtraInfo))
+                                {
+                                    AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
+                                }
                             
-                            ctx.Status(Markup.Escape($"Updating Deezer Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}{callback.ExtraInfo}"));
-                        }
-                        else if(callback.Status == UpdateDeezerStatus.SkippedSyncedWithin)
-                        {
-                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Deezer ArtistId '{callback?.ArtistId}' synced already within 7days"));
-                        }
-                    });
+                                ctx.Status(Markup.Escape($"Updating Deezer Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}{callback.ExtraInfo}"));
+                            }
+                            else if(callback.Status == UpdateDeezerStatus.SkippedSyncedWithin)
+                            {
+                                AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Deezer ArtistId '{callback?.ArtistId}' synced already within 7days"));
+                            }
+                        });
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
                 }
             });
     }
