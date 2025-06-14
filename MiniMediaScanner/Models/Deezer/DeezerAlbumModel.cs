@@ -62,4 +62,5 @@ public class DeezerAlbumModel
     public DeezerAlbumGenreDataModel Genres { get; set; }
     public List<DeezerAlbumArtistModel> Contributors { get; set; }
     public DeezerAlbumArtistModel Artist { get; set; }
+    public DeezerErrorModel? Error { get; set; }
 }

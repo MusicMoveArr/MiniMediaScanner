@@ -10,10 +10,10 @@ public class UpdateDeezerCommandHandler
     private readonly DeezerRepository _deezerRepository;
     private readonly DeezerService _deezerService;
 
-    public UpdateDeezerCommandHandler(string connectionString)
+    public UpdateDeezerCommandHandler(string connectionString, string proxyFile, string singleProxy, string proxyMode)
     {
         _deezerRepository = new DeezerRepository(connectionString);
-        _deezerService = new DeezerService(connectionString);
+        _deezerService = new DeezerService(connectionString, proxyFile, singleProxy, proxyMode);
     }
     
     public async Task UpdateDeezerArtistsByNameAsync(string artistName)

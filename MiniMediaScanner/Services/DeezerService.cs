@@ -2,6 +2,7 @@ using System.Diagnostics;
 using FuzzySharp;
 using MiniMediaScanner.Callbacks;
 using MiniMediaScanner.Callbacks.Status;
+using MiniMediaScanner.Enums;
 using MiniMediaScanner.Models.Deezer;
 using MiniMediaScanner.Models.Tidal;
 using MiniMediaScanner.Repositories;
@@ -15,10 +16,10 @@ public class DeezerService
     private readonly DeezerAPIService _deezerAPIService;
     private readonly DeezerRepository _deezerRepository;
 
-    public DeezerService(string connectionString)
+    public DeezerService(string connectionString, string proxyFile, string singleProxy, string proxyMode)
     {
         _deezerRepository = new DeezerRepository(connectionString);
-        _deezerAPIService = new DeezerAPIService();
+        _deezerAPIService = new DeezerAPIService(proxyFile, singleProxy, proxyMode);
     }
     
     public async Task UpdateArtistByNameAsync(string artistName,
@@ -26,13 +27,18 @@ public class DeezerService
     {
         var searchResult = await _deezerAPIService.SearchResultsArtistsAsync(artistName);
 
-        if (searchResult?.Data.Any() == true)
+        if (searchResult?.Data?.Any() == true)
         {
             foreach (var artist in searchResult
                          .Data
                          .Where(artist => !string.IsNullOrWhiteSpace(artist.Name))
                          .Where(artist => Fuzz.Ratio(artistName, artist.Name) > 80))
             {
+                if (_deezerAPIService.ProxyManagerService.ProxyMode == ProxyModeType.PerArtist)
+                {
+                    _deezerAPIService.ProxyManagerService.PickNextProxy();
+                }
+                
                 try
                 {
                     await UpdateArtistByIdAsync(artist.Id, callback);
@@ -67,7 +73,12 @@ public class DeezerService
         //by going through the next page cursor
         var albums = await _deezerAPIService.GetAlbumsByArtistIdAsync(artistId);
 
-        if (!string.IsNullOrWhiteSpace(albums.Next))
+        if (albums?.Data == null)
+        {
+            return;
+        }
+        
+        if (!string.IsNullOrWhiteSpace(albums?.Next))
         {
             string? nextUrl = albums.Next;
             while (!string.IsNullOrWhiteSpace(nextUrl))
@@ -81,13 +92,16 @@ public class DeezerService
                     $"Fetching all albums... {albums.Data.Count}"));
                 
                 var nextAlbums = await _deezerAPIService.GetAlbumsNextAsync(nextUrl);
-                albums.Data.AddRange(nextAlbums.Data);
+                if (nextAlbums?.Data != null)
+                {
+                    albums.Data.AddRange(nextAlbums.Data);
+                }
                 nextUrl = nextAlbums?.Next;
             }
         }
         
         int albumProgress = 1;
-        foreach (var album in albums.Data)
+        foreach (var album in albums?.Data ?? [])
         {
             callback?.Invoke(new UpdateDeezerCallback(artistId,
                 artistInfo.Name,
@@ -146,6 +160,11 @@ public class DeezerService
             
             var tracks = await _deezerAPIService.GetTracksByAlbumIdAsync(album.Id);
 
+            if (tracks?.Data == null)
+            {
+                continue;
+            }
+
             //get all tracks
             if (!string.IsNullOrWhiteSpace(tracks.Next))
             {
@@ -161,7 +180,10 @@ public class DeezerService
                         $"Fetching all tracks of album '{album.Title}', {tracks.Data.Count}"));
                     
                     var nextTracks = await _deezerAPIService.GetAlbumTracksNextAsync(nextUrl);
-                    tracks.Data.AddRange(nextTracks.Data);
+                    if (nextTracks?.Data != null)
+                    {
+                        tracks.Data.AddRange(nextTracks.Data);
+                    }
                     nextUrl = nextTracks?.Next;
                 }
             }
@@ -186,7 +208,7 @@ public class DeezerService
                 
                 var fullTrackInfo = await _deezerAPIService.GetTrackByIdAsync(track.Id);
 
-                if (fullTrackInfo.Id == 0) //track was not found
+                if (fullTrackInfo?.Id == 0) //track was not found
                 {
                     continue;
                 }

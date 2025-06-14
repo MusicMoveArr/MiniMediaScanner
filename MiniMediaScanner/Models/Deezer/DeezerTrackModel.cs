@@ -57,4 +57,5 @@ public class DeezerTrackModel
     public DeezerTrackArtistModel Artist { get; set; }
     public DeezerTrackAlbumModel Album { get; set; }
     public string Type { get; set; }
+    public DeezerErrorModel? Error { get; set; }
 }
