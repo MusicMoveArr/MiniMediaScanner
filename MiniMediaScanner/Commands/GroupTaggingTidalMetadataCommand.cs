@@ -17,31 +17,31 @@ public class GroupTaggingTidalMetadataCommand : ICommand
     [CommandOption("artist", 'a', 
         Description = "Artistname", 
         IsRequired = false,
-        EnvironmentVariable = "GROUPTAGGINGMETADATA_ARTIST")]
+        EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_ARTIST")]
     public string Artist { get; set; }
     
     [CommandOption("album", 'b', 
         Description = "target Album", 
         IsRequired = false,
-        EnvironmentVariable = "GROUPTAGGINGMETADATA_ALBUM")]
+        EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_ALBUM")]
     public string Album { get; set; }
     
     [CommandOption("confirm", 'y', 
         Description = "Always confirm automatically.", 
         IsRequired = false,
-        EnvironmentVariable = "REMOVETAG_CONFIRM")]
+        EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_CONFIRM")]
     public bool Confirm { get; set; } = false;
 
     [CommandOption("overwrite-tag", 'o', 
         Description = "Overwrite existing tag values.", 
         IsRequired = false,
-        EnvironmentVariable = "GROUPTAGGINGMETADATA_OVERWRITE_TAG")]
+        EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_OVERWRITE_TAG")]
     public bool OverwriteTag { get; set; } = true;
 
     [CommandOption("overwrite-album-tag", 'B', 
         Description = "Overwrite the existing album tag value, only overwrites it if the Album is tagged incorrectly before.", 
         IsRequired = false,
-        EnvironmentVariable = "GROUPTAGGINGMETADATA_OVERWRITE_ALBUM_TAG")]
+        EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_OVERWRITE_ALBUM_TAG")]
     public bool OverwriteAlbumTag { get; set; } = true;
     
     public async ValueTask ExecuteAsync(IConsole console)
