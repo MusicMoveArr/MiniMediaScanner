@@ -15,7 +15,7 @@ public class StatsRepository
     {
         string query = $"SELECT count(*) FROM {tableName}";
         await using var conn = new NpgsqlConnection(_connectionString);
-        return await conn.ExecuteScalarAsync<int>(query);
+        return await conn.ExecuteScalarAsync<int>(query, commandTimeout: 300);
     }
     
     public async Task<int> GetTracksAddedCountAsync(int lastDays)
@@ -24,6 +24,6 @@ public class StatsRepository
                          FROM metadata 
                          WHERE file_creationtime > NOW() - INTERVAL '{lastDays} days';";
         await using var conn = new NpgsqlConnection(_connectionString);
-        return await conn.ExecuteScalarAsync<int>(query);
+        return await conn.ExecuteScalarAsync<int>(query, commandTimeout: 300);
     }
 }
