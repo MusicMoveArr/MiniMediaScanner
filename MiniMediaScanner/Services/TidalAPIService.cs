@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using MiniMediaScanner.Enums;
 using MiniMediaScanner.Models.Tidal;
 using Polly;
 using Polly.Retry;
@@ -21,23 +22,33 @@ public class TidalAPIService
     private readonly string _countryCode;
 
     public TidalAuthenticationResponse? AuthenticationResponse { get; private set; }
+    public ProxyManagerService ProxyManagerService { get; private set; }
 
-    public TidalAPIService(string clientId, string clientSecret, string countryCode)
+    public TidalAPIService(string clientId, 
+        string clientSecret, 
+        string countryCode, 
+        string proxyFile, 
+        string singleProxy, 
+        string proxyMode)
     {
         _clientId = clientId;
         _clientSecret = clientSecret;
         _countryCode = countryCode;
+        ProxyManagerService = new ProxyManagerService("https://tidal.com", proxyFile, singleProxy, proxyMode);
     }
     
     public async Task<TidalAuthenticationResponse?> AuthenticateAsync()
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal Authenticate");
-        using RestClient client = new RestClient(AuthTokenUrl);
 
         var token = await retryPolicy.ExecuteAsync(async () =>
         {
+            RestClientOptions options = new RestClientOptions(AuthTokenUrl);
+            await ProxyManagerService.SetProxySettingsAsync(options);
+            using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
+            
             var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_clientId}:{_clientSecret}"));
             request.AddHeader("Authorization", $"Basic {credentials}");
             request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -57,10 +68,12 @@ public class TidalAPIService
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal SearchResults '{searchTerm}'");
-        using RestClient client = new RestClient(SearchResultArtistsUrl + Uri.EscapeDataString(searchTerm));
 
         return await retryPolicy.ExecuteAsync(async () =>
         {
+            RestClientOptions options = new RestClientOptions(SearchResultArtistsUrl + Uri.EscapeDataString(searchTerm));
+            await ProxyManagerService.SetProxySettingsAsync(options);
+            using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
             request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
@@ -76,10 +89,12 @@ public class TidalAPIService
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal GetArtistById '{artistId}'");
-        using RestClient client = new RestClient(string.Format(ArtistsIdUrl, artistId));
 
         return await retryPolicy.ExecuteAsync(async () =>
         {
+            RestClientOptions options = new RestClientOptions(string.Format(ArtistsIdUrl, artistId));
+            await ProxyManagerService.SetProxySettingsAsync(options);
+            using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
             request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
@@ -102,10 +117,12 @@ public class TidalAPIService
         {
             url += "&include=albums,profileArt";
         }
-        using RestClient client = new RestClient(url);
 
         return await retryPolicy.ExecuteAsync(async () =>
         {
+            RestClientOptions options = new RestClientOptions(url);
+            await ProxyManagerService.SetProxySettingsAsync(options);
+            using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
             request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
@@ -119,10 +136,12 @@ public class TidalAPIService
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal GetTracksByAlbumId '{albumId}'");
-        using RestClient client = new RestClient(string.Format(TracksByAlbumIdUrl, albumId));
 
         return await retryPolicy.ExecuteAsync(async () =>
         {
+            RestClientOptions options = new RestClientOptions(string.Format(TracksByAlbumIdUrl, albumId));
+            await ProxyManagerService.SetProxySettingsAsync(options);
+            using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
             request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
@@ -145,10 +164,12 @@ public class TidalAPIService
         {
             url += "&include=artists,coverArt,items,providers";
         }
-        using RestClient client = new RestClient(url);
 
         return await retryPolicy.ExecuteAsync(async () =>
         {
+            RestClientOptions options = new RestClientOptions(url);
+            await ProxyManagerService.SetProxySettingsAsync(options);
+            using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
             request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
@@ -162,10 +183,12 @@ public class TidalAPIService
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal GetTrackArtistsByTrackId for {trackIds.Length} tracks");
-        using RestClient client = new RestClient(TracksUrl);
 
         return await retryPolicy.ExecuteAsync(async () =>
         {
+            RestClientOptions options = new RestClientOptions(TracksUrl);
+            await ProxyManagerService.SetProxySettingsAsync(options);
+            using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
             request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
@@ -188,6 +211,11 @@ public class TidalAPIService
                 (exception, timeSpan, retryCount, context) => {
                     Debug.WriteLine($"Retry {retryCount} after {timeSpan.TotalSeconds} sec due to: {exception.Message}");
                     Console.WriteLine($"Retry {retryCount} after {timeSpan.TotalSeconds} sec due to: {exception.Message}");
+                    
+                    if (ProxyManagerService.ProxyMode == ProxyModeType.StickyTillError)
+                    {
+                        ProxyManagerService.PickNextProxy();
+                    }
                 });
         
         return retryPolicy;

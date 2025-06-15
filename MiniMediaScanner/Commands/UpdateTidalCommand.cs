@@ -37,9 +37,28 @@ public class UpdateTidalCommand : ICommand
         EnvironmentVariable = "UPDATETIDAL_COUNTRY_CODE")]
     public string TidalCountryCode { get; set; } = "US";
     
+    
+    [CommandOption("proxy-file", 
+        Description = "HTTP/HTTPS Proxy/Proxies to use to access Deezer.", 
+        IsRequired = false,
+        EnvironmentVariable = "PROXY_FILE")]
+    public string ProxyFile { get; set; }
+    
+    [CommandOption("proxy", 
+        Description = "HTTP/HTTPS Proxy to use to access Deezer.", 
+        IsRequired = false,
+        EnvironmentVariable = "PROXY")]
+    public string Proxy { get; set; }
+
+    [CommandOption("proxy-mode",
+        Description = "Proxy Mode: Random, RoundRobin, StickyTillError, RotateTime, PerArtist.",
+        IsRequired = false,
+        EnvironmentVariable = "PROXY_MODE")]
+    public string ProxyMode { get; set; } = "StickyTillError";
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new UpdateTidalCommandHandler(ConnectionString, TidalClientId, TidalSecretId, TidalCountryCode);
+        var handler = new UpdateTidalCommandHandler(ConnectionString, TidalClientId, TidalSecretId, TidalCountryCode, ProxyFile, Proxy, ProxyMode);
 
         if (!string.IsNullOrWhiteSpace(Artist))
         {

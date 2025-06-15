@@ -30,7 +30,7 @@ public class UpdateDeezerCommand : ICommand
     [CommandOption("proxy", 
         Description = "HTTP/HTTPS Proxy to use to access Deezer.", 
         IsRequired = false,
-        EnvironmentVariable = "PROXY_FILE")]
+        EnvironmentVariable = "PROXY")]
     public string Proxy { get; set; }
 
     [CommandOption("proxy-mode",

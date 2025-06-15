@@ -2,6 +2,7 @@ using System.Diagnostics;
 using FuzzySharp;
 using MiniMediaScanner.Callbacks;
 using MiniMediaScanner.Callbacks.Status;
+using MiniMediaScanner.Enums;
 using MiniMediaScanner.Models.Tidal;
 using MiniMediaScanner.Repositories;
 using SmartFormat.Utilities;
@@ -14,10 +15,16 @@ public class TidalService
     private readonly TidalAPICacheLayerService _tidalAPIService;
     private readonly TidalRepository _tidalRepository;
 
-    public TidalService(string connectionString, string clientId, string clientSecret, string countryCode)
+    public TidalService(string connectionString, 
+        string clientId, 
+        string clientSecret, 
+        string countryCode, 
+        string proxyFile, 
+        string singleProxy, 
+        string proxyMode)
     {
         _tidalRepository = new TidalRepository(connectionString);
-        _tidalAPIService = new TidalAPICacheLayerService(clientId, clientSecret, countryCode);
+        _tidalAPIService = new TidalAPICacheLayerService(clientId, clientSecret, countryCode, proxyFile, singleProxy, proxyMode);
     }
 
     private async Task RefreshTokenAsync()
@@ -43,6 +50,11 @@ public class TidalService
                          ?.Where(artist => !string.IsNullOrWhiteSpace(artist?.Attributes?.Name))
                          ?.Where(artist => Fuzz.Ratio(artistName, artist.Attributes.Name) > 80))
             {
+                if (_tidalAPIService.ProxyManagerService.ProxyMode == ProxyModeType.PerArtist)
+                {
+                    _tidalAPIService.ProxyManagerService.PickNextProxy();
+                }
+                
                 try
                 {
                     await UpdateArtistByIdAsync(int.Parse(artist.Id), callback);

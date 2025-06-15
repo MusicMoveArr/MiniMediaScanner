@@ -10,10 +10,17 @@ public class TidalAPICacheLayerService
     private readonly MemoryCache _cache;
     private const int ApiDelay = 4500;
     private Stopwatch _apiStopwatch = Stopwatch.StartNew();
+
+    public ProxyManagerService ProxyManagerService => _tidalAPIService.ProxyManagerService;
     
-    public TidalAPICacheLayerService(string clientId, string clientSecret, string countryCode)
+    public TidalAPICacheLayerService(string clientId, 
+        string clientSecret, 
+        string countryCode, 
+        string proxyFile, 
+        string singleProxy, 
+        string proxyMode)
     {
-        _tidalAPIService = new TidalAPIService(clientId, clientSecret, countryCode);
+        _tidalAPIService = new TidalAPIService(clientId, clientSecret, countryCode, proxyFile, singleProxy, proxyMode);
         var options = new MemoryCacheOptions();
         _cache = new MemoryCache(options);
     }

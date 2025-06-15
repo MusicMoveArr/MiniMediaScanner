@@ -50,12 +50,12 @@ public class ProxyManagerService
 
         if (!string.Equals(_currentProxyUri, proxy?.ProxyUri))
         {
-            Console.WriteLine($"Switched to proxy {proxy?.ProxyUri}");
+            Debug.WriteLine($"Switched to proxy {proxy?.ProxyUri}");
         }
 
         if (proxy != null && string.IsNullOrWhiteSpace(_currentProxyUri))
         {
-            Console.WriteLine($"Switched to proxy {proxy.ProxyUri}");
+            Debug.WriteLine($"Switched to proxy {proxy.ProxyUri}");
         }
         _currentProxyUri = proxy?.ProxyUri;
     }
@@ -159,7 +159,6 @@ public class ProxyManagerService
             testProxies = File
                 .ReadAllLines(_proxyFile)
                 .ToList();
-            return;
         }
 
         if (!string.IsNullOrWhiteSpace(_singleProxy))
@@ -176,7 +175,7 @@ public class ProxyManagerService
         {
             if (stopwatch.Elapsed.Seconds >= 5)
             {
-                Console.WriteLine($"Tested proxies: {testedProxies} of {testProxies.Count}, working proxies: {_proxies.Count}");
+                Debug.WriteLine($"Tested proxies: {testedProxies} of {testProxies.Count}, working proxies: {_proxies.Count}");
                 stopwatch.Restart();
             }
             
@@ -189,7 +188,6 @@ public class ProxyManagerService
             }
             testedProxies++;
         });
-        
         
         Console.WriteLine($"Proxies working: {_proxies.Count}");
 
@@ -222,7 +220,7 @@ public class ProxyManagerService
         }
         catch (Exception e)
         {
-            
+            Debug.WriteLine($"Proxy error: {proxyModel.ProxyUri}, {e.Message}");
         }
 
         return false;

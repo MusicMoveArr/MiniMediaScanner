@@ -13,10 +13,13 @@ public class UpdateTidalCommandHandler
     public UpdateTidalCommandHandler(string connectionString, 
         string clientId, 
         string clientSecret, 
-        string countryCode)
+        string countryCode, 
+        string proxyFile, 
+        string singleProxy, 
+        string proxyMode)
     {
         _tidalRepository = new TidalRepository(connectionString);
-        _tidalService = new TidalService(connectionString, clientId, clientSecret, countryCode);
+        _tidalService = new TidalService(connectionString, clientId, clientSecret, countryCode, proxyFile, singleProxy, proxyMode);
     }
     
     public async Task UpdateTidalArtistsByNameAsync(string artistName)
