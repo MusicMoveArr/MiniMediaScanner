@@ -762,12 +762,13 @@ USAGE
 DESCRIPTION
   Update Tidal metadata
 
-OPTIONS
 * -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
 * -c|--tidal-client-id  Tidal Client Id, to use for the Tidal API. Environment variable: UPDATETIDAL_TIDAL_CLIENT_ID. 
 * -s|--tidal-secret-id  Tidal Secret Id, to use for the Tidal API. Environment variable: UPDATETIDAL_TIDAL_SECRET_ID. 
+  --proxy           HTTP/HTTPS Proxy to use to access Deezer. Environment variable: PROXY. 
   -a|--artist       Artist filter to update. Environment variable: UPDATETIDAL_ARTIST. 
   -G|--country-code  Tidal's CountryCode (e.g. US, FR, NL, DE etc). Environment variable: UPDATETIDAL_COUNTRY_CODE. Default: "US".
+  --proxy-file      HTTP/HTTPS Proxy/Proxies to use to access Deezer. Environment variable: PROXY_FILE. 
+  --proxy-mode      Proxy Mode: Random, RoundRobin, StickyTillError, RotateTime, PerArtist. Environment variable: PROXY_MODE. Default: "StickyTillError".
   -h|--help         Shows help text. 
-
 ```
