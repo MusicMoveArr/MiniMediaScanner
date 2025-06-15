@@ -18,7 +18,7 @@ This roadmap will be ongoing as the project keeps going
 - [x] Implement Tidal's API for Tags (ongoing)
 - [ ] Implement Discogs's API for Tags
 - [ ] Implement Beatport's API for Tags
-- [ ] Implement Deezer's API for Tags
+- [x] Implement Deezer's API for Tags
 - [ ] Improve Missing songs command
 - [ ] Command to cleanup/merge tags (e.g. AlbumArtist, album_artist...)
 
@@ -28,18 +28,22 @@ This roadmap will be ongoing as the project keeps going
 3. MusicBrainz support (+cached in Postgres)
 4. Spotify support (+cached in Postgres)
 5. Tidal support (+cached in Postgres)
-6. All commands are multi-threaded for performance
-7. Low memory footprint
+6. Deezer support (+cached in Postgres)
+7. All commands are multi-threaded for performance
+8. Low memory footprint
 
 # Commands
 1. Import - Import Full/Partially your entire library multi-threaded
 2. UpdateMB - Update MusicBrainz media info in postgres
-3. Missing - Query potentially missing songs from artists by checking with MusicBrainz
-4. DeletedMedia - Check which media is deleted locally, optionally remove from database as well
-5. Convert - Convert for example FLAC > M4A, FLAC > MP3 etc
-6. Fingerprint - Fingerprint all the media by generating AcoustID / AcoustID Fingerprint
-7. DeDuplicate - DeDuplicate files locally that contain at the end of the filename, (1).mp3, (2).m4a etc
-8. NormalizeFile - Normalize/Standardize all your media file names to a common standard
+3. UpdateSpotify - Update/Add artists into the database from Spotify's API
+4. UpdateTidal - Update/Add artists into the database from Tidal's API
+5. UpdateDeezer - Update/Add artists into the database from Deezer's API
+6. Missing - Query potentially missing songs from artists by checking with MusicBrainz
+7. DeletedMedia - Check which media is deleted locally, optionally remove from database as well
+8. Convert - Convert for example FLAC > M4A, FLAC > MP3 etc
+9. Fingerprint - Fingerprint all the media by generating AcoustID / AcoustID Fingerprint
+10. DeDuplicate - DeDuplicate files locally that contain at the end of the filename, (1).mp3, (2).m4a etc
+11. NormalizeFile - Normalize/Standardize all your media file names to a common standard
    
    Every word gets capatalized (rest of the letters lowercase) except roman letters, all uppercase
    
@@ -48,22 +52,26 @@ This roadmap will be ongoing as the project keeps going
    Special characters are replaced: – to -, — to -, … to ...
    
    Seperators between words are kept: : - _ / ,
-10. TagMissingMetadata - Add missing tags to your media files from AcoustId/MusicBrainz from fingerprints
-11. TagMissingSpotifyMetadata - Add missing tags to your media files from Spotify
-12. EqualizeMetadata - Equalize (set the same) tag value for the entire album of an artist (mostly to fix issues with albums showing weird/duplicated in Plex/Navidrome etc)
-13. FixVersioning - Find media that are using the same track/disc numbering, usually normal version and (AlbumVersion), (Live) etc
+12. TagMissingMetadata - Add missing tags to your media files from AcoustId/MusicBrainz from fingerprints
+13. TagMissingSpotifyMetadata - Add missing tags to your media files from Spotify
+14. TagMissingTidalMetadata - Add missing tags to your media files from Tidal
+15. TagMissingDeezerMetadata - Add missing tags to your media files from Deezer
+16. EqualizeMetadata - Equalize (set the same) tag value for the entire album of an artist (mostly to fix issues with albums showing weird/duplicated in Plex/Navidrome etc)
+17. FixVersioning - Find media that are using the same track/disc numbering, usually normal version and (AlbumVersion), (Live) etc
     The media with the longest file name and contains TrackFilters will get incremented disc number
     This will make it so the normal version of the album stays at disc 1 but remix(etc) gets disc number 1001+
-14. Cover ArtArchive - Grab covers from the CoverArtArchive and save them as cover.jpg
-15. Cover Extract - Extract the covers directly from the media files and save them as cover.jpg
-16. RemoveTag - Remove specific tags from Artist/Albums
-17. RefreshMetadata - Simply do a quick refresh of the metadata for an artist/album
-18. SplitArtist - Split Artist is kind of experimental, it will try to split the 2 artist's that have the same name apart into 2 seperate artists
-19. Stats - Show basic stats of your database
-20. UpdateSpotify - Update/Add artists into the database from Spotify's API
-21. SplitTag - Split specific tag's into single value fields by specific seperator like ';'
-22. UpdateTidal - Update/Add artists into the database from Tidal's API
-23. FixCollections - Fix collections by adding the missing artist to the Artists tag
+18. Cover ArtArchive - Grab covers from the CoverArtArchive and save them as cover.jpg
+19. Cover Extract - Extract the covers directly from the media files and save them as cover.jpg
+20. RemoveTag - Remove specific tags from Artist/Albums
+21. RefreshMetadata - Simply do a quick refresh of the metadata for an artist/album
+22. SplitArtist - Split Artist is kind of experimental, it will try to split the 2 artist's that have the same name apart into 2 seperate artists
+23. Stats - Show basic stats of your database
+24. SplitTag - Split specific tag's into single value fields by specific seperator like ';'
+25. FixCollections - Fix collections by adding the missing artist to the Artists tag
+24. GroupTaggingDeezerMetadata - Group Tagging metadata per Album - Deezer
+25. GroupTaggingMBMetadata - Group Tagging metadata per Album - MusicBrainz
+26. GroupTaggingSpotifyMetadata - Group Tagging metadata per Album - Spotify
+27. GroupTaggingTidalMetadata - Group Tagging metadata per Album - Tidal
 
 # FAQ
 ### Why is there no confirm question on tagging files
@@ -661,6 +669,23 @@ OPTIONS
   -h|--help         Shows help text. 
 ```
 
+# Tag Missing Deezer Metadata Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll tagmissingdeezermetadata --connection-string <value> [options]
+
+DESCRIPTION
+  Tag missing metadata using Deezer, optionally write to file
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: TAGMISSINGDEEZERMETADATA_ARTIST. 
+  -b|--album        target Album Environment variable: TAGMISSINGDEEZERMETADATA_ALBUM. 
+  -w|--write        Write missing metadata to media on disk. Environment variable: TAGMISSINGDEEZERMETADATA_WRITE. Default: "False".
+  -o|--overwrite-tag  Overwrite existing tag values. Environment variable: TAGMISSINGDEEZERMETADATA_OVERWRITE_TAG. Default: "True".
+  -h|--help         Shows help text. 
+```
+
 # Tag Missing Spotify Metadata Command
 ```
 USAGE
@@ -675,6 +700,24 @@ OPTIONS
   -b|--album        target Album Environment variable: TAGMISSINGSPOTIFYMETADATA_ALBUM. 
   -w|--write        Write missing metadata to media on disk. Environment variable: TAGMISSINGSPOTIFYMETADATA_WRITE. Default: "False".
   -o|--overwrite-tag  Overwrite existing tag values. Environment variable: TAGMISSINGSPOTIFYMETADATA_OVERWRITE_TAG. Default: "True".
+  -h|--help         Shows help text. 
+```
+
+
+# UpdateMB Deezer Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll updatedeezer --connection-string <value> [options]
+
+DESCRIPTION
+  Update Deezer metadata
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  --proxy-file      HTTP/HTTPS Proxy/Proxies to use to access Deezer. Environment variable: PROXY_FILE. 
+  -a|--artist       Artist filter to update. Environment variable: UPDATEDEEZER_ARTIST. 
+  --proxy           HTTP/HTTPS Proxy to use to access Deezer. Environment variable: PROXY. 
+  --proxy-mode      Proxy Mode: Random, RoundRobin, StickyTillError, RotateTime, PerArtist. Environment variable: PROXY_MODE. Default: "StickyTillError".
   -h|--help         Shows help text. 
 ```
 
