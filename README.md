@@ -52,6 +52,7 @@ This roadmap will be ongoing as the project keeps going
    Special characters are replaced: – to -, — to -, … to ...
    
    Seperators between words are kept: : - _ / ,
+   
 12. TagMissingMetadata - Add missing tags to your media files from AcoustId/MusicBrainz from fingerprints
 13. TagMissingSpotifyMetadata - Add missing tags to your media files from Spotify
 14. TagMissingTidalMetadata - Add missing tags to your media files from Tidal
