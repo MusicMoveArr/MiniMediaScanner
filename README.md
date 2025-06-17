@@ -705,7 +705,7 @@ OPTIONS
 ```
 
 
-# UpdateMB Deezer Command
+# Update Deezer Command
 ```
 USAGE
   dotnet MiniMediaScanner.dll updatedeezer --connection-string <value> [options]
