@@ -381,12 +381,12 @@ public class TidalService
             artistInfo.Data.Attributes.Name,
             artistInfo.Data.Attributes.Popularity);
 
-        foreach (var externalLink in artistInfo.Data.Attributes.ExternalLinks)
+        foreach (var externalLink in artistInfo?.Data?.Attributes?.ExternalLinks ?? [])
         {
             await _tidalRepository.UpsertArtistExternalLinkAsync(artistId, externalLink.Href, externalLink.Meta.Type);
         }
 
-        foreach (var imageLink in artistInfo.Data.Attributes.ImageLinks)
+        foreach (var imageLink in artistInfo?.Data?.Attributes?.ImageLinks ?? [])
         {
             await _tidalRepository.UpsertArtistImageLinkAsync(artistId,
                 imageLink.Href,
