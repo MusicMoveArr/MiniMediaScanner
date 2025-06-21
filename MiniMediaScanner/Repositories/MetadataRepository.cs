@@ -153,37 +153,42 @@ public class MetadataRepository
     }
     public async Task<List<DuplicateAlbumFileNameModel>> GetDuplicateAlbumFileNamesAsync(string artistName, int accuracy)
     {
-        string query = @$"WITH filenames AS (
-                        SELECT 
-                            m.MetadataId,
-                            m.Path,
-                            m.Title,
-                            album.AlbumId,
-                            REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g') AS FileName
-                        FROM artists artist
-                        JOIN albums album ON album.artistid = artist.artistid
-                        JOIN metadata m ON m.albumid = album.albumid
-                        WHERE LOWER(artist.name) = LOWER(@artistName)
-                    ),
-                    similar_groups AS (
-                        SELECT 
-                            f1.MetadataId,
-                            f1.Path,
-                            f1.Title,
-                            f1.AlbumId,
-                            f1.FileName,
-                            COUNT(*) AS duplicate_count
-                        FROM filenames f1
-                        JOIN filenames f2 
-                            ON f1.AlbumId = f2.AlbumId
-                           AND f1.MetadataId != f2.MetadataId
-                           AND similarity(f1.FileName, f2.FileName) >= 0.{accuracy}
-                        GROUP BY f1.MetadataId, f1.Path, f1.Title, f1.AlbumId, f1.FileName
-                    )
-                    SELECT *
-                    FROM similar_groups
-                    WHERE duplicate_count > 0
-                    ORDER BY AlbumId, FileName, Path";
+        if (accuracy >= 100)
+        {
+            accuracy = 99;
+        }
+        string query = @$"SET LOCAL pg_trgm.similarity_threshold = 0.{accuracy};
+                          WITH filenames AS (
+                              SELECT 
+                                  m.MetadataId,
+                                  m.Path,
+                                  m.Title,
+                                  album.AlbumId,
+                                  REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g') AS FileName
+                              FROM artists artist
+                              JOIN albums album ON album.artistid = artist.artistid
+                              JOIN metadata m ON m.albumid = album.albumid
+                              WHERE LOWER(artist.name) = LOWER(@artistName)
+                          ),
+                          similar_groups AS (
+                              SELECT 
+                                  f1.MetadataId,
+                                  f1.Path,
+                                  f1.Title,
+                                  f1.AlbumId,
+                                  f1.FileName,
+                                  COUNT(*) AS duplicate_count
+                              FROM filenames f1
+                              JOIN filenames f2 
+                                  ON f1.AlbumId = f2.AlbumId
+                                 AND f1.MetadataId != f2.MetadataId
+                                 AND f1.FileName % f2.FileName
+                              GROUP BY f1.MetadataId, f1.Path, f1.Title, f1.AlbumId, f1.FileName
+                          )
+                          SELECT *
+                          FROM similar_groups
+                          WHERE duplicate_count > 0
+                          ORDER BY AlbumId, FileName, Path";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         
@@ -622,7 +627,8 @@ public class MetadataRepository
         string artistName, 
         string albumRegex)
     {
-        string query = @"select m.MetadataId, 
+        string query = @"SET LOCAL pg_trgm.similarity_threshold = 0.8;
+                         select m.MetadataId, 
                               m.Path, 
                               m.Title, 
                               m.AlbumId,
@@ -647,7 +653,7 @@ public class MetadataRepository
 	                         SELECT jsonb_object_keys(m.tag_alljsontags) AS key
                          ) labelkey ON LOWER(labelkey.key) = @searchTag
                          where 
-                             (@artistFilter is null or length(@artistFilter) = 0 or similarity(lower(artist.name), lower(@artistFilter)) >= 0.8)
+                             (@artistFilter is null or length(@artistFilter) = 0 or lower(artist.name) % lower(@artistFilter))
                              and regexp_like(album.Title,  @albumRegex)
                              and LOWER(m.tag_alljsontags->>labelkey.key) ILIKE '%' || @labelName || '%'
                              and not LOWER(m.tag_alljsontags->>artistskey.key) ILIKE '%' || @artistName || '%'";

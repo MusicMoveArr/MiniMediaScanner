@@ -249,6 +249,10 @@ public class DeezerRepository
         string trackToken,
         string type)
     {
+        preview = string.Empty;
+        trackToken = string.Empty;
+        
+        
         string query = @"
             INSERT INTO deezer_track (TrackId, 
                                   Readable, 
@@ -504,7 +508,8 @@ public class DeezerRepository
     
         public async Task<List<DeezerTrackDbModel>> GetTrackByArtistIdAsync(long artistId, string albumName, string trackName)
     {
-        string query = @"select distinct on (track.isrc, album.upc, album.title, artist.artistid)
+        string query = @"SET LOCAL pg_trgm.similarity_threshold = 0.8;
+                         select distinct on (track.isrc, album.upc, album.title, artist.artistid)
                              track.title As TrackName,
                              track.TrackId,
                              track.AlbumId,
@@ -528,8 +533,8 @@ public class DeezerRepository
                          join deezer_track_artist track_artist on track_artist.trackid = track.trackid
                          join deezer_artist artist on artist.artistid = track_artist.artistid
                          where artist.artistid = @artistId
-                             and (length(@albumName) = 0 OR similarity(lower(album.title), lower(@albumName)) >= 0.8)
-	                         and (length(@trackName) = 0 OR similarity(lower(track.title), lower(@trackName)) >= 0.8)";
+                             and (length(@albumName) = 0 OR lower(album.title) % lower(@albumName))
+	                         and (length(@trackName) = 0 OR lower(track.title) % lower(@trackName))";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         

@@ -179,8 +179,8 @@ public class MusicBrainzArtistRepository
     }
     public async Task<List<MusicBrainzArtistModel>> GetMusicBrainzDataByNameAsync(string artistName, string albumName, string trackName)
     {
-        const string query = @"
-                                SELECT 
+        const string query = @"SET LOCAL pg_trgm.similarity_threshold = 0.8;
+                               SELECT 
                                     a.ArtistId AS ArtistId,
                                     a.releasecount AS ArtistReleaseCount,
                                     a.disambiguation AS ArtistDisambiguation,
@@ -235,8 +235,8 @@ public class MusicBrainzArtistRepository
                                 left join MusicBrainz_Label label on label.labelid = rl.labelid
                                 WHERE lower(a.name) = lower(@artistName)
                                       AND lower(r.status) = 'official'
-                                      AND (length(@albumName) = 0 OR similarity(lower(r.title), lower(@albumName)) >= 0.80)
-                                      AND (length(@trackName) = 0 OR similarity(lower(rt.title), lower(@trackName)) >= 0.80)";
+                                      AND (length(@albumName) = 0 OR lower(r.title) % lower(@albumName))
+                                      AND (length(@trackName) = 0 OR lower(rt.title) % lower(@trackName))";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         var records = await conn.QueryAsync<MusicBrainzRecordingFlatModel>(query, 
