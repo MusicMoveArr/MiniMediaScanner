@@ -14,6 +14,7 @@ namespace MiniMediaScanner.Services;
 
 public class DeezerAPIService
 {
+    
     private const string SearchArtistsUrl = "https://api.deezer.com/search/artist?q=\"{0}\"&output=json";
     private const string ArtistsIdUrl = "https://api.deezer.com/artist/{0}?output=json";
     private const string AlbumsByArtistIdUrl = "https://api.deezer.com/artist/{0}/albums?output=json";
@@ -36,6 +37,7 @@ public class DeezerAPIService
         return await retryPolicy.ExecuteAsync(async () =>
         {
             RestClientOptions options = new RestClientOptions(string.Format(SearchArtistsUrl, Uri.EscapeDataString(searchTerm)));
+
             await ProxyManagerService.SetProxySettingsAsync(options);
             using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
@@ -187,7 +189,7 @@ public class DeezerAPIService
                 (exception, timeSpan, retryCount, context) => {
                     Debug.WriteLine($"Retry {retryCount} after {timeSpan.TotalSeconds} sec due to: {exception.Message}");
                     Console.WriteLine($"Retry {retryCount} after {timeSpan.TotalSeconds} sec due to: {exception.Message}");
-
+                    
                     if (ProxyManagerService.ProxyMode == ProxyModeType.StickyTillError)
                     {
                         ProxyManagerService.PickNextProxy();

@@ -249,10 +249,6 @@ public class DeezerRepository
         string trackToken,
         string type)
     {
-        preview = string.Empty;
-        trackToken = string.Empty;
-        
-        
         string query = @"
             INSERT INTO deezer_track (TrackId, 
                                   Readable, 

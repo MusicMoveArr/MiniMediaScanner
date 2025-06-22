@@ -609,6 +609,7 @@ public class MetadataRepository
 	                     ) subquery ON lower(subquery.key) ilike lower('MusicBrainz%')
 	 			                    or lower(subquery.key) ilike lower('Tidal%')
 	 			                    or lower(subquery.key) ilike lower('Spotify%')
+	 			                    or lower(subquery.key) ilike lower('Deezer%')
                         where lower(artist.name) = lower(@artistName)
                               and subquery.key is null ";
 

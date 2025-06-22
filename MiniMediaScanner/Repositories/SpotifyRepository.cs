@@ -356,7 +356,8 @@ public class SpotifyRepository
 
     public async Task<List<SpotifyTrackModel>> GetTrackByArtistIdAsync(string artistId, string albumName, string trackName)
     {
-        string query = @"select
+        string query = @"SET LOCAL pg_trgm.similarity_threshold = 0.8;
+                         select
                              track.name As TrackName,
 	                         track.TrackId,
 	                         track.AlbumId,
@@ -383,8 +384,8 @@ public class SpotifyRepository
                          join spotify_artist artist on artist.id = track_artist.artistid or 
 						 	                           artist.id = album_artist.artistid
                          where artist.id = @artistId
-	                         and (length(@albumName) = 0 OR similarity(lower(album.name), lower(@albumName)) >= 0.8)
-	                         and (length(@trackName) = 0 OR similarity(lower(track.name), lower(@trackName)) >= 0.8)";
+	                         and (length(@albumName) = 0 OR lower(album.name) % lower(@albumName))
+	                         and (length(@trackName) = 0 OR lower(track.name) % lower(@trackName))";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         

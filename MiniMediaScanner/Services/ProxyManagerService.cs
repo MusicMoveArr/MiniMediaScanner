@@ -21,6 +21,8 @@ public class ProxyManagerService
     private Stopwatch _stopwatch = Stopwatch.StartNew();
     private string _currentProxyUri;
     
+    public int WorkingProxies => _proxies?.Count ?? 0;
+    
     public ProxyManagerService(string testUrl, string proxyFile, string singleProxy, string proxyMode)
     {
         _testUrl = testUrl;
@@ -220,7 +222,7 @@ public class ProxyManagerService
         }
         catch (Exception e)
         {
-            Debug.WriteLine($"Proxy error: {proxyModel.ProxyUri}, {e.Message}");
+            Console.WriteLine($"Proxy error: {proxyModel.ProxyUri}, {e.Message}");
         }
 
         return false;
