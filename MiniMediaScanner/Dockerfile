@@ -1,4 +1,12 @@
 ﻿FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
+
+# Install ffmpeg, fpcalc and ca-certs
+USER root
+RUN apt-get update
+RUN apt-get install -y ffmpeg libchromaprint-tools
+RUN apt-get install -y ca-certificates
+RUN update-ca-certificates
+
 USER $APP_UID
 WORKDIR /app
 

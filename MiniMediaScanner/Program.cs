@@ -32,6 +32,7 @@ public class Program
         
         var upgradeEngine = DeployChanges.To
             .PostgresqlDatabase(connectionString)
+            .WithExecutionTimeout(TimeSpan.FromMinutes(15))
             .WithScriptsFromFileSystem("./DbScripts")
             .LogToConsole()
             .Build();

@@ -30,7 +30,7 @@
       <PackageReference Include="Spectre.Console" Version="0.50.0" />
       <PackageReference Include="SpotifyAPI.Web.Auth" Version="7.2.1" />
       <PackageReference Include="TagLibSharp" Version="2.3.0" />
-      <PackageReference Include="z440.atl.core" Version="6.26.0" />
+      <PackageReference Include="z440.atl.core" Version="7.0.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -47,6 +47,12 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
       <None Update="DbScripts\20250612 deezer indexes.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="DbScripts\20250625 spotify indexes.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="DbScripts\20250629 indexes.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>
