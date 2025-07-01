@@ -798,7 +798,45 @@ public class MetadataRepository
         }
         return canUpdate;
     }
-    
+      
+    public async Task<List<string>> MetadataCanUpdatePathListAsync(List<string> paths)
+    {
+        string query = @"SELECT MetadataId, Path, File_LastWriteTime, File_CreationTime
+                         FROM metadata 
+                         WHERE path = ANY(@paths)";
+        
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        var canUpdateMetadataModels = await conn
+            .QueryAsync<CanUpdateMetadataModel>(query, new
+            {
+                paths
+            });
+
+        //get missing files that we can import
+        List<string> pathsCanUpdate = paths
+            .Where(path => !canUpdateMetadataModels.Any(model => string.Equals(model.Path, path)))
+            .ToList();
+
+        foreach (var model in canUpdateMetadataModels)
+        {
+            FileInfo fileInfo = new FileInfo(model.Path);
+            if (!fileInfo.Exists)
+            {
+                continue;
+            }
+            
+            bool canUpdate = !model.MetadataId.Equals(Guid.Empty) &&
+                             (model.File_LastWriteTime?.ToString("yyyy-MM-dd HH:mm:ss") != fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss") ||
+                              model.File_CreationTime?.ToString("yyyy-MM-dd HH:mm:ss") != fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss"));
+            if (canUpdate && !pathsCanUpdate.Contains(model.Path))
+            {
+                pathsCanUpdate.Add(model.Path);
+            }
+        }
+        
+        return pathsCanUpdate;
+    }
     
     
     public async Task InsertOrUpdateMetadataAsync(MetadataInfo metadata, Guid albumId)
