@@ -31,6 +31,12 @@ public class DeDuplicateFileCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "DEDUPLICATE_ACCURACY")]
     public int Accuracy { get; set; } = 98;
+
+    [CommandOption("extensions", 'e',
+        Description = "Extensions to keep, in order, first found extension is kept (extensions must be without '.')",
+        IsRequired = false,
+        EnvironmentVariable = "DEDUPLICATE_EXTENSIONS")]
+    public List<string> Extensions { get; set; } = ImportCommandHandler.MediaFileExtensions.ToList();
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -49,11 +55,11 @@ public class DeDuplicateFileCommand : ICommand
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.CheckDuplicateFilesAsync(Delete, Accuracy);
+            await handler.CheckDuplicateFilesAsync(Delete, Accuracy, Extensions);
         }
         else
         {
-            await handler.CheckDuplicateFilesAsync(Artist, Delete, Accuracy);
+            await handler.CheckDuplicateFilesAsync(Artist, Delete, Accuracy, Extensions);
         }
     }
 }

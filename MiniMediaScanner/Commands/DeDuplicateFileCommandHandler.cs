@@ -19,13 +19,13 @@ public class DeDuplicateFileCommandHandler
         _metadataRepository = new MetadataRepository(connectionString);
     }
 
-    public async Task CheckDuplicateFilesAsync(bool delete, int accuracy)
+    public async Task CheckDuplicateFilesAsync(bool delete, int accuracy, List<string> extensions)
     {
         await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
             try
             {
-                await CheckDuplicateFilesAsync(artist, delete, accuracy);
+                await CheckDuplicateFilesAsync(artist, delete, accuracy, extensions);
             }
             catch (Exception e)
             {
@@ -34,14 +34,14 @@ public class DeDuplicateFileCommandHandler
         });
     }
     
-    public async Task CheckDuplicateFilesAsync(string artistName, bool delete, int accuracy)
+    public async Task CheckDuplicateFilesAsync(string artistName, bool delete, int accuracy, List<string> extensions)
     {
         Console.WriteLine($"Checking artist '{artistName}'");
         try
         {
-            await FindDuplicateFileExtensionsAsync(artistName, delete);
-            await FindDuplicateFileVersionsAsync(artistName, delete);
-            await FindDuplicateAlbumFileNamesAsync(artistName, delete, accuracy);
+            await FindDuplicateFileExtensionsAsync(artistName, delete, extensions);
+            await FindDuplicateFileVersionsAsync(artistName, delete, extensions);
+            await FindDuplicateAlbumFileNamesAsync(artistName, delete, accuracy, extensions);
         }
         catch (Exception e)
         {
@@ -49,7 +49,7 @@ public class DeDuplicateFileCommandHandler
         }
     }
 
-    private async Task FindDuplicateAlbumFileNamesAsync(string artistName, bool delete, int accuracy)
+    private async Task FindDuplicateAlbumFileNamesAsync(string artistName, bool delete, int accuracy, List<string> extensions)
     {
         var duplicateFiles = (await _metadataRepository.GetDuplicateAlbumFileNamesAsync(artistName, accuracy))
             .GroupBy(group =>
@@ -80,7 +80,7 @@ public class DeDuplicateFileCommandHandler
             {
                 DuplicateAlbumFileNameModel recordToKeep = null;
 
-                foreach (string extension in ImportCommandHandler.MediaFileExtensions)
+                foreach (string extension in extensions)
                 {
                     var record = duplicateFileVersions
                         .FirstOrDefault(path => new FileInfo($"{path.Path.Substring(0, path.Path.LastIndexOf('.'))}.{extension}").Exists);
@@ -126,7 +126,7 @@ public class DeDuplicateFileCommandHandler
         }
     }
     
-    private async Task FindDuplicateFileExtensionsAsync(string artistName, bool delete)
+    private async Task FindDuplicateFileExtensionsAsync(string artistName, bool delete, List<string> extensions)
     {
         var duplicateFiles = (await _metadataRepository.GetDuplicateFileExtensionsAsync(artistName))
             .GroupBy(group => group.FilePathWithoutExtension);
@@ -135,7 +135,7 @@ public class DeDuplicateFileCommandHandler
         {
             var fileWithoutExtension = duplicateFileVersions.First().FilePathWithoutExtension;
             var recordToKeep = (await Task.WhenAll(
-                    ImportCommandHandler.MediaFileExtensions
+                    extensions
                         .Select(async ext =>
                             (await _metadataRepository.GetMetadataByPathAsync(fileWithoutExtension + "." + ext))
                             .FirstOrDefault())
@@ -176,7 +176,7 @@ public class DeDuplicateFileCommandHandler
         }
     }
     
-    private async Task FindDuplicateFileVersionsAsync(string artistName, bool delete)
+    private async Task FindDuplicateFileVersionsAsync(string artistName, bool delete, List<string> extensions)
     {
         //regex for files ending with (1).flac, (2).mp3 etc
         string regexFilter = @" \([0-9]*\)(?=\.([a-zA-Z0-9]{2,5})$)";
@@ -196,7 +196,7 @@ public class DeDuplicateFileCommandHandler
                 string fileWithoutExtension = Path.ChangeExtension(nonDuplicateFile, "");
                 
                 nonDuplicateRecord = (await Task.WhenAll(
-                        ImportCommandHandler.MediaFileExtensions
+                        extensions
                             .Where(ext => ext != extension)
                             .Select(ext => fileWithoutExtension + ext)
                             .Select(async path =>
