@@ -94,7 +94,7 @@ public class FileMetaDataService
             mediaTags["group"] = trackInfo.Group;
         }
         
-        mediaTags["lyrics"] = trackInfo.Lyrics?.UnsynchronizedLyrics;
+        mediaTags["lyrics"] = string.Join("\r\n", trackInfo.Lyrics.Select(x => x.UnsynchronizedLyrics));
         
         if (trackInfo.BPM > 0)
         {
