@@ -40,6 +40,7 @@ public class ImportCommandHandler
         {
             var sortedTopDirectories = Directory
                 .EnumerateFileSystemEntries(directoryPath, "*.*", SearchOption.TopDirectoryOnly)
+                .Where(dir => File.GetAttributes(dir).HasFlag(FileAttributes.Directory))
                 .Where(dir => !new DirectoryInfo(dir).Name.StartsWith("."))
                 .OrderBy(dir => dir)
                 .ToList();
@@ -66,16 +67,21 @@ public class ImportCommandHandler
 
                         var allFilePaths = Directory
                             .EnumerateFileSystemEntries(dir, "*.*", SearchOption.AllDirectories)
-                            .Where(file => !new DirectoryInfo(file).Name.StartsWith("."))
+                            .Where(dir => !File.GetAttributes(dir).HasFlag(FileAttributes.Directory))
+                            .Where(file => !new FileInfo(file).Name.StartsWith("."))
+                            .Where(file => MediaFileExtensions.Any(ext => file.EndsWith(ext)))
                             .ToList();
 
-                        task.MaxValue = allFilePaths.Count;
+                        List<string> updatePaths = forceImport ? allFilePaths : await _metadataRepository.MetadataCanUpdatePathListAsync(allFilePaths);
+                        task.MaxValue = updatePaths.Count;
                         
-                        foreach (var file in allFilePaths)
+                        foreach (var file in updatePaths)
                         {
-                            await ProcessFileAsync(file, forceImport, updateMb);
+                            await ProcessFileAsync(file, true, updateMb);
                             task.Value++;
                         }
+
+                        task.Value = task.MaxValue;
                     });
             });
         }
