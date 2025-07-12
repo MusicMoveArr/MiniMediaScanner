@@ -15,11 +15,26 @@ public class DeezerService
     private const int PreventUpdateWithinDays = 7; 
     private readonly DeezerAPIService _deezerAPIService;
     private readonly DeezerRepository _deezerRepository;
+    private readonly bool _saveTrackToken;
+    private readonly bool _savePreviewUrl;
 
-    public DeezerService(string connectionString, string proxyFile, string singleProxy, string proxyMode)
+    public DeezerService(
+        string connectionString, 
+        string proxyFile, 
+        string singleProxy, 
+        string proxyMode, 
+        bool saveTrackToken, 
+        bool savePreviewUrl)
     {
         _deezerRepository = new DeezerRepository(connectionString);
         _deezerAPIService = new DeezerAPIService(proxyFile, singleProxy, proxyMode);
+        _saveTrackToken = saveTrackToken;
+        _savePreviewUrl = savePreviewUrl;
+    }
+
+    public async Task PrepareProxiesAsync()
+    {
+        await _deezerAPIService.ProxyManagerService.GetProxyAsync();
     }
     
     public async Task UpdateArtistByNameAsync(string artistName,
@@ -29,6 +44,20 @@ public class DeezerService
 
         if (searchResult?.Data?.Any() == true)
         {
+            if (!string.IsNullOrWhiteSpace(searchResult?.Next))
+            {
+                string? nextUrl = searchResult.Next;
+                while (!string.IsNullOrWhiteSpace(nextUrl))
+                {
+                    var nextArtists = await _deezerAPIService.GetArtistsNextAsync(nextUrl);
+                    if (nextArtists?.Data != null)
+                    {
+                        searchResult.Data.AddRange(nextArtists.Data);
+                    }
+                    nextUrl = nextArtists?.Next;
+                }
+            }
+            
             foreach (var artist in searchResult
                          .Data
                          .Where(artist => !string.IsNullOrWhiteSpace(artist.Name))
@@ -229,11 +258,11 @@ public class DeezerService
                     fullTrackInfo.ExplicitLyrics,
                     fullTrackInfo.ExplicitContentLyrics,
                     fullTrackInfo.ExplicitContentCover,
-                    fullTrackInfo.Preview,
+                    _savePreviewUrl ? fullTrackInfo.Preview : string.Empty,
                     fullTrackInfo.BPM,
                     fullTrackInfo.Gain,
                     fullTrackInfo.Md5Image,
-                    fullTrackInfo.TrackToken,
+                    _saveTrackToken ? fullTrackInfo.TrackToken : string.Empty,
                     fullTrackInfo.Type);
                 
                 //add the search ArtistId on purpose to the track_artist

@@ -14,7 +14,6 @@ namespace MiniMediaScanner.Services;
 
 public class DeezerAPIService
 {
-    
     private const string SearchArtistsUrl = "https://api.deezer.com/search/artist?q=\"{0}\"&output=json";
     private const string ArtistsIdUrl = "https://api.deezer.com/artist/{0}?output=json";
     private const string AlbumsByArtistIdUrl = "https://api.deezer.com/artist/{0}/albums?output=json";
@@ -23,6 +22,7 @@ public class DeezerAPIService
     private const string TrackByIdUrl = "https://api.deezer.com/track/{0}?output=json";
 
     public ProxyManagerService ProxyManagerService { get; private set; }
+    
     
     public DeezerAPIService(string proxyFile, string singleProxy, string proxyMode)
     {
@@ -42,6 +42,24 @@ public class DeezerAPIService
             using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
             
+            var response = await client.GetAsync<DeezerSearchDataModel<DeezerSearchArtistModel>>(request);
+            response?.Error?.ThrowExceptionOnRateLimiter();
+            return response;
+        });
+    }
+    public async Task<DeezerSearchDataModel<DeezerSearchArtistModel>?> GetArtistsNextAsync(string next)
+    {
+        AsyncRetryPolicy retryPolicy = GetRetryPolicy();
+        Debug.WriteLine($"Requesting Deezer GetArtistsNext '{next}'");
+        
+        RestClientOptions options = new RestClientOptions(next);
+        await ProxyManagerService.SetProxySettingsAsync(options);
+        
+        using RestClient client = new RestClient(options);
+
+        return await retryPolicy.ExecuteAsync(async () =>
+        {
+            RestRequest request = new RestRequest();
             var response = await client.GetAsync<DeezerSearchDataModel<DeezerSearchArtistModel>>(request);
             response?.Error?.ThrowExceptionOnRateLimiter();
             return response;

@@ -1,5 +1,5 @@
-using ListRandomizer;
 using MiniMediaScanner.Callbacks.Status;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 using Spectre.Console;
@@ -10,11 +10,19 @@ public class UpdateDeezerCommandHandler
 {
     private readonly DeezerRepository _deezerRepository;
     private readonly DeezerService _deezerService;
+    private readonly int _threads;
 
-    public UpdateDeezerCommandHandler(string connectionString, string proxyFile, string singleProxy, string proxyMode)
+    public UpdateDeezerCommandHandler(string connectionString, 
+        string proxyFile, 
+        string singleProxy, 
+        string proxyMode, 
+        bool saveTrackToken, 
+        bool savePreviewUrl,
+        int threads)
     {
+        _deezerService = new DeezerService(connectionString, proxyFile, singleProxy, proxyMode, saveTrackToken, savePreviewUrl);
         _deezerRepository = new DeezerRepository(connectionString);
-        _deezerService = new DeezerService(connectionString, proxyFile, singleProxy, proxyMode);
+        _threads = threads;
     }
     
     public async Task UpdateDeezerArtistsByNameAsync(string artistName)
@@ -49,7 +57,9 @@ public class UpdateDeezerCommandHandler
             .Spinner(Spinner.Known.Dots)
             .StartAsync(Markup.Escape($"Updating all Deezer Artist..."), async ctx =>
             {
-                foreach (var artistId in artistIds)
+                await _deezerService.PrepareProxiesAsync();
+                
+                await ParallelHelper.ForEachAsync(artistIds, _threads, async artistId =>
                 {
                     try
                     {
@@ -59,9 +69,10 @@ public class UpdateDeezerCommandHandler
                             {
                                 if (string.IsNullOrWhiteSpace(callback.ExtraInfo))
                                 {
-                                    AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
+                                    AnsiConsole.WriteLine(Markup.Escape(
+                                        $"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
                                 }
-                            
+
                                 ctx.Status(Markup.Escape($"Updating Deezer Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}{callback.ExtraInfo}"));
                             }
                             else if(callback.Status == UpdateDeezerStatus.SkippedSyncedWithin)
@@ -74,7 +85,7 @@ public class UpdateDeezerCommandHandler
                     {
                         Console.WriteLine(e.Message);
                     }
-                }
+                });
             });
     }
 }

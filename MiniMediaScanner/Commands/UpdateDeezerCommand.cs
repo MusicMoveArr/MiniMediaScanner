@@ -20,7 +20,6 @@ public class UpdateDeezerCommand : ICommand
         EnvironmentVariable = "UPDATEDEEZER_ARTIST")]
     public string Artist { get; set; }
     
-    
     [CommandOption("proxy-file", 
         Description = "HTTP/HTTPS Proxy/Proxies to use to access Deezer.", 
         IsRequired = false,
@@ -38,10 +37,29 @@ public class UpdateDeezerCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "PROXY_MODE")]
     public string ProxyMode { get; set; } = "StickyTillError";
+
+
+    [CommandOption("save-track-token",
+        Description = "Save the track_token that is returned by the Deezer API into the database, disabling this saves space in postgres.",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATEDEEZER_SAVE_TRACK_TOKEN")]
+    public bool SaveTrackToken { get; set; } = true;
+
+    [CommandOption("save-preview-url",
+        Description = "Save the preview_url that is returned by the Deezer API into the database, disabling this saves space in postgres.",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATEDEEZER_SAVE_PREVIEW_URL")]
+    public bool SavePreviewUrl { get; set; } = true;
+
+    [CommandOption("threads",
+        Description = "The amount of threads to use.",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATEDEEZER_THREADS")]
+    public int Threads { get; set; } = 1;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new UpdateDeezerCommandHandler(ConnectionString, ProxyFile, Proxy, ProxyMode);
+        var handler = new UpdateDeezerCommandHandler(ConnectionString, ProxyFile, Proxy, ProxyMode, SaveTrackToken, SavePreviewUrl, Threads);
 
         if (!string.IsNullOrWhiteSpace(Artist))
         {
