@@ -91,7 +91,7 @@ public class TagMissingDeezerMetadataCommandHandler
         
         if (deezerTracks.Count > 1)
         {
-            Console.WriteLine($"Found more then 1 spotify track with '{metadata.Album}', '{metadata.Title}'");
+            Console.WriteLine($"Found more then 1 Deezer track with '{metadata.Album}', '{metadata.Title}'");
             return;
         }
         
