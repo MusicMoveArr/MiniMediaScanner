@@ -24,7 +24,14 @@ public class MissingCommandHandler
         _tidalRepository = new TidalRepository(connectionString);
     }
     
-    public async Task CheckMissingTracksByArtistAsync(string artistName, string provider, string output, List<string>? filterOut)
+    public async Task CheckMissingTracksByArtistAsync(
+        string artistName, 
+        string provider, 
+        string output, 
+        List<string>? filterOut, 
+        string extension, 
+        string filePath, 
+        bool fileAppend)
     {
         try
         {
@@ -39,7 +46,7 @@ public class MissingCommandHandler
                     string? spotifyArtistId = await _matchRepository.GetBestSpotifyMatchAsync(artistId.Value, artistName);
                     if (!string.IsNullOrWhiteSpace(spotifyArtistId))
                     {
-                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistSpotify2Async(spotifyArtistId, artistName);
+                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistSpotify2Async(spotifyArtistId, artistName, extension);
                     }
                 }
             }
@@ -52,7 +59,7 @@ public class MissingCommandHandler
                     long? deezerArtistId = await _matchRepository.GetBestDeezerMatchAsync(artistId.Value, artistName);
                     if (deezerArtistId > 0)
                     {
-                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistDeezerAsync(deezerArtistId.Value, artistName);
+                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistDeezerAsync(deezerArtistId.Value, artistName, extension);
                     }
                 }
             }
@@ -65,25 +72,31 @@ public class MissingCommandHandler
                     int? tidalArtistId = await _matchRepository.GetBestTidalMatchAsync(artistId.Value, artistName);
                     if (tidalArtistId > 0)
                     {
-                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistTidalAsync(tidalArtistId.Value, artistName);
+                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistTidalAsync(tidalArtistId.Value, artistName, extension);
                     }
                 }
             }
             else
             {
-                tempMissingTracks = await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(artistName);
+                tempMissingTracks = await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(artistName, extension);
             }
 
             //re-check with Associated Artists
             List<MissingTrackModel> missingTracks = new List<MissingTrackModel>();
             foreach (var track in tempMissingTracks)
             {
-                if (!await _missingRepository.TrackExistsAtAssociatedArtist(track.Artist, track.Album, track.Track))
+                if (!await _missingRepository.TrackExistsAtAssociatedArtist(track.Artist, track.Album, track.Track, extension))
                 {
                     missingTracks.Add(track);
                 }
             }
 
+            StreamWriter? fileStream = null;
+            if (!string.IsNullOrWhiteSpace(filePath))
+            {
+                fileStream = new StreamWriter(filePath, fileAppend);
+            }
+            
             missingTracks
                 .Where(track => filterOut?.Count == 0 || !filterOut.Any(filter => $"{track.Album} - {track.Track}".ToLower().Contains(filter.ToLower())))
                 .Select(track => SmartFormat.Smart.Format(output, track))
@@ -93,7 +106,10 @@ public class MissingCommandHandler
                 .ForEach(track =>
                 {
                     Console.WriteLine(track);
+                    fileStream?.WriteLine(track);
                 });
+            fileStream?.Flush();
+            fileStream?.Close();
         }
         catch (Exception e)
         {
@@ -102,13 +118,19 @@ public class MissingCommandHandler
         }
     }
     
-    public async Task CheckAllMissingTracksAsync(string provider, string output, List<string>? filterOut)
+    public async Task CheckAllMissingTracksAsync(
+        string provider, 
+        string output, 
+        List<string>? filterOut, 
+        string extension, 
+        string filePath, 
+        bool fileAppend)
     {
         var filteredNames = await _artistRepository.GetAllArtistNamesAsync();
 
         foreach (string artistName in filteredNames)
         {
-            await CheckMissingTracksByArtistAsync(artistName, provider, output, filterOut);
+            await CheckMissingTracksByArtistAsync(artistName, provider, output, filterOut, extension, filePath, fileAppend);
         }
     }
 }

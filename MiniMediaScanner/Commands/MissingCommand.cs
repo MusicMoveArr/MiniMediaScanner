@@ -47,6 +47,24 @@ public class MissingCommand : ICommand
         EnvironmentVariable = "MISSING_FILTEROUT")]
     public List<string>? FilterOut { get; set; } = new List<string>();
     
+    [CommandOption("extension", 'e', 
+        Description = "When the specific file extension (mp3, opus, wav...) is not found, it's considered missing.", 
+        IsRequired = false,
+        EnvironmentVariable = "MISSING_EXTENSION")]
+    public string Extension { get; set; }
+    
+    [CommandOption("file", 
+        Description = "Save the missing tracks list to a file.", 
+        IsRequired = false,
+        EnvironmentVariable = "MISSING_FILE")]
+    public string FilePath { get; set; }
+
+    [CommandOption("file-append",
+        Description = "Append to the file instead of a overwrite.",
+        IsRequired = false,
+        EnvironmentVariable = "MISSING_FILE_APPEND")]
+    public bool FileAppend { get; set; } = false;
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
         if (string.IsNullOrWhiteSpace(Provider) ||
@@ -59,11 +77,11 @@ public class MissingCommand : ICommand
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.CheckAllMissingTracksAsync(Provider, Output, FilterOut);
+            await handler.CheckAllMissingTracksAsync(Provider, Output, FilterOut, Extension, FilePath, FileAppend);
         }
         else
         {
-            await handler.CheckMissingTracksByArtistAsync(Artist, Provider, Output, FilterOut);
+            await handler.CheckMissingTracksByArtistAsync(Artist, Provider, Output, FilterOut, Extension, FilePath, FileAppend);
         }
     }
 }
