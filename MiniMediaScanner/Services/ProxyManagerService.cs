@@ -150,6 +150,12 @@ public class ProxyManagerService
     private async Task LoadProxyFileAsync()
     {
         List<string> testProxies = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(_proxyFile))
+        {
+            return;
+        }
+        
         if (!string.IsNullOrWhiteSpace(_proxyFile))
         {
             FileInfo fileInfo = new FileInfo(_proxyFile);
