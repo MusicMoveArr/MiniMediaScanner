@@ -51,41 +51,53 @@ public class UpdateDeezerCommandHandler
     
     public async Task UpdateAllDeezerArtistsAsync()
     {
-        var artistIds = await _deezerRepository.GetAllDeezerArtistIdsAsync();
         
         await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
             .StartAsync(Markup.Escape($"Updating all Deezer Artist..."), async ctx =>
             {
                 await _deezerService.PrepareProxiesAsync();
-                
-                await ParallelHelper.ForEachAsync(artistIds, _threads, async artistId =>
-                {
-                    try
-                    {
-                        await _deezerService.UpdateArtistByIdAsync(artistId, callback =>
-                        {
-                            if (callback.Status == UpdateDeezerStatus.Updating)
-                            {
-                                if (string.IsNullOrWhiteSpace(callback.ExtraInfo))
-                                {
-                                    AnsiConsole.WriteLine(Markup.Escape(
-                                        $"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
-                                }
 
-                                ctx.Status(Markup.Escape($"Updating Deezer Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}{callback.ExtraInfo}"));
-                            }
-                            else if(callback.Status == UpdateDeezerStatus.SkippedSyncedWithin)
-                            {
-                                AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Deezer ArtistId '{callback?.ArtistId}' synced already within 7days"));
-                            }
-                        });
-                    }
-                    catch (Exception e)
+                int offset = 0;
+
+                while (true)
+                {
+                    var artistIds = await _deezerRepository.GetAllDeezerArtistIdsAsync(offset);
+                    offset += DeezerRepository.PagingSize;
+
+                    if (artistIds.Count == 0)
                     {
-                        Console.WriteLine(e.Message);
+                        break;
                     }
-                });
+                    
+                    await ParallelHelper.ForEachAsync(artistIds, _threads, async artistId =>
+                    {
+                        try
+                        {
+                            await _deezerService.UpdateArtistByIdAsync(artistId, callback =>
+                            {
+                                if (callback.Status == UpdateDeezerStatus.Updating)
+                                {
+                                    if (string.IsNullOrWhiteSpace(callback.ExtraInfo))
+                                    {
+                                        AnsiConsole.WriteLine(Markup.Escape(
+                                            $"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
+                                    }
+
+                                    ctx.Status(Markup.Escape($"Updating Deezer Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}{callback.ExtraInfo}"));
+                                }
+                                else if(callback.Status == UpdateDeezerStatus.SkippedSyncedWithin)
+                                {
+                                    AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Deezer ArtistId '{callback?.ArtistId}' synced already within 7days"));
+                                }
+                            });
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.Message);
+                        }
+                    });
+                }
             });
     }
 }

@@ -6,6 +6,7 @@ namespace MiniMediaScanner.Repositories;
 
 public class DeezerRepository
 {
+    public const int PagingSize = 1000;
     private readonly string _connectionString;
     public DeezerRepository(string connectionString)
     {
@@ -387,9 +388,8 @@ public class DeezerRepository
     public async Task<int> GetAlbumTrackCountAsync(long albumId, long artistId)
     {
         string query = @"SELECT count(track.trackid)
-                         FROM deezer_album album
-                         join deezer_track track on track.albumid = album.albumid
-                         where album.albumid = @albumId and album.artistId = @artistId
+                         FROM deezer_track track 
+                         where track.albumid = @albumId and track.artistId = @artistId
                          limit 1";
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -403,14 +403,21 @@ public class DeezerRepository
                 });
     }
     
-    public async Task<List<int>> GetAllDeezerArtistIdsAsync()
+    public async Task<List<int>> GetAllDeezerArtistIdsAsync(int offset)
     {
-        string query = @"SELECT artistid FROM deezer_artist order by name asc";
+        string query = @"SELECT artistid FROM deezer_artist 
+                         order by name asc 
+                         offset @offset
+                         limit @PagingSize";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         
         return (await conn
-                .QueryAsync<int>(query))
+                .QueryAsync<int>(query, param: new
+                {
+                    offset,
+                    PagingSize
+                }))
             .ToList();
     }
     
