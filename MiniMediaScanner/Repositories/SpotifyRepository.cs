@@ -388,16 +388,32 @@ public class SpotifyRepository
 	                         and (length(@trackName) = 0 OR lower(track.name) % lower(@trackName))";
 
         await using var conn = new NpgsqlConnection(_connectionString);
-        
-        return (await conn
-            .QueryAsync<SpotifyTrackModel>(query,
-                param: new
-                {
-                    artistId,
-                    albumName,
-                    trackName
-                }))
-            .ToList();
+        await conn.OpenAsync();
+        var transaction = await conn.BeginTransactionAsync();
+        var tracks = new List<SpotifyTrackModel>();
+
+        try
+        {
+            tracks = (await conn
+                    .QueryAsync<SpotifyTrackModel>(query, new
+                    {
+                        artistId,
+                        albumName,
+                        trackName
+                    }, commandTimeout: 60,
+                    transaction: transaction))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+        }
+        finally
+        {
+            await transaction.CommitAsync();
+        }
+
+        return tracks;
     }
 
     public async Task<List<SpotifyExternalValue>> GetTrackExternalValuesAsync(string trackId)

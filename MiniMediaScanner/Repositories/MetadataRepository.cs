@@ -191,13 +191,30 @@ public class MetadataRepository
                           ORDER BY AlbumId, FileName, Path";
 
         await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync();
+        var transaction = await conn.BeginTransactionAsync();
+        var filenames = new List<DuplicateAlbumFileNameModel>();
         
-        return conn.Query<DuplicateAlbumFileNameModel>(query, 
-                new
-                {
-                    artistName
-                }, commandTimeout: 120)
-            .ToList();
+        try
+        {
+            filenames = conn.Query<DuplicateAlbumFileNameModel>(query, 
+                    new
+                    {
+                        artistName
+                    }, commandTimeout: 120,
+                    transaction: transaction)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+        }
+        finally
+        {
+            await transaction.CommitAsync();
+        }
+
+        return filenames;
     }
     
     public async Task<List<MetadataInfo>> GetMissingMusicBrainzMetadataRecordsAsync(string artistName)
@@ -660,15 +677,31 @@ public class MetadataRepository
                              and not LOWER(m.tag_alljsontags->>artistskey.key) ILIKE '%' || @artistName || '%'";
 
         await using var conn = new NpgsqlConnection(_connectionString);
-        
-        return conn.Query<MetadataModel>(query, new
+        await conn.OpenAsync();
+        var transaction = await conn.BeginTransactionAsync();
+        var metadata = new List<MetadataModel>();
+
+        try
         {
-            artistFilter,
-            searchTag,
-            labelName,
-            artistName,
-            albumRegex
-        }).ToList();
+            metadata = conn.Query<MetadataModel>(query, new
+                               {
+                                   artistFilter,
+                                   searchTag,
+                                   labelName,
+                                   artistName,
+                                   albumRegex
+                               }).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+        }
+        finally
+        {
+            await transaction.CommitAsync();
+        }
+
+        return metadata;
     }
     
     public async Task<List<Guid?>> GetArtistIdByMetadataAsync(string artistName)

@@ -540,15 +540,32 @@ public class DeezerRepository
 	                         and (length(@trackName) = 0 OR lower(track.title) % lower(@trackName))";
 
         await using var conn = new NpgsqlConnection(_connectionString);
-        
-        return (await conn
-            .QueryAsync<DeezerTrackDbModel>(query,
-                param: new
-                {
-                    artistId,
-                    albumName,
-                    trackName
-                }))
-            .ToList();
+        await conn.OpenAsync();
+        var transaction = await conn.BeginTransactionAsync();
+        var tracks = new List<DeezerTrackDbModel>();
+
+        try
+        {
+            tracks = (await conn
+                    .QueryAsync<DeezerTrackDbModel>(query,
+                        param: new
+                        {
+                            artistId,
+                            albumName,
+                            trackName
+                        },
+                        transaction: transaction))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+        }
+        finally
+        {
+            await transaction.CommitAsync();
+        }
+
+        return tracks;
     }
 }

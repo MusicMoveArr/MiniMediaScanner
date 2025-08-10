@@ -239,13 +239,29 @@ public class MusicBrainzArtistRepository
                                       AND (length(@trackName) = 0 OR lower(rt.title) % lower(@trackName))";
 
         await using var conn = new NpgsqlConnection(_connectionString);
-        var records = await conn.QueryAsync<MusicBrainzRecordingFlatModel>(query, 
-            param: new
-            {
-                artistName,
-                albumName,
-                trackName
-            });
+        await conn.OpenAsync();
+        var transaction = await conn.BeginTransactionAsync();
+        var records = new List<MusicBrainzRecordingFlatModel>();
+
+        try
+        {
+            records = (await conn.QueryAsync<MusicBrainzRecordingFlatModel>(query, 
+                param: new
+                {
+                    artistName,
+                    albumName,
+                    trackName
+                },
+                transaction: transaction)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+        }
+        finally
+        {
+            await transaction.CommitAsync();
+        }
 
         if (records.Count() == 0)
         {

@@ -185,14 +185,31 @@ public class MissingRepository
 						WHERE ml.track_name IS NULL";
 
         await using var conn = new NpgsqlConnection(_connectionString);
-        
-        return (await conn
-            .QueryAsync<MissingTrackModel>(query, new
-            {
-                artistName,
-                extension
-            }, commandTimeout: 60))
-            .ToList();
+        await conn.OpenAsync();
+        var transaction = await conn.BeginTransactionAsync();
+        var tracks = new List<MissingTrackModel>();
+
+        try
+        {
+	        tracks = (await conn
+                                 .QueryAsync<MissingTrackModel>(query, new
+                                 {
+                                     artistName,
+                                     extension
+                                 }, commandTimeout: 60,
+                                 transaction: transaction))
+                                 .ToList();
+        }
+        catch (Exception ex)
+        {
+	        Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+        }
+        finally
+        {
+	        await transaction.CommitAsync();
+        }
+
+        return tracks;
     }
 	
     public async Task<List<MissingTrackModel>> GetMissingTracksByArtistSpotify2Async(string spotifyArtistId, string artistName, string extension)
@@ -238,15 +255,32 @@ public class MissingRepository
 						 where ml.track_name is null";
 
 	    await using var conn = new NpgsqlConnection(_connectionString);
-        
-	    return (await conn
-		    .QueryAsync<MissingTrackModel>(query, new
-		    {
-			    spotifyArtistId,
-			    artistName,
-			    extension
-		    }, commandTimeout: 60))
-		    .ToList();
+	    await conn.OpenAsync();
+	    var transaction = await conn.BeginTransactionAsync();
+	    var tracks = new List<MissingTrackModel>();
+
+	    try
+	    {
+		    tracks = (await conn
+				    .QueryAsync<MissingTrackModel>(query, new
+				    {
+					    spotifyArtistId,
+					    artistName,
+					    extension
+				    }, commandTimeout: 60,
+				    transaction: transaction))
+			    .ToList();
+	    }
+	    catch (Exception ex)
+	    {
+		    Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+	    }
+	    finally
+	    {
+		    await transaction.CommitAsync();
+	    }
+
+	    return tracks;
     }
     
     public async Task<List<MissingTrackModel>> GetMissingTracksByArtistTidalAsync(int tidalArtistId, string artistName, string extension)
@@ -296,15 +330,32 @@ public class MissingRepository
 						 where ml.track_name is null";
 
 	    await using var conn = new NpgsqlConnection(_connectionString);
-        
-	    return (await conn
-			    .QueryAsync<MissingTrackModel>(query, new
-			    {
-				    tidalArtistId,
-				    artistName,
-				    extension
-			    }, commandTimeout: 300))
-		    .ToList();
+	    await conn.OpenAsync();
+	    var transaction = await conn.BeginTransactionAsync();
+	    var tracks = new List<MissingTrackModel>();
+	    
+	    try
+	    {
+		    tracks = (await conn
+				    .QueryAsync<MissingTrackModel>(query, new
+				    {
+					    tidalArtistId,
+					    artistName,
+					    extension
+				    }, commandTimeout: 300,
+				    transaction: transaction))
+			    .ToList();
+	    }
+	    catch (Exception ex)
+	    {
+		    Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+	    }
+	    finally
+	    {
+		    await transaction.CommitAsync();
+	    }
+
+	    return tracks;
     }
     
     public async Task<List<MissingTrackModel>> GetMissingTracksByArtistDeezerAsync(long deezerArtistId, string artistName, string extension)
@@ -346,15 +397,73 @@ public class MissingRepository
 						 where ml.track_name is null";
 
 	    await using var conn = new NpgsqlConnection(_connectionString);
+	    await conn.OpenAsync();
+	    var transaction = await conn.BeginTransactionAsync();
+	    var tracks = new List<MissingTrackModel>();
         
-	    return (await conn
-			    .QueryAsync<MissingTrackModel>(query, new
+        try
+        {
+	        tracks = (await conn
+			        .QueryAsync<MissingTrackModel>(query, new
+			        {
+				        deezerArtistId,
+				        artistName,
+				        extension
+			        }, commandTimeout: 300,
+			        transaction: transaction))
+		        .ToList();
+        }
+        catch (Exception ex)
+        {
+	        Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+        }
+        finally
+        {
+	        await transaction.CommitAsync();
+        }
+
+        return tracks;
+    }
+
+    public async Task<List<string>> GetMissingDeezerArtistsAsync(int offset, int  limit)
+    {
+	    string query = @"SET LOCAL pg_trgm.similarity_threshold = 0.9;
+						 with brainz_artist AS (
+							 select *
+							 from musicbrainz_artist ma
+							 order by ma.artistid asc
+							 offset @offset
+							 limit @limit
+						 ) 
+						 select ma.name
+						 from brainz_artist ma
+						 left join deezer_artist da on lower(da.name) % lower(ma.name)
+						 where da.name is null";
+	    
+	    await using var conn = new NpgsqlConnection(_connectionString);
+	    await conn.OpenAsync();
+	    var transaction = await conn.BeginTransactionAsync();
+	    var artists = new List<string>();
+
+	    try
+	    {
+		    artists = (await conn
+			    .QueryAsync<string>(query, new
 			    {
-				    deezerArtistId,
-				    artistName,
-				    extension
-			    }, commandTimeout: 300))
-		    .ToList();
+				    offset,
+				    limit
+			    }, commandTimeout: 300,
+			    transaction: transaction)).ToList();
+	    }
+	    catch (Exception ex)
+	    {
+		    Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+	    }
+	    finally
+	    {
+		    await transaction.CommitAsync();
+	    }
+	    return artists;
     }
 
     public async Task<bool> TrackExistsAtAssociatedArtist(string artistName, string albumName, string trackName, string extension)
@@ -374,14 +483,32 @@ public class MissingRepository
 						 LIMIT 1";
 	    
 	    await using var conn = new NpgsqlConnection(_connectionString);
+		await conn.OpenAsync();
+	    var transaction = await conn.BeginTransactionAsync();
+	    var trackExists = false;
 
-	    return await conn
-		    .ExecuteScalarAsync<bool>(query, new
-		    {
-			    artistName,
-			    albumName,
-			    trackName,
-			    extension
-		    }, commandTimeout: 300);
+	    try
+	    {
+		    trackExists = await conn
+			    .ExecuteScalarAsync<bool>(query, new
+			    {
+				    artistName,
+				    albumName,
+				    trackName,
+				    extension
+			    }, 
+				commandTimeout: 60,
+				transaction: transaction);
+	    }
+	    catch (Exception ex)
+	    {
+		    Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+	    }
+	    finally
+	    {
+		    await transaction.CommitAsync();
+	    }
+
+	    return trackExists;
     }
 }

@@ -438,16 +438,33 @@ public class TidalRepository
 	                         and (length(track.availability) > 0 or length(track.mediatags) > 0)";
 
         await using var conn = new NpgsqlConnection(_connectionString);
-        
-        return (await conn
-            .QueryAsync<TidalTrackModel>(query,
-                param: new
-                {
-                    artistId,
-                    albumName,
-                    trackName
-                }))
-            .ToList();
+        await conn.OpenAsync();
+        var transaction = await conn.BeginTransactionAsync();
+        var tracks = new List<TidalTrackModel>();
+
+        try
+        {
+            tracks = (await conn
+                                 .QueryAsync<TidalTrackModel>(query,
+                                     param: new
+                                     {
+                                         artistId,
+                                         albumName,
+                                         trackName
+                                     },
+                                     transaction: transaction))
+                                 .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+        }
+        finally
+        {
+            await transaction.CommitAsync();
+        }
+
+        return tracks;
     }
     
     public async Task<List<string>> GetTrackArtistsAsync(int trackId, int orderByArtistId)
