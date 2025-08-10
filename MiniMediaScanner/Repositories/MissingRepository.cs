@@ -154,8 +154,8 @@ public class MissingRepository
 						        al.title AS album_name, 
 						        m.metadataid, 
 						        m.title AS track_name, 
-						        m.musicbrainztrackid ,
-						        m.path
+						        m.musicbrainztrackid,
+						        m.path as FilePath
 						    FROM metadata m
 						    JOIN albums al ON m.albumid = al.albumid
 						    JOIN artists a ON al.artistid = a.artistid
@@ -168,8 +168,7 @@ public class MissingRepository
 						        mr.releaseid, 
 						        mr.title AS album_name, 
 						        mrt.releasetrackid, 
-						        mrt.title AS track_name,
-								m.path as FilePath
+						        mrt.title AS track_name
 						    FROM MusicBrainz_Release_Track mrt
 						    JOIN MusicBrainz_Release mr ON mr.releaseid = mrt.releaseid
 						    JOIN MusicBrainz_Artist ma ON ma.artistid = mr.artistid
