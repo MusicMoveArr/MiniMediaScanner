@@ -13,7 +13,7 @@ public class StatsRepository
     
     public async Task<int> GetGenericCountAsync(string tableName)
     {
-        string query = $"SELECT count(*) FROM {tableName}";
+        string query = $"SELECT reltuples::bigint AS estimate FROM pg_class where relname = '{tableName}'";
         await using var conn = new NpgsqlConnection(_connectionString);
         return await conn.ExecuteScalarAsync<int>(query, commandTimeout: 300);
     }
