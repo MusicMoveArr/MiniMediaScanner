@@ -37,6 +37,24 @@ public class DeDuplicateFileCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "DEDUPLICATE_EXTENSIONS")]
     public List<string> Extensions { get; set; } = ImportCommandHandler.MediaFileExtensions.ToList();
+
+    [CommandOption("check-extensions", 
+        Description = "Check for duplicate filenames with difference file extensions",
+        IsRequired = false,
+        EnvironmentVariable = "DEDUPLICATE_CHECK_EXTENSIONS")]
+    public bool CheckExtensions { get; set; } = false;
+    
+    [CommandOption("check-versions", 
+        Description = "Check for duplicate filename versions, files ending with (1), (2), (3) and so on",
+        IsRequired = false,
+        EnvironmentVariable = "DEDUPLICATE_CHECK_VERSIONS")]
+    public bool CheckVersions { get; set; } = false;
+    
+    [CommandOption("check-album-duplicates", 
+        Description = "Check for duplicate files per album with a accuracy of X % given with --accuracy or environment variable DEDUPLICATE_ACCURACY",
+        IsRequired = false,
+        EnvironmentVariable = "DEDUPLICATE_CHECK_EXTENSIONS")]
+    public bool CheckAlbumDuplicates { get; set; } = false;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -55,11 +73,11 @@ public class DeDuplicateFileCommand : ICommand
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.CheckDuplicateFilesAsync(Delete, Accuracy, Extensions);
+            await handler.CheckDuplicateFilesAsync(Delete, Accuracy, Extensions, CheckExtensions, CheckVersions, CheckAlbumDuplicates);
         }
         else
         {
-            await handler.CheckDuplicateFilesAsync(Artist, Delete, Accuracy, Extensions);
+            await handler.CheckDuplicateFilesAsync(Artist, Delete, Accuracy, Extensions, CheckExtensions, CheckVersions, CheckAlbumDuplicates);
         }
     }
 }

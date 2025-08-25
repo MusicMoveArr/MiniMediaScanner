@@ -1,10 +1,8 @@
-using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
 using FuzzySharp;
 using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
-using MiniMediaScanner.Services;
 
 namespace MiniMediaScanner.Commands;
 
@@ -19,13 +17,26 @@ public class DeDuplicateFileCommandHandler
         _metadataRepository = new MetadataRepository(connectionString);
     }
 
-    public async Task CheckDuplicateFilesAsync(bool delete, int accuracy, List<string> extensions)
+    public async Task CheckDuplicateFilesAsync(
+        bool delete, 
+        int accuracy, 
+        List<string> extensions, 
+        bool checkExtensions, 
+        bool checkVersions, 
+        bool checkAlbumDuplicates)
     {
         await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
             try
             {
-                await CheckDuplicateFilesAsync(artist, delete, accuracy, extensions);
+                await CheckDuplicateFilesAsync(
+                    artist, 
+                    delete, 
+                    accuracy, 
+                    extensions, 
+                    checkExtensions, 
+                    checkVersions, 
+                    checkAlbumDuplicates);
             }
             catch (Exception e)
             {
@@ -34,14 +45,32 @@ public class DeDuplicateFileCommandHandler
         });
     }
     
-    public async Task CheckDuplicateFilesAsync(string artistName, bool delete, int accuracy, List<string> extensions)
+    public async Task CheckDuplicateFilesAsync(
+        string artistName, 
+        bool delete, 
+        int accuracy, 
+        List<string> extensions, 
+        bool checkExtensions, 
+        bool checkVersions, 
+        bool checkAlbumDuplicates)
     {
         Console.WriteLine($"Checking artist '{artistName}'");
         try
         {
-            await FindDuplicateFileExtensionsAsync(artistName, delete, extensions);
-            await FindDuplicateFileVersionsAsync(artistName, delete, extensions);
-            await FindDuplicateAlbumFileNamesAsync(artistName, delete, accuracy, extensions);
+            if (checkExtensions)
+            {
+                await FindDuplicateFileExtensionsAsync(artistName, delete, extensions);
+            }
+
+            if (checkVersions)
+            {
+                await FindDuplicateFileVersionsAsync(artistName, delete, extensions);
+            }
+
+            if (checkAlbumDuplicates)
+            {
+                await FindDuplicateAlbumFileNamesAsync(artistName, delete, accuracy, extensions);
+            }
         }
         catch (Exception e)
         {
