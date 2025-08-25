@@ -7,4 +7,5 @@ public class DuplicateAlbumFileNameModel
     public string Title { get; set; }
     public Guid AlbumId { get; set; }
     public string FileName { get; set; }
+    public string PathWithoutExtension { get; set; }
 }

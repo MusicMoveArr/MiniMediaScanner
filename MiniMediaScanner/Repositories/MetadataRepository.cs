@@ -217,6 +217,59 @@ public class MetadataRepository
         return filenames;
     }
     
+    
+    public async Task<List<DuplicateAlbumFileNameModel>> GetDuplicateAlbumFileExtensionsAsync(string artistName)
+    {
+        string query = @"WITH duplicates AS (
+                             SELECT 
+                                 m.MetadataId,
+                                 m.Path,
+                                 REGEXP_REPLACE(m.Path, '\.([a-zA-Z0-9]{2,5})$', '') AS PathWithoutExtension,
+                                 m.Title,
+                                 album.AlbumId,
+                                 REGEXP_REPLACE(
+          	                       REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g'), 
+          			   				                     '\.([a-zA-Z0-9]{2,5})$', '') AS FileName,
+                                 COUNT(*) OVER (PARTITION BY album.albumId, 
+          	                       REGEXP_REPLACE(REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g'), 
+          			   								                    '\.([a-zA-Z0-9]{2,5})$', '')) AS duplicate_count
+                             FROM artists artist
+                             JOIN albums album ON album.artistid = artist.artistid
+                             JOIN metadata m ON m.albumid = album.albumid
+                             WHERE LOWER(artist.name) = lower(@artistName)
+                         )
+                         SELECT MetadataId, PathWithoutExtension, Path, Title, AlbumId, FileName, duplicate_count
+                         FROM duplicates
+                         WHERE duplicate_count > 1
+                         ORDER BY AlbumId, FileName, Path";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync();
+        var transaction = await conn.BeginTransactionAsync();
+        var filenames = new List<DuplicateAlbumFileNameModel>();
+        
+        try
+        {
+            filenames = conn.Query<DuplicateAlbumFileNameModel>(query, 
+                    new
+                    {
+                        artistName
+                    }, commandTimeout: 120,
+                    transaction: transaction)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
+        }
+        finally
+        {
+            await transaction.CommitAsync();
+        }
+
+        return filenames;
+    }
+    
     public async Task<List<MetadataInfo>> GetMissingMusicBrainzMetadataRecordsAsync(string artistName)
     {
         string query = @$"SELECT m.MetadataId, 

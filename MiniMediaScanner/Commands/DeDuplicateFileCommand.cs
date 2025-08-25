@@ -51,10 +51,16 @@ public class DeDuplicateFileCommand : ICommand
     public bool CheckVersions { get; set; } = false;
     
     [CommandOption("check-album-duplicates", 
-        Description = "Check for duplicate files per album with a accuracy of X % given with --accuracy or environment variable DEDUPLICATE_ACCURACY",
+        Description = "Check for duplicate files per album (works better for multi-drive / MergerFS Setups) with a accuracy of X % given with --accuracy or environment variable DEDUPLICATE_ACCURACY",
         IsRequired = false,
         EnvironmentVariable = "DEDUPLICATE_CHECK_EXTENSIONS")]
     public bool CheckAlbumDuplicates { get; set; } = false;
+    
+    [CommandOption("check-album-extensions", 
+        Description = "Similar to --check-extensions with the difference of better support for multi-drive / MergerFS Setups, --check-extensions checks the full path, this option checks per album",
+        IsRequired = false,
+        EnvironmentVariable = "DEDUPLICATE_CHECK_ALBUM_EXTENSIONS")]
+    public bool CheckAlbumExtensions { get; set; } = false;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -73,11 +79,11 @@ public class DeDuplicateFileCommand : ICommand
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.CheckDuplicateFilesAsync(Delete, Accuracy, Extensions, CheckExtensions, CheckVersions, CheckAlbumDuplicates);
+            await handler.CheckDuplicateFilesAsync(Delete, Accuracy, Extensions, CheckExtensions, CheckVersions, CheckAlbumDuplicates, CheckAlbumExtensions);
         }
         else
         {
-            await handler.CheckDuplicateFilesAsync(Artist, Delete, Accuracy, Extensions, CheckExtensions, CheckVersions, CheckAlbumDuplicates);
+            await handler.CheckDuplicateFilesAsync(Artist, Delete, Accuracy, Extensions, CheckExtensions, CheckVersions, CheckAlbumDuplicates, CheckAlbumExtensions);
         }
     }
 }

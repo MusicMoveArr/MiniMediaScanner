@@ -23,7 +23,8 @@ public class DeDuplicateFileCommandHandler
         List<string> extensions, 
         bool checkExtensions, 
         bool checkVersions, 
-        bool checkAlbumDuplicates)
+        bool checkAlbumDuplicates,
+        bool checkAlbumExtensions)
     {
         await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
@@ -36,7 +37,8 @@ public class DeDuplicateFileCommandHandler
                     extensions, 
                     checkExtensions, 
                     checkVersions, 
-                    checkAlbumDuplicates);
+                    checkAlbumDuplicates,
+                    checkAlbumExtensions);
             }
             catch (Exception e)
             {
@@ -52,7 +54,8 @@ public class DeDuplicateFileCommandHandler
         List<string> extensions, 
         bool checkExtensions, 
         bool checkVersions, 
-        bool checkAlbumDuplicates)
+        bool checkAlbumDuplicates,
+        bool checkAlbumExtensions)
     {
         Console.WriteLine($"Checking artist '{artistName}'");
         try
@@ -60,6 +63,10 @@ public class DeDuplicateFileCommandHandler
             if (checkExtensions)
             {
                 await FindDuplicateFileExtensionsAsync(artistName, delete, extensions);
+            }
+            if (checkAlbumExtensions)
+            {
+                await FindDuplicateAlbumFileExtensionsAsync(artistName, delete, extensions);
             }
 
             if (checkVersions)
@@ -78,6 +85,68 @@ public class DeDuplicateFileCommandHandler
         }
     }
 
+    private async Task FindDuplicateAlbumFileExtensionsAsync(string artistName, bool delete, List<string> extensions)
+    {
+        var duplicateFiles = (await _metadataRepository.GetDuplicateAlbumFileExtensionsAsync(artistName))
+            .GroupBy(group =>
+                new
+                {
+                    group.AlbumId,
+                    group.FileName
+                });
+        
+        foreach (var albumDuplicates in duplicateFiles)
+        {
+            var fileWithoutExtension = albumDuplicates.First().PathWithoutExtension;
+
+            DuplicateAlbumFileNameModel recordToKeep = null;
+
+            foreach (string extension in extensions)
+            {
+                var record = albumDuplicates
+                    .FirstOrDefault(path => new FileInfo($"{path.Path.Substring(0, path.Path.LastIndexOf('.'))}.{extension}").Exists);
+
+                if (record != null)
+                {
+                    recordToKeep = record;
+                    break;
+                }
+            }
+            
+            if (recordToKeep == null)
+            {
+                continue;
+            }
+
+            var toRemove = albumDuplicates
+                .Where(file => !string.Equals(recordToKeep.Path, file.Path))
+                .Where(file => new FileInfo(file.Path).Exists)
+                .ToList();
+
+            if (toRemove.Count == 0)
+            {
+                continue;
+            }
+
+            Console.WriteLine($"Keeping file {recordToKeep.Path}");
+            foreach (var file in toRemove)
+            {
+                if (delete)
+                {
+                    Console.WriteLine($"Delete duplicate file {file.Path}");
+                    new FileInfo(file.Path).Delete();
+                    await _metadataRepository.DeleteMetadataRecordsAsync(new List<string>(new string[] { file.MetadataId.ToString() }));
+                }
+                else
+                {
+                    Console.WriteLine($"Duplicate file {file.Path}");
+                }
+            }
+            Console.WriteLine($"");
+        }
+    }
+    
+    
     private async Task FindDuplicateAlbumFileNamesAsync(string artistName, bool delete, int accuracy, List<string> extensions)
     {
         var duplicateFiles = (await _metadataRepository.GetDuplicateAlbumFileNamesAsync(artistName, accuracy))
