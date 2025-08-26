@@ -104,8 +104,8 @@ public class DeDuplicateFileCommandHandler
             foreach (string extension in extensions)
             {
                 var record = albumDuplicates
-                    .FirstOrDefault(path => new FileInfo($"{path.Path.Substring(0, path.Path.LastIndexOf('.'))}.{extension}").Exists);
-
+                    .FirstOrDefault(path => path.Path.EndsWith(extension) && new FileInfo(path.Path).Exists);
+                
                 if (record != null)
                 {
                     recordToKeep = record;
