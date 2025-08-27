@@ -58,6 +58,12 @@ public class MoveUntaggedCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "MOVEUNTAGGEDFILES_DIRECTORY_SEPARATOR")]
     public string DirectorySeperator { get; set; } = "_";
+
+    [CommandOption("dry-run", 
+        Description = "Dry run, no changes will be made", 
+        IsRequired = false,
+        EnvironmentVariable = "MOVEUNTAGGEDFILES_DRY_RUN")]
+    public bool DryRun { get; set; } = false;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -112,7 +118,8 @@ public class MoveUntaggedCommand : ICommand
                 TargetFolder,
                 FileFormat, 
                 DirectoryFormat, 
-                DirectorySeperator);
+                DirectorySeperator,
+                DryRun);
         }
         else
         {
@@ -122,7 +129,8 @@ public class MoveUntaggedCommand : ICommand
                 TargetFolder,
                 FileFormat, 
                 DirectoryFormat, 
-                DirectorySeperator);
+                DirectorySeperator,
+                DryRun);
         }
         
     }

@@ -31,7 +31,8 @@ public class MoveUntaggedCommandHandler
         string targetFolder,
         string fileFormat = "",
         string directoryFormat = "",
-        string directorySeperator = "_")
+        string directorySeperator = "_",
+        bool dryRun = false)
     {
         await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
@@ -42,7 +43,8 @@ public class MoveUntaggedCommandHandler
                     targetFolder,
                     fileFormat, 
                     directoryFormat, 
-                    directorySeperator);
+                    directorySeperator,
+                    dryRun);
             }
             catch (Exception e)
             {
@@ -58,7 +60,8 @@ public class MoveUntaggedCommandHandler
         string targetFolder,
         string fileFormat = "",
         string directoryFormat = "",
-        string directorySeperator = "_")
+        string directorySeperator = "_",
+        bool dryRun = false)
     {
         var metadatas = (await _metadataRepository.GetUntaggedMetadataByArtistAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
@@ -71,7 +74,7 @@ public class MoveUntaggedCommandHandler
             try
             {
                 bool success = await ProcessFileAsync(metadata, overwrite, targetFolder,
-                    fileFormat, directoryFormat, directorySeperator);
+                    fileFormat, directoryFormat, directorySeperator, dryRun);
 
                 if (success)
                 {
@@ -84,7 +87,7 @@ public class MoveUntaggedCommandHandler
             }
         });
         
-        Console.WriteLine($"Renamed files: {_updateFiles}");
+        Console.WriteLine($"Moved files: {_updateFiles}");
     }
 
     private async Task<bool> ProcessFileAsync(MetadataModel file,
@@ -92,7 +95,8 @@ public class MoveUntaggedCommandHandler
         string targetFolder,
         string fileFormat = "",
         string directoryFormat = "",
-        string directorySeperator = "_")
+        string directorySeperator = "_",
+        bool dryRun = false)
     {
         string oldPath = file.Path;
         FileInfo fileInfo = new FileInfo(file.Path);
@@ -137,18 +141,31 @@ public class MoveUntaggedCommandHandler
         }
         
         //rename the file to it's new location
-        if (!newFileInfo.Directory.Exists)
+        if (!dryRun)
         {
-            newFileInfo.Directory.Create();
-        }
-        fileInfo.MoveTo(newFullPath, true);
-        await _importCommandHandler.ProcessFileAsync(newFullPath);
+            if (!newFileInfo.Directory.Exists)
+            {
+                newFileInfo.Directory.Create();
+            }
+        
+            fileInfo.MoveTo(newFullPath, true);
+            //await _importCommandHandler.ProcessFileAsync(newFullPath);
 
-        lock (_consoleLock)
+            lock (_consoleLock)
+            {
+                Console.WriteLine($"File: {oldPath}");
+                Console.WriteLine($"Moved to: {newFullPath}");
+                Console.WriteLine();
+            }
+        }
+        else
         {
-            Console.WriteLine($"File: {oldPath}");
-            Console.WriteLine($"Renamed to: {newFullPath}");
-            Console.WriteLine();
+            lock (_consoleLock)
+            {
+                Console.WriteLine($"File: {oldPath}");
+                Console.WriteLine($"Will move to: {newFullPath}");
+                Console.WriteLine();
+            }
         }
 
         return true;
