@@ -63,7 +63,7 @@ public class MoveUntaggedCommandHandler
         string directorySeperator = "_",
         bool dryRun = false)
     {
-        var metadatas = (await _metadataRepository.GetUntaggedMetadataByArtistAsync(artist))
+        var metadatas = (await _metadataRepository.GetUntaggedMetadataByArtistAsync(artist, ["musicbrainz", "tidal", "spotify", "deezer"]))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
             .ToList();
 

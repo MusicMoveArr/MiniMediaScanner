@@ -654,7 +654,7 @@ public class MetadataRepository
         }).ToList();
     }
     
-    public async Task<List<MetadataModel>> GetUntaggedMetadataByArtistAsync(string artistName)
+    public async Task<List<MetadataModel>> GetUntaggedMetadataByArtistAsync(string artistName, string[] providers)
     {
         string query = @$"SELECT m.MetadataId, 
                                  m.Path, 
@@ -676,10 +676,7 @@ public class MetadataRepository
                         JOIN artists artist ON artist.artistid = album.artistid
                         left JOIN LATERAL (
 	                         SELECT jsonb_object_keys(m.tag_alljsontags) AS key
-	                     ) subquery ON lower(subquery.key) ilike lower('MusicBrainz%')
-	 			                    or lower(subquery.key) ilike lower('Tidal%')
-	 			                    or lower(subquery.key) ilike lower('Spotify%')
-	 			                    or lower(subquery.key) ilike lower('Deezer%')
+	                     ) subquery ON lower(subquery.key) ilike all(@providers)
                         where lower(artist.name) = lower(@artistName)
                               and subquery.key is null ";
 
@@ -687,7 +684,8 @@ public class MetadataRepository
         
         return conn.Query<MetadataModel>(query, new
         {
-            artistName
+            artistName,
+            providers = providers.Select(provider => provider + "%").ToArray()
         }).ToList();
     }
     
