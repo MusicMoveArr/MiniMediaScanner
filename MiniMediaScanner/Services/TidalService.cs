@@ -139,7 +139,7 @@ public class TidalService
                 album.Attributes.Duration ?? string.Empty,
                 album.Attributes.Explicit,
                 album.Attributes.ReleaseDate ?? string.Empty,
-                album.Attributes.Copyright ?? string.Empty,
+                album.Attributes.Copyright?.Text ?? string.Empty,
                 album.Attributes.Popularity,
                 albumAvailability,
                 albumMediaTags);
@@ -341,7 +341,7 @@ public class TidalService
                     track.Attributes.Title ?? string.Empty,
                     track.Attributes.ISRC ?? string.Empty,
                     track.Attributes.Duration ?? string.Empty,
-                    track.Attributes.Copyright ?? string.Empty,
+                    track.Attributes.Copyright?.Text ?? string.Empty,
                     track.Attributes.Explicit,
                     track.Attributes.Popularity,
                     trackAvailability,
