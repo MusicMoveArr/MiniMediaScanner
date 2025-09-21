@@ -37,48 +37,45 @@ public class MissingCommandHandler
         {
             List<MissingTrackModel> tempMissingTracks = new List<MissingTrackModel>();
             
+            var artistIds = await _metadataRepository.GetArtistIdByMetadataAsync(artistName);
+            Guid? artistId = artistIds.FirstOrDefault(track => track.HasValue);
+
+            if (!GuidHelper.GuidHasValue(artistId))
+            {
+                return;
+            }
+            
             if (provider.ToLower() == "spotify")
             {
-                var artistIds = await _metadataRepository.GetArtistIdByMetadataAsync(artistName);
-                Guid? artistId = artistIds.FirstOrDefault(track => track.HasValue);
-                if (GuidHelper.GuidHasValue(artistId))
+                string? spotifyArtistId = await _matchRepository.GetBestSpotifyMatchAsync(artistId.Value, artistName);
+                if (!string.IsNullOrWhiteSpace(spotifyArtistId))
                 {
-                    string? spotifyArtistId = await _matchRepository.GetBestSpotifyMatchAsync(artistId.Value, artistName);
-                    if (!string.IsNullOrWhiteSpace(spotifyArtistId))
-                    {
-                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistSpotify2Async(spotifyArtistId, artistName, extension);
-                    }
+                    tempMissingTracks = await _missingRepository.GetMissingTracksByArtistSpotify2Async(spotifyArtistId, artistName, extension);
                 }
             }
             else if (provider.ToLower() == "deezer")
             {
-                var artistIds = await _metadataRepository.GetArtistIdByMetadataAsync(artistName);
-                Guid? artistId = artistIds.FirstOrDefault(track => track.HasValue);
-                if (GuidHelper.GuidHasValue(artistId))
+                long? deezerArtistId = await _matchRepository.GetBestDeezerMatchAsync(artistId.Value, artistName);
+                if (deezerArtistId > 0)
                 {
-                    long? deezerArtistId = await _matchRepository.GetBestDeezerMatchAsync(artistId.Value, artistName);
-                    if (deezerArtistId > 0)
-                    {
-                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistDeezerAsync(deezerArtistId.Value, artistName, extension);
-                    }
+                    tempMissingTracks = await _missingRepository.GetMissingTracksByArtistDeezerAsync(deezerArtistId.Value, artistName, extension);
                 }
             }
             else if (provider.ToLower() == "tidal")
             {
-                var artistIds = await _metadataRepository.GetArtistIdByMetadataAsync(artistName);
-                Guid? artistId = artistIds.FirstOrDefault(track => track.HasValue);
-                if (GuidHelper.GuidHasValue(artistId))
+                int? tidalArtistId = await _matchRepository.GetBestTidalMatchAsync(artistId.Value, artistName);
+                if (tidalArtistId > 0)
                 {
-                    int? tidalArtistId = await _matchRepository.GetBestTidalMatchAsync(artistId.Value, artistName);
-                    if (tidalArtistId > 0)
-                    {
-                        tempMissingTracks = await _missingRepository.GetMissingTracksByArtistTidalAsync(tidalArtistId.Value, artistName, extension);
-                    }
+                    tempMissingTracks = await _missingRepository.GetMissingTracksByArtistTidalAsync(tidalArtistId.Value, artistName, extension);
                 }
             }
-            else
+            else  if (provider.ToLower() == "musicbrainz")
             {
-                tempMissingTracks = await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(artistName, extension);
+                Guid? musicBrainzArtistId = await _matchRepository.GetBestMusicBrainzMatchAsync(artistId.Value, artistName);
+                if (GuidHelper.GuidHasValue(musicBrainzArtistId))
+                {
+                    tempMissingTracks = await _missingRepository.GetMissingTracksByArtistMusicBrainz2Async(musicBrainzArtistId.Value, artistName, extension);
+                }
             }
 
             //re-check with Associated Artists

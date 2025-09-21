@@ -143,9 +143,9 @@ public class MissingRepository
             .ToList();
     }
 	
-	public async Task<List<MissingTrackModel>> GetMissingTracksByArtistMusicBrainz2Async(string artistName, string extension)
+	public async Task<List<MissingTrackModel>> GetMissingTracksByArtistMusicBrainz2Async(Guid musicBrainzArtistId, string artistName, string extension)
     {
-        string query = @"SET LOCAL pg_trgm.similarity_threshold = 0.5;
+        string query = @"SET LOCAL pg_trgm.similarity_threshold = 0.9;
                          WITH MusicLibrary AS (
 						    SELECT 
 						        a.artistid, 
@@ -172,7 +172,7 @@ public class MissingRepository
 						    FROM MusicBrainz_Release_Track mrt
 						    JOIN MusicBrainz_Release mr ON mr.releaseid = mrt.releaseid
 						    JOIN MusicBrainz_Artist ma ON ma.artistid = mr.artistid
-						    where lower(ma.name) = lower(@artistName)
+						    where ma.artistid = @musicBrainzArtistId
 						)
 						SELECT distinct mb.artist_name AS Artist, mb.album_name AS Album, mb.track_name AS Track
 						FROM MusicBrainzData mb
@@ -180,7 +180,6 @@ public class MissingRepository
 						    ON ((lower(mb.album_name) = lower(ml.album_name) and lower(mb.track_name) % lower(ml.track_name))
 						       or (lower(mb.track_name) % lower(ml.track_name)))
 							and (length(@extension) = 0 or ml.FilePath like '%.' || @extension)
-							
 						WHERE ml.track_name IS NULL";
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -193,6 +192,7 @@ public class MissingRepository
 	        tracks = (await conn
                                  .QueryAsync<MissingTrackModel>(query, new
                                  {
+	                                 musicBrainzArtistId,
                                      artistName,
                                      extension
                                  }, commandTimeout: 60,

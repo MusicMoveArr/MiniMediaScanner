@@ -143,4 +143,49 @@ public class MatchRepository
             });
     }
     
+    
+    public async Task<Guid?> GetBestMusicBrainzMatchAsync(Guid artistId, string artistName)
+    {
+        string query = @"WITH MusicLibrary AS (
+                             SELECT distinct
+                                 a.artistid, 
+                                 a.name AS artist_name, 
+                                 al.albumid, 
+                                 al.title AS album_name
+                             FROM metadata m
+                             JOIN albums al ON m.albumid = al.albumid
+                             JOIN artists a ON al.artistid = a.artistid
+                             WHERE a.artistid = @artistId
+                         ),
+                         MusicBrainzData AS (
+						    SELECT distinct
+						        ma.artistid, 
+						        ma.name AS artist_name, 
+						        mr.title AS album_name
+						    FROM MusicBrainz_Release_Track mrt
+						    JOIN MusicBrainz_Release mr ON mr.releaseid = mrt.releaseid
+						    JOIN MusicBrainz_Artist ma ON ma.artistid = mr.artistid
+						    WHERE lower(ma.name) = lower(@artistName)
+                         )
+                         SELECT 
+                             mb.artistid,
+                             mb.artist_name,
+                             ROUND(100.0 * COUNT(DISTINCT ml.album_name) / NULLIF((SELECT COUNT(DISTINCT album_name) FROM MusicLibrary ml), 0), 2) AS match_percentage
+                         FROM MusicBrainzData mb
+                         LEFT JOIN MusicLibrary ml 
+                             ON lower(mb.album_name) = lower(ml.album_name)
+                         GROUP BY mb.artistid, mb.artist_name
+                         ORDER BY match_percentage desc
+                         limit 1";
+        
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .QueryFirstOrDefaultAsync<Guid>(query, param: new
+            {
+                artistId,
+                artistName
+            });
+    }
+    
 }
