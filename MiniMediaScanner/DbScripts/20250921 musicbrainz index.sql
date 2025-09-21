@@ -1,0 +1,1 @@
+CREATE INDEX idx_musicbrainz_artist_name_lower ON public.musicbrainz_artist (lower(name));
