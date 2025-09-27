@@ -1,18 +1,17 @@
-using System.Diagnostics;
 using ATL;
 using FuzzySharp;
 using MiniMediaScanner.Helpers;
+using MiniMediaScanner.Models.AcoustId;
 using MiniMediaScanner.Models.MusicBrainz;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
-using Newtonsoft.Json.Linq;
 
 namespace MiniMediaScanner.Commands;
 
 public class TagMissingMetadataCommandHandler
 {
     private readonly AcoustIdService _acoustIdService;
-    private readonly MusicBrainzAPIService _musicBrainzAPIService;
+    private readonly MusicBrainzAPIService _musicBrainzApiService;
     private readonly MetadataRepository _metadataRepository;
     private readonly ArtistRepository _artistRepository;
     private readonly MediaTagWriteService _mediaTagWriteService;
@@ -23,7 +22,7 @@ public class TagMissingMetadataCommandHandler
     public TagMissingMetadataCommandHandler(string connectionString)
     {
         _acoustIdService = new AcoustIdService();
-        _musicBrainzAPIService = new MusicBrainzAPIService();
+        _musicBrainzApiService = new MusicBrainzAPIService();
         _metadataRepository = new MetadataRepository(connectionString);
         _artistRepository = new ArtistRepository(connectionString);
         _mediaTagWriteService = new MediaTagWriteService();
@@ -32,13 +31,13 @@ public class TagMissingMetadataCommandHandler
         _fileMetaDataService = new FileMetaDataService();
     }
     
-    public async Task TagMetadataAsync(string accoustId, bool write, string album, bool overwriteTagValue)
+    public async Task TagMetadataAsync(string accoustId, bool write, string album, bool overwriteTagValue, int matchPercentage)
     {
         await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
         {
             try
             {
-                await TagMetadataAsync(accoustId, write, artist, album, overwriteTagValue);
+                await TagMetadataAsync(accoustId, write, artist, album, overwriteTagValue, matchPercentage);
             }
             catch (Exception e)
             {
@@ -47,7 +46,13 @@ public class TagMissingMetadataCommandHandler
         });
     }
 
-    public async Task TagMetadataAsync(string accoustId, bool write, string artist, string album, bool overwriteTagValue)
+    public async Task TagMetadataAsync(
+        string accoustId, 
+        bool write, 
+        string artist, 
+        string album, 
+        bool overwriteTagValue, 
+        int matchPercentage)
     {
         var metadata = (await _metadataRepository.GetMissingMusicBrainzMetadataRecordsAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || 
@@ -60,7 +65,7 @@ public class TagMissingMetadataCommandHandler
         {
             try
             {
-                await ProcessFileAsync(record, write, accoustId, overwriteTagValue);
+                await ProcessFileAsync(record, write, accoustId, overwriteTagValue, matchPercentage);
             }
             catch (Exception e)
             {
@@ -69,28 +74,44 @@ public class TagMissingMetadataCommandHandler
         }
     }
                 
-    private async Task ProcessFileAsync(MetadataInfo metadata, bool write, string accoustId, bool overwriteTagValue)
+    private async Task ProcessFileAsync(MetadataInfo metadata, 
+        bool write, 
+        string accoustId, 
+        bool overwriteTagValue, 
+        int matchPercentage)
     {
-        JObject? acoustIdLookup = await _acoustIdService.LookupAcoustIdAsync(accoustId,
+        AcoustIdResponse? acoustIdLookup = await _acoustIdService.LookupAcoustIdAsync(accoustId,
             metadata.Tag_AcoustIdFingerPrint, (int)metadata.Tag_AcoustIdFingerPrint_Duration);
         
-        Guid.TryParse(acoustIdLookup?["results"]?.FirstOrDefault()?["recordings"]?.FirstOrDefault()?["id"]?.ToString(), out var recordingId);
+        var matchedRecording = await GetBestMatchingAcoustIdAsync(acoustIdLookup, 
+            metadata.Artist, 
+            metadata.Album, 
+            metadata.Title,
+            (int)TimeSpan.Parse(metadata.Tag_Length).TotalSeconds, 
+            matchPercentage);
+
+        if (matchedRecording == null)
+        {
+            Console.WriteLine($"No recording Id found from AcoustId for '{metadata.Path}'");
+            return;
+        }
         
-        var acoustId = acoustIdLookup?["results"]?.FirstOrDefault()?["id"]?.ToString();
+        Guid recordingId = matchedRecording?.Id ?? Guid.Empty;
+        Guid acoustId = matchedRecording?.AcoustId ?? Guid.Empty;
 
         Track track = null;
         MusicBrainzArtistModel? artistModel = null;
         
         if (!GuidHelper.GuidHasValue(recordingId))
         {
-            Console.WriteLine($"No recording ID found from AcoustID for '{metadata.Path}'");
+            Console.WriteLine($"No recording ID found from AcoustId for '{metadata.Path}'");
             
             track = new Track(metadata.Path);
             recordingId = (await _musicBrainzArtistRepository.GetRecordingIdByNameAsync(track.Artist, track.Album, track.Title)).Value;
 
             if (GuidHelper.GuidHasValue(recordingId))
             {
-                artistModel = await _musicBrainzAPIService.GetRecordingByIdAsync(recordingId);
+                artistModel = await _musicBrainzApiService.GetRecordingByIdAsync(recordingId);
                 if (artistModel != null)
                 {
                     Console.WriteLine($"Found MusicBrainz data from the database, '{metadata.Path}'");
@@ -99,7 +120,7 @@ public class TagMissingMetadataCommandHandler
         }
         else
         {
-            artistModel = await _musicBrainzAPIService.GetRecordingByIdAsync(recordingId);
+            artistModel = await _musicBrainzApiService.GetRecordingByIdAsync(recordingId);
         }
 
         if (track == null)
@@ -125,12 +146,18 @@ public class TagMissingMetadataCommandHandler
                 .Select(release => new
                 {
                     Release = release.Release,
+                    release.Title,
                     AlbumMatch = Fuzz.Ratio(release.Album, track.Album),
                     TitleMatch = Fuzz.Ratio(release.Title, track.Title),
                     LengthMatch = Math.Abs(track.Duration - release.Length),
                     CountryMatch = !string.IsNullOrWhiteSpace(artistCountry) ? Fuzz.Ratio(release.Release.Country, artistCountry) : 0,
                     BarcodeMatch = !string.IsNullOrWhiteSpace(release.Barcode) ? Fuzz.Ratio(release.Barcode, trackBarcode) : 0
                 })
+                .Where(match => match.AlbumMatch > matchPercentage)
+                .Where(match => match.TitleMatch > matchPercentage)
+                .Where(match => FuzzyHelper.ExactNumberMatch(match.Release.Title, track.Album))
+                .Where(match => FuzzyHelper.ExactNumberMatch(match.Title, track.Title))
+                .Where(match => match.TitleMatch > matchPercentage)
                 .OrderByDescending(match => match.AlbumMatch)
                 .ThenByDescending(match => match.TitleMatch)
                 .ThenByDescending(match => match.CountryMatch)
@@ -194,7 +221,7 @@ public class TagMissingMetadataCommandHandler
 
         if (Guid.TryParse(release.Id, out var releaseId))
         {
-            MusicBrainzArtistReleaseModel? withLabeLInfo = await _musicBrainzAPIService.GetReleaseWithLabelAsync(releaseId);
+            MusicBrainzArtistReleaseModel? withLabeLInfo = await _musicBrainzApiService.GetReleaseWithLabelAsync(releaseId);
             var label = withLabeLInfo?.LabeLInfo?.FirstOrDefault(label => label?.Label?.Type?.ToLower().Contains("production") == true);
 
             if (label == null && withLabeLInfo?.LabeLInfo?.Count == 1)
@@ -211,22 +238,10 @@ public class TagMissingMetadataCommandHandler
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "date", release.Date, ref trackInfoUpdated, overwriteTagValue);
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "originaldate", release.Date, ref trackInfoUpdated, overwriteTagValue);
 
-        if (string.IsNullOrWhiteSpace(track.Title))
-        {
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Title", release.Media?.FirstOrDefault()?.Title, ref trackInfoUpdated, overwriteTagValue);
-        }
-        if (string.IsNullOrWhiteSpace(track.Album))
-        {
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Album", release.Title, ref trackInfoUpdated, overwriteTagValue);
-        }
-        if (string.IsNullOrWhiteSpace(track.AlbumArtist)  || track.AlbumArtist.ToLower().Contains("various"))
-        {
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "AlbumArtist", bestMatchedArtist?.Name, ref trackInfoUpdated, overwriteTagValue);
-        }
-        if (string.IsNullOrWhiteSpace(track.Artist) || track.Artist.ToLower().Contains("various"))
-        {
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Artist", bestMatchedArtist?.Name, ref trackInfoUpdated, overwriteTagValue);
-        }
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Title", release.Media?.FirstOrDefault()?.Title, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Album", release.Title, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "AlbumArtist", bestMatchedArtist?.Name, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Artist", bestMatchedArtist?.Name, ref trackInfoUpdated, overwriteTagValue);
 
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "ARTISTS", artists, ref trackInfoUpdated, overwriteTagValue);
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "ISRC", isrcs, ref trackInfoUpdated, overwriteTagValue);
@@ -251,8 +266,11 @@ public class TagMissingMetadataCommandHandler
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Release Country", release.Country, ref trackInfoUpdated, overwriteTagValue);
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Status", release.Status, ref trackInfoUpdated, overwriteTagValue);
 
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Acoustid Id", acoustId, ref trackInfoUpdated, overwriteTagValue);
-
+        if (GuidHelper.GuidHasValue(acoustId))
+        {
+            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Acoustid Id", acoustId.ToString(), ref trackInfoUpdated, overwriteTagValue);
+        }
+        
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "Date", release.ReleaseGroup.FirstReleaseDate, ref trackInfoUpdated, overwriteTagValue);
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "originaldate", release.ReleaseGroup.FirstReleaseDate, ref trackInfoUpdated, overwriteTagValue);
         
@@ -270,5 +288,88 @@ public class TagMissingMetadataCommandHandler
         {
             await _importCommandHandler.ProcessFileAsync(metadata.Path);
         }
+    }
+    
+    public async Task<AcoustIdRecording?> GetBestMatchingAcoustIdAsync(
+        AcoustIdResponse? acoustIdResponse, 
+        string artist,
+        string album,
+        string title,
+        int trackDuration,
+        int matchPercentage)
+    {
+        if (acoustIdResponse?.Results?.Count == 0)
+        {
+            return null;
+        }
+
+        var highestScoreResult = acoustIdResponse
+            ?.Results
+            ?.Where(result => result.Recordings?.Any() == true)
+            .Where(result => result.Score >= (matchPercentage / 100F))
+            .OrderByDescending(result => result.Score)
+            .FirstOrDefault();
+
+        if (highestScoreResult == null)
+        {
+            return null;
+        }
+
+        //perhaps not the best approach but sometimes...
+        bool ignoreFilters = string.IsNullOrWhiteSpace(album) ||
+                             string.IsNullOrWhiteSpace(artist) ||
+                             string.IsNullOrWhiteSpace(title);
+
+        var recordingReleases = highestScoreResult.Recordings
+            .Where(x => GuidHelper.GuidHasValue(x.Id))
+            .Select(async x => new
+            {
+                RecordingId = x.Id,
+                Recording = await _musicBrainzApiService.GetRecordingByIdAsync(x.Id.Value)
+            })
+            .Select(x => x.Result)
+            .ToList();
+        
+        var results = highestScoreResult
+            .Recordings
+           ?.Select(result => new
+           {
+               Result = result,
+               Releases = recordingReleases.FirstOrDefault(release => string.Equals(release.RecordingId, result.Id))
+           })
+            ?.Select(result => new
+            {
+                AlbumMatchedFor = result.Releases.Recording.Releases
+                    .Where(release => ignoreFilters || FuzzyHelper.ExactNumberMatch(release.Title, album))
+                    .Select(release => new
+                    {
+                        MatchedFor = FuzzyHelper.FuzzTokenSortRatioToLower(release.Title, album),
+                        Release = release
+                    })
+                    .OrderByDescending(match => match.MatchedFor)
+                    .FirstOrDefault(),
+                ArtistMatchedFor = result.Result.Artists?.Sum(a => FuzzyHelper.FuzzTokenSortRatioToLower(a.Name, artist)) ?? 0,
+                TitleMatchedFor = FuzzyHelper.FuzzTokenSortRatioToLower(title, result.Result.Title),
+                LengthMatch = Math.Abs(trackDuration - result.Result.Duration ?? 100),
+                AcoustIdResult = result
+            })
+            .Where(match => ignoreFilters || FuzzyHelper.ExactNumberMatch(title, match.AcoustIdResult.Result.Title))
+            .Where(match => ignoreFilters || match.ArtistMatchedFor >= matchPercentage)
+            .Where(match => ignoreFilters || match.TitleMatchedFor >= matchPercentage)
+            .OrderByDescending(result => result.ArtistMatchedFor)
+            .ThenByDescending(result => result.AlbumMatchedFor?.MatchedFor)
+            .ThenByDescending(result => result.TitleMatchedFor)
+            .ThenBy(result => result.LengthMatch)
+            .Select(result => result)
+            .ToList();
+
+        var bestResult = results.FirstOrDefault();
+        AcoustIdRecording? firstResult = bestResult?.AcoustIdResult.Result;
+        if (firstResult != null)
+        {
+            firstResult.RecordingRelease = bestResult.AlbumMatchedFor?.Release;
+            firstResult.AcoustId = highestScoreResult.Id;
+        }
+        return firstResult;
     }
 }

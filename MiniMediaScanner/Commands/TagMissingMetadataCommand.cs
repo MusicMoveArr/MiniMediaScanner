@@ -44,17 +44,23 @@ public class TagMissingMetadataCommand : ICommand
         EnvironmentVariable = "TAGMISSINGMETADATA_OVERWRITE_TAG")]
     public bool OverwriteTag { get; set; } = true;
     
+    [CommandOption("match-percentage",
+        Description = "The percentage used for tagging, how accurate it must match with MusicBrainz.",
+        EnvironmentVariable = "TAGMISSINGMETADATA_MATCH_PERCENTAGE",
+        IsRequired = false)]
+    public int MatchPercentage { get; set; } = 80;
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new TagMissingMetadataCommandHandler(ConnectionString);
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.TagMetadataAsync(AccoustId, Write, Album, OverwriteTag);
+            await handler.TagMetadataAsync(AccoustId, Write, Album, OverwriteTag, MatchPercentage);
         }
         else
         {
-            await handler.TagMetadataAsync(AccoustId, Write, Artist, Album, OverwriteTag);
+            await handler.TagMetadataAsync(AccoustId, Write, Artist, Album, OverwriteTag, MatchPercentage);
         }
     }
 }

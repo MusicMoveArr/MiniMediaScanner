@@ -1,7 +1,11 @@
+using System.Diagnostics;
 using AcoustID;
 using AcoustID.Web;
+using MiniMediaScanner.Models.AcoustId;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Polly;
+using Polly.Retry;
 using Quartz.Logging;
 using RestSharp;
 
@@ -9,37 +13,39 @@ namespace MiniMediaScanner.Services;
 
 public class AcoustIdService
 {
-    public async Task<JObject?> LookupAcoustIdAsync(string acoustIdApiKey, string fingerprint, int duration)
+    public async Task<AcoustIdResponse?> LookupAcoustIdAsync(string acoustIdApiKey, string fingerprint, int duration)
     {
-        if (string.IsNullOrWhiteSpace(acoustIdApiKey) || duration <= 0)
+        if (string.IsNullOrWhiteSpace(acoustIdApiKey))
         {
             return null;
         }
         
-        using var client = new RestClient("https://api.acoustid.org/v2/lookup");
-        var request = new RestRequest();
-        request.AddParameter("client", acoustIdApiKey);
-        request.AddParameter("meta", "recordings");
-        request.AddParameter("duration", duration);
-        request.AddParameter("fingerprint", fingerprint);
+        AsyncRetryPolicy retryPolicy = GetRetryPolicy();
+        var client = new RestClient("https://api.acoustid.org/v2/lookup");
 
-        var response = await client.ExecuteAsync(request);
-
-        if (response.IsSuccessful)
+        return await retryPolicy.ExecuteAsync(async () =>
         {
-            var content = response.Content;
+            var request = new RestRequest();
+            request.AddParameter("client", acoustIdApiKey);
+            request.AddParameter("meta", "recordings");
+            request.AddParameter("duration", duration);
+            request.AddParameter("fingerprint", fingerprint);
 
-            if (!string.IsNullOrWhiteSpace(content))
-            {
-                JObject jsonResponse = JObject.Parse(content);
-                
-                return jsonResponse;
-            }
-        }
-        else
-        {
-            Console.WriteLine("Error: " + response.ErrorMessage);
-        }
-        return null;
+            return await client.GetAsync<AcoustIdResponse>(request);
+        });
+    }
+    
+    private AsyncRetryPolicy GetRetryPolicy()
+    {
+        AsyncRetryPolicy retryPolicy = Policy
+            .Handle<HttpRequestException>()
+            .Or<TimeoutException>()
+            .WaitAndRetryAsync(5, retryAttempt => 
+                    TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                (exception, timeSpan, retryCount, context) => {
+                    Debug.WriteLine($"Retry {retryCount} after {timeSpan.TotalSeconds} sec due to: {exception.Message}");
+                });
+        
+        return retryPolicy;
     }
 }
