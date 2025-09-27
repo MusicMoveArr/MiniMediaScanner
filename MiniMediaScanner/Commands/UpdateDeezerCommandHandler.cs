@@ -18,9 +18,10 @@ public class UpdateDeezerCommandHandler
         string proxyMode, 
         bool saveTrackToken, 
         bool savePreviewUrl,
-        int threads)
+        int threads,
+        int preventUpdateWithinDays)
     {
-        _deezerService = new DeezerService(connectionString, proxyFile, singleProxy, proxyMode, saveTrackToken, savePreviewUrl);
+        _deezerService = new DeezerService(connectionString, proxyFile, singleProxy, proxyMode, saveTrackToken, savePreviewUrl, preventUpdateWithinDays);
         _deezerRepository = new DeezerRepository(connectionString);
         _threads = threads;
     }
@@ -43,7 +44,7 @@ public class UpdateDeezerCommandHandler
                     }
                     else if(callback.Status == UpdateDeezerStatus.SkippedSyncedWithin)
                     {
-                        AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Deezer ArtistId '{callback?.ArtistId}' synced already within 7days"));
+                        AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Deezer ArtistId '{callback?.ArtistId}' synced already within {_deezerService.PreventUpdateWithinDays}days"));
                     }
                 });
             });
@@ -88,7 +89,7 @@ public class UpdateDeezerCommandHandler
                                 }
                                 else if(callback.Status == UpdateDeezerStatus.SkippedSyncedWithin)
                                 {
-                                    AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Deezer ArtistId '{callback?.ArtistId}' synced already within 7days"));
+                                    AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Deezer ArtistId '{callback?.ArtistId}' synced already within {_deezerService.PreventUpdateWithinDays}days"));
                                 }
                             });
                         }

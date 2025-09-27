@@ -1,18 +1,15 @@
-using System.Diagnostics;
 using FuzzySharp;
 using MiniMediaScanner.Callbacks;
 using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Enums;
 using MiniMediaScanner.Models.Deezer;
-using MiniMediaScanner.Models.Tidal;
 using MiniMediaScanner.Repositories;
-using SmartFormat.Utilities;
 
 namespace MiniMediaScanner.Services;
 
 public class DeezerService
 {
-    private const int PreventUpdateWithinDays = 7; 
+    public readonly int PreventUpdateWithinDays;
     private readonly DeezerAPIService _deezerAPIService;
     private readonly DeezerRepository _deezerRepository;
     private readonly bool _saveTrackToken;
@@ -24,8 +21,10 @@ public class DeezerService
         string singleProxy, 
         string proxyMode, 
         bool saveTrackToken, 
-        bool savePreviewUrl)
+        bool savePreviewUrl,
+        int preventUpdateWithinDays)
     {
+        this.PreventUpdateWithinDays = preventUpdateWithinDays;
         _deezerRepository = new DeezerRepository(connectionString);
         _deezerAPIService = new DeezerAPIService(proxyFile, singleProxy, proxyMode);
         _saveTrackToken = saveTrackToken;

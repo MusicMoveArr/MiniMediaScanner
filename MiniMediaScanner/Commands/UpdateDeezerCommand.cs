@@ -57,9 +57,23 @@ public class UpdateDeezerCommand : ICommand
         EnvironmentVariable = "UPDATEDEEZER_THREADS")]
     public int Threads { get; set; } = 1;
     
+    [CommandOption("prevent-update-within-days",
+        Description = "Prevent updating existing artists within x days from the last pull/update",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATEDEEZER_PREVENT_UPDATE_WITHIN_DAYS")]
+    public int PreventUpdateWithinDays { get; set; } = 7;
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new UpdateDeezerCommandHandler(ConnectionString, ProxyFile, Proxy, ProxyMode, SaveTrackToken, SavePreviewUrl, Threads);
+        var handler = new UpdateDeezerCommandHandler(
+            ConnectionString, 
+            ProxyFile, 
+            Proxy, 
+            ProxyMode, 
+            SaveTrackToken, 
+            SavePreviewUrl, 
+            Threads, 
+            PreventUpdateWithinDays);
 
         if (!string.IsNullOrWhiteSpace(Artist))
         {
