@@ -1,0 +1,1 @@
+CREATE INDEX idx_tidal_track_isrc ON public.tidal_track (isrc);
