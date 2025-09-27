@@ -10,15 +10,14 @@ namespace MiniMediaScanner.Commands;
 public class UpdateSpotifyCommandHandler
 {
     private readonly SpotifyService _spotifyService;
-    private readonly SpotifyRepository _spotifyRepository;
     private readonly ArtistRepository _artistRepository;
     public UpdateSpotifyCommandHandler(string connectionString, 
         string spotifyClientId,
         string spotifySecretId,
-        int apiDelay)
+        int apiDelay,
+        int preventUpdateWithinDays)
     {
-        _spotifyService = new SpotifyService(spotifyClientId, spotifySecretId, connectionString, apiDelay);
-        _spotifyRepository = new SpotifyRepository(connectionString);
+        _spotifyService = new SpotifyService(spotifyClientId, spotifySecretId, connectionString, apiDelay, preventUpdateWithinDays);
         _artistRepository = new ArtistRepository(connectionString);
     }
     
@@ -39,7 +38,7 @@ public class UpdateSpotifyCommandHandler
                         }
                         else if(callback.Status == UpdateSpotifyStatus.SkippedSyncedWithin)
                         {
-                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Spotify '{callback?.Artist?.Name}' synced already within 7days"));
+                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Spotify '{callback?.Artist?.Name}' synced already within {_spotifyService.PreventUpdateWithinDays}days"));
                         }
                     });
                 });

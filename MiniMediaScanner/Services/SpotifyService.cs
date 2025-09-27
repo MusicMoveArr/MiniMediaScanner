@@ -9,6 +9,7 @@ namespace MiniMediaScanner.Services;
 
 public class SpotifyService
 {
+    public readonly int PreventUpdateWithinDays; 
     private readonly string _connectionString;
     private SpotifyRepository _spotifyRepository;
     private readonly SpotifyAPICacheLayerService  _cacheLayerService;
@@ -16,8 +17,10 @@ public class SpotifyService
     public SpotifyService(string spotifyClientId, 
         string spotifySecretId, 
         string connectionString, 
-        int apiDelay)
+        int apiDelay,
+        int preventUpdateWithinDays)
     {
+        this.PreventUpdateWithinDays = preventUpdateWithinDays;
         _connectionString = connectionString;
         _spotifyRepository = new SpotifyRepository(_connectionString);
         _cacheLayerService = new SpotifyAPICacheLayerService(apiDelay, spotifyClientId, spotifySecretId);
@@ -45,7 +48,7 @@ public class SpotifyService
         await _cacheLayerService.AuthenticateAsync();
         
         DateTime? lastSyncTime = await _spotifyRepository.GetArtistLastSyncTimeAsync(artistId);
-        if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < 7)
+        if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < PreventUpdateWithinDays)
         {
             callback?.Invoke(new UpdateSpotifyCallback(artist, UpdateSpotifyStatus.SkippedSyncedWithin));
             return;

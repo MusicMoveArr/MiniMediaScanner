@@ -38,9 +38,15 @@ public class UpdateSpotifyCommand : ICommand
         EnvironmentVariable = "UPDATESPOTIFY_API_DELAY")]
     public int ApiDelay { get; set; } = 10;
     
+    [CommandOption("prevent-update-within-days",
+        Description = "Prevent updating existing artists within x days from the last pull/update",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATESPOTIFY_PREVENT_UPDATE_WITHIN_DAYS")]
+    public int PreventUpdateWithinDays { get; set; } = 7;
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new UpdateSpotifyCommandHandler(ConnectionString, SpotifyClientId, SpotifySecretId, ApiDelay);
+        var handler = new UpdateSpotifyCommandHandler(ConnectionString, SpotifyClientId, SpotifySecretId, ApiDelay, PreventUpdateWithinDays);
 
         if (!string.IsNullOrWhiteSpace(Artist))
         {
