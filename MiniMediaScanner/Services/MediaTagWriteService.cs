@@ -88,7 +88,7 @@ public class MediaTagWriteService
                     DateTime? oldDate = track.Date;
                     track.AdditionalFields[GetFieldName(track,"date")] = value;
                     track.Date = result;
-                    updated = track.Date != oldDate || IsDictionaryUpdated(track, oldValues, "date");
+                    updated = track.Date != oldDate;
                     return true;
                 }
                 else if (int.TryParse(value, out var result2))
