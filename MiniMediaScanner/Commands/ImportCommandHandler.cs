@@ -25,9 +25,9 @@ public class ImportCommandHandler
         "mp3",
     };
 
-    public ImportCommandHandler(string connectionString)
+    public ImportCommandHandler(string connectionString, int preventUpdateWithinDays = 0)
     {
-        _musicBrainzService = new MusicBrainzService(connectionString);
+        _musicBrainzService = new MusicBrainzService(connectionString, preventUpdateWithinDays);
         _fileMetaDataService = new FileMetaDataService();
         _artistRepository = new ArtistRepository(connectionString);
         _metadataRepository =  new MetadataRepository(connectionString);

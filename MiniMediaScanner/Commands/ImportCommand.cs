@@ -31,9 +31,15 @@ public class ImportCommand : ICommand
         EnvironmentVariable = "IMPORT_FORCE")]
     public bool Force { get; set; } = false;
     
+    [CommandOption("prevent-update-within-days",
+        Description = "Prevent updating existing artists within x days from the last pull/update",
+        IsRequired = false,
+        EnvironmentVariable = "IMPORT_PREVENT_UPDATE_WITHIN_DAYS")]
+    public int PreventUpdateWithinDays { get; set; } = 7;
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new ImportCommandHandler(ConnectionString);
+        var handler = new ImportCommandHandler(ConnectionString, PreventUpdateWithinDays);
         await handler.ProcessDirectoryAsync(Path, Force, UpdateMb);
     }
 }
