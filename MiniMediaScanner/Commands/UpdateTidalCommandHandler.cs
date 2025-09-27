@@ -1,3 +1,4 @@
+using ListRandomizer;
 using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -16,10 +17,11 @@ public class UpdateTidalCommandHandler
         string countryCode, 
         string proxyFile, 
         string singleProxy, 
-        string proxyMode)
+        string proxyMode,
+        int preventUpdateWithinDays)
     {
         _tidalRepository = new TidalRepository(connectionString);
-        _tidalService = new TidalService(connectionString, clientId, clientSecret, countryCode, proxyFile, singleProxy, proxyMode);
+        _tidalService = new TidalService(connectionString, clientId, clientSecret, countryCode, proxyFile, singleProxy, proxyMode, preventUpdateWithinDays);
     }
     
     public async Task UpdateTidalArtistsByNameAsync(string artistName)
@@ -40,7 +42,7 @@ public class UpdateTidalCommandHandler
                     }
                     else if(callback.Status == UpdateTidalStatus.SkippedSyncedWithin)
                     {
-                        AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Tidal ArtistId '{callback?.ArtistId}' synced already within 7days"));
+                        AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Tidal ArtistId '{callback?.ArtistId}' synced already within {_tidalService.PreventUpdateWithinDays}days"));
                     }
                 });
             });
@@ -49,6 +51,7 @@ public class UpdateTidalCommandHandler
     public async Task UpdateAllTidalArtistsAsync()
     {
         var artistIds = await _tidalRepository.GetAllTidalArtistIdsAsync();
+        artistIds.Shuffle();
         
         await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
@@ -69,7 +72,7 @@ public class UpdateTidalCommandHandler
                         }
                         else if(callback.Status == UpdateTidalStatus.SkippedSyncedWithin)
                         {
-                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Tidal ArtistId '{callback?.ArtistId}' synced already within 7days"));
+                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Tidal ArtistId '{callback?.ArtistId}' synced already within {_tidalService.PreventUpdateWithinDays}days"));
                         }
                     });
                 }

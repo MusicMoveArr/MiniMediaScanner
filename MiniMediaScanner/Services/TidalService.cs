@@ -1,17 +1,16 @@
-using System.Diagnostics;
+using System.Text;
 using FuzzySharp;
 using MiniMediaScanner.Callbacks;
 using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Enums;
 using MiniMediaScanner.Models.Tidal;
 using MiniMediaScanner.Repositories;
-using SmartFormat.Utilities;
 
 namespace MiniMediaScanner.Services;
 
 public class TidalService
 {
-    private const int PreventUpdateWithinDays = 7; 
+    public readonly int PreventUpdateWithinDays; 
     private readonly TidalAPICacheLayerService _tidalAPIService;
     private readonly TidalRepository _tidalRepository;
 
@@ -21,8 +20,10 @@ public class TidalService
         string countryCode, 
         string proxyFile, 
         string singleProxy, 
-        string proxyMode)
+        string proxyMode,
+        int preventUpdateWithinDays)
     {
+        this.PreventUpdateWithinDays = preventUpdateWithinDays;
         _tidalRepository = new TidalRepository(connectionString);
         _tidalAPIService = new TidalAPICacheLayerService(clientId, clientSecret, countryCode, proxyFile, singleProxy, proxyMode);
     }
@@ -73,7 +74,7 @@ public class TidalService
         await RefreshTokenAsync();
 
         DateTime? lastSyncTime = await _tidalRepository.GetArtistLastSyncTimeAsync(artistId);
-        if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < PreventUpdateWithinDays)
+        if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < this.PreventUpdateWithinDays)
         {
             callback?.Invoke(new UpdateTidalCallback(artistId, UpdateTidalStatus.SkippedSyncedWithin));
             return;

@@ -55,10 +55,24 @@ public class UpdateTidalCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "PROXY_MODE")]
     public string ProxyMode { get; set; } = "StickyTillError";
+
+    [CommandOption("prevent-update-within-days",
+        Description = "Prevent updating existing artists within x days from the last pull/update",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATETIDAL_PREVENT_UPDATE_WITHIN_DAYS")]
+    public int PreventUpdateWithinDays { get; set; } = 7;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new UpdateTidalCommandHandler(ConnectionString, TidalClientId, TidalSecretId, TidalCountryCode, ProxyFile, Proxy, ProxyMode);
+        var handler = new UpdateTidalCommandHandler(
+            ConnectionString, 
+            TidalClientId, 
+            TidalSecretId, 
+            TidalCountryCode, 
+            ProxyFile, 
+            Proxy, 
+            ProxyMode, 
+            PreventUpdateWithinDays);
 
         if (!string.IsNullOrWhiteSpace(Artist))
         {
