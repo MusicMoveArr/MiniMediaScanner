@@ -20,9 +20,15 @@ public class UpdateMBCommand : ICommand
         EnvironmentVariable = "UPDATEMB_ARTIST")]
     public string Artist { get; set; }
     
+    [CommandOption("prevent-update-within-days",
+        Description = "Prevent updating existing artists within x days from the last pull/update",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATEMB_PREVENT_UPDATE_WITHIN_DAYS")]
+    public int PreventUpdateWithinDays { get; set; } = 7;
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new UpdateMBCommandHandler(ConnectionString);
+        var handler = new UpdateMBCommandHandler(ConnectionString, PreventUpdateWithinDays);
 
         if (!string.IsNullOrWhiteSpace(Artist))
         {

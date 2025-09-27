@@ -9,6 +9,8 @@ namespace MiniMediaScanner.Services;
 
 public class MusicBrainzService
 {
+    public readonly int PreventUpdateWithinDays; 
+    
     private readonly MusicBrainzAPIService _musicBrainzApiService;
     private const int BulkRequestLimit = 100;
     private readonly MusicBrainzArtistRepository _musicBrainzArtistRepository;
@@ -19,8 +21,9 @@ public class MusicBrainzService
     private readonly MusicBrainzReleaseArtistRepository _musicBrainzReleaseArtistRepository;
     private readonly MusicBrainzReleaseLabelRepository _musicBrainzReleaseLabelRepository;
     
-    public MusicBrainzService(string connectionString)
+    public MusicBrainzService(string connectionString, int preventUpdateWithinDays)
     {
+        this.PreventUpdateWithinDays =  preventUpdateWithinDays;
         _musicBrainzApiService = new MusicBrainzAPIService();
         _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
         _musicBrainzReleaseRepository = new MusicBrainzReleaseRepository(connectionString);
@@ -76,10 +79,10 @@ public class MusicBrainzService
         }
         
         DateTime lastSyncTime = await _musicBrainzArtistRepository.GetArtistLastSyncTimeAsync(musicBrainzArtistGuid);
-        if (DateTime.Now.Subtract(lastSyncTime).TotalDays < 7)
+        if (DateTime.Now.Subtract(lastSyncTime).TotalDays < this.PreventUpdateWithinDays)
         {
             callback?.Invoke(new UpdateMBCallback(musicBrainzArtistGuid, UpdateMBStatus.SkippedSyncedWithin));
-            Debug.WriteLine($"Skipped synchronizing for MusicBrainzArtistId '{musicBrainzArtistId}' synced already within 7days");
+            Debug.WriteLine($"Skipped synchronizing for MusicBrainzArtistId '{musicBrainzArtistId}' synced already within {this.PreventUpdateWithinDays}days");
             return;
         }
         

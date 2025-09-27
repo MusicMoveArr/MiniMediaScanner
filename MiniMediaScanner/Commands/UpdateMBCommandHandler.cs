@@ -13,9 +13,9 @@ public class UpdateMBCommandHandler
     private readonly MusicBrainzArtistRepository _musicBrainzArtistRepository;
     private readonly MusicBrainzAPIService _musicBrainzAPIService;
 
-    public UpdateMBCommandHandler(string connectionString)
+    public UpdateMBCommandHandler(string connectionString, int preventUpdateWithinDays)
     {
-        _musicBrainzService = new MusicBrainzService(connectionString);
+        _musicBrainzService = new MusicBrainzService(connectionString, preventUpdateWithinDays);
         _musicBrainzArtistRepository = new MusicBrainzArtistRepository(connectionString);
         _musicBrainzAPIService = new MusicBrainzAPIService();
     }
@@ -49,7 +49,7 @@ public class UpdateMBCommandHandler
                         }
                         else if(callback.Status == UpdateMBStatus.SkippedSyncedWithin)
                         {
-                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for MusicBrainz ArtistId '{callback?.ArtistId}' synced already within 7days"));
+                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for MusicBrainz ArtistId '{callback?.ArtistId}' synced already within {_musicBrainzService.PreventUpdateWithinDays}days"));
                         }
                     });
                 }
@@ -75,7 +75,7 @@ public class UpdateMBCommandHandler
                         }
                         else if(callback.Status == UpdateMBStatus.SkippedSyncedWithin)
                         {
-                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for MusicBrainz ArtistId '{callback?.ArtistId}' synced already within 7days"));
+                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for MusicBrainz ArtistId '{callback?.ArtistId}' synced already within {_musicBrainzService.PreventUpdateWithinDays}days"));
                         }
                     });
                 }
