@@ -486,4 +486,44 @@ public class TidalRepository
                     }))
             .ToList();
     }
+    
+    public async Task<string?> GetHighestQualityArtistCoverUrlAsync(int artistId)
+    {
+        string query = @"SELECT tail.href
+                         FROM tidal_artist_image_link tail
+                         where tail.artistid = @artistId
+                         order by tail.meta_width desc, tail.meta_height desc
+                         limit 1";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .QueryFirstOrDefaultAsync<string>(query,
+                param: new
+                {
+                    artistId
+                });
+    }
+    
+    public async Task<string?> GetHighestQualityAlbumCoverUrlAsync(int artistId, string albumName)
+    {
+        string query = @"SELECT tail.href
+                         FROM tidal_album_image_link tail
+                         join tidal_album album on 
+                             album.albumid = tail.albumid 
+                             and lower(album.title) = lower(@albumName) 
+                             and album.artistid = @artistId
+                         order by tail.meta_width desc, tail.meta_height desc
+                         limit 1";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .QueryFirstOrDefaultAsync<string>(query,
+                param: new
+                {
+                    artistId,
+                    albumName
+                });
+    }
 }

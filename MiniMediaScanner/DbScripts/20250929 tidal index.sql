@@ -1,0 +1,1 @@
+CREATE INDEX idx_tidal_album_title_trgm ON tidal_album USING gin (lower(title) gin_trgm_ops);
