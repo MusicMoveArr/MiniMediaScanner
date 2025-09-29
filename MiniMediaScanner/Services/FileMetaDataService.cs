@@ -18,9 +18,28 @@ public class FileMetaDataService
         "EO"
     };
 
-    public MetadataInfo GetMetadataInfo(FileInfo fileInfo)
+    public async Task<MetadataInfo> GetMetadataInfoAsync(FileInfo fileInfo)
     {
-        return GetMetadataInfo(new Track(fileInfo.FullName), fileInfo);
+        Track trackInfo = new Track();
+        CancellationTokenSource cancellationToken = new CancellationTokenSource();
+        var readRask = Task.Run(() =>
+        {
+            trackInfo = new Track(fileInfo.FullName);
+        }, cancellationToken.Token);
+        Task.WhenAny(readRask, Task.Delay(TimeSpan.FromSeconds(5))).GetAwaiter().GetResult();
+        
+        if (trackInfo == null)
+        {
+            try
+            {
+                cancellationToken.Cancel();
+            }
+            catch { }
+            
+            throw new FileLoadException($"It took too long to load '{fileInfo.FullName}'");
+        }
+        
+        return GetMetadataInfo(trackInfo, fileInfo);
     }
 
     public MetadataInfo GetMetadataInfo(Track trackInfo)
