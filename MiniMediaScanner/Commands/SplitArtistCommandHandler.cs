@@ -89,7 +89,7 @@ public class SplitArtistCommandHandler
             foreach (var metadataAlbum in album)
             {
                 Track track = new Track(metadataAlbum.Path);
-                var metadataInfo = _fileMetaDataService.GetMetadataInfo(new FileInfo(track.Path));
+                var metadataInfo = await _fileMetaDataService.GetMetadataInfoAsync(new FileInfo(track.Path));
                 bool trackInfoUpdated = false;
                 if (string.Equals(track.AlbumArtist, artist, StringComparison.OrdinalIgnoreCase))
                 {

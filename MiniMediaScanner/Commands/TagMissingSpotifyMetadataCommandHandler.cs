@@ -92,7 +92,7 @@ public class TagMissingSpotifyMetadataCommandHandler
         Console.WriteLine($"Release found for '{metadata.Path}', Title '{spotifyTrack.TrackName}', Date '{spotifyTrack.ReleaseDate}'");
 
         Track track = new Track(metadata.Path);
-        var metadataInfo = _fileMetaDataService.GetMetadataInfo(new FileInfo(track.Path));
+        var metadataInfo = await _fileMetaDataService.GetMetadataInfoAsync(new FileInfo(track.Path));
         bool trackInfoUpdated = false;
         
         

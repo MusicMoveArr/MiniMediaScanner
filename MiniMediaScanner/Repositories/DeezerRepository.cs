@@ -509,7 +509,7 @@ public class DeezerRepository
                 });
     }
     
-        public async Task<List<DeezerTrackDbModel>> GetTrackByArtistIdAsync(long artistId, string albumName, string trackName)
+    public async Task<List<DeezerTrackDbModel>> GetTrackByArtistIdAsync(long artistId, string albumName, string trackName)
     {
         string query = @"SET LOCAL pg_trgm.similarity_threshold = 0.8;
                          select distinct on (track.isrc, album.upc, album.title, artist.artistid)

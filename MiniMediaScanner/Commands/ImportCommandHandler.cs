@@ -118,7 +118,7 @@ public class ImportCommandHandler
 
             try
             {
-                metadata = _fileMetaDataService.GetMetadataInfo(fileInfo);
+                metadata = await _fileMetaDataService.GetMetadataInfoAsync(fileInfo);
                 metadata.NonNullableValues();
             }
             catch (Exception e)

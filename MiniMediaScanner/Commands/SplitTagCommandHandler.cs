@@ -101,7 +101,7 @@ public class SplitTagCommandHandler
         }
 
         Track track = new Track(metadata.Path);
-        var metadataInfo = _fileMetaDataService.GetMetadataInfo(new FileInfo(track.Path));
+        var metadataInfo = await _fileMetaDataService.GetMetadataInfoAsync(new FileInfo(track.Path));
         
         string newWriteTagValue = updateWriteTagOriginalValue ? mediaTargetTag.Value.Value : splitValue.First();
         _mediaTagWriteService.UpdateTag(track, metadataInfo, writetag, newWriteTagValue, ref trackInfoUpdated, overwriteTagValue);

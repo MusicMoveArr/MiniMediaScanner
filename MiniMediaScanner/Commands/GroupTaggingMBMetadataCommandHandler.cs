@@ -195,7 +195,7 @@ public class GroupTaggingMBMetadataCommandHandler
         , bool overwriteTagValue
         , bool autoConfirm)
     {
-        var metadataInfo = _fileMetaDataService.GetMetadataInfo(new FileInfo(track.Path));
+        var metadataInfo = await _fileMetaDataService.GetMetadataInfoAsync(new FileInfo(track.Path));
         
         bool trackInfoUpdated = false;
         string? musicBrainzTrackId = mediaTrack.Id;

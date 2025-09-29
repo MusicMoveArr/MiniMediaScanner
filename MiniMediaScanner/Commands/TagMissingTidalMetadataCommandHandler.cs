@@ -102,7 +102,7 @@ public class TagMissingTidalMetadataCommandHandler
         Console.WriteLine($"Release found for '{metadata.Path}', Title '{tidalTrack.TrackName}', Date '{tidalTrack.ReleaseDate}'");
 
         Track track = new Track(metadata.Path);
-        var metadataInfo = _fileMetaDataService.GetMetadataInfo(new FileInfo(track.Path));
+        var metadataInfo = await _fileMetaDataService.GetMetadataInfoAsync(new FileInfo(track.Path));
         bool trackInfoUpdated = false;
         
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "Tidal Track Id", tidalTrack.TrackId.ToString(), ref trackInfoUpdated, overwriteTagValue);

@@ -68,7 +68,7 @@ public class FixCollectionsCommandHandler
                         continue;
                     }
                     Track track = new Track(metadata.Path);
-                    var metadataInfo = _fileMetaDataService.GetMetadataInfo(fileInfo);
+                    var metadataInfo = await _fileMetaDataService.GetMetadataInfoAsync(fileInfo);
 
                     string artistsValue = _mediaTagWriteService.GetDictionaryValue(track, "artists");
 

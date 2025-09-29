@@ -35,7 +35,7 @@ public class SpotifyService
         var searchResult = await _cacheLayerService.SpotifyClient.Search.Item(search);
         
         foreach(var artist in searchResult.Artists.Items
-                    .Where(artist => string.Equals(artist.Name, artistName, StringComparison.OrdinalIgnoreCase)))
+                   /* .Where(artist => string.Equals(artist.Name, artistName, StringComparison.OrdinalIgnoreCase))*/)
         {
             await UpdateArtistByIdAsync(artist.Id, artist, callback);
         }

@@ -102,7 +102,7 @@ public class TagMissingDeezerMetadataCommandHandler
         Console.WriteLine($"Release found for '{metadata.Path}', Title '{deezerTrack.TrackName}', Date '{deezerTrack.AlbumReleaseDate}'");
 
         Track track = new Track(metadata.Path);
-        var metadataInfo = _fileMetaDataService.GetMetadataInfo(new FileInfo(track.Path));
+        var metadataInfo = await _fileMetaDataService.GetMetadataInfoAsync(new FileInfo(track.Path));
         bool trackInfoUpdated = false;
         
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Track Id", deezerTrack.TrackId.ToString(), ref trackInfoUpdated, overwriteTagValue);
