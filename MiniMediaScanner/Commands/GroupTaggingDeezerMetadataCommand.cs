@@ -38,11 +38,29 @@ public class GroupTaggingDeezerMetadataCommand : ICommand
         EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_OVERWRITE_TAG")]
     public bool OverwriteTag { get; set; } = true;
 
-    [CommandOption("overwrite-album-tag", 'B', 
-        Description = "Overwrite the existing album tag value, only overwrites it if the Album is tagged incorrectly before.", 
+    [CommandOption("overwrite-artist", 
+        Description = "Overwrite the Artist name when tagging from MusicBrainz.", 
         IsRequired = false,
-        EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_OVERWRITE_ALBUM_TAG")]
-    public bool OverwriteAlbumTag { get; set; } = true;
+        EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_OVERWRITEARTIST")]
+    public bool OverwriteArtist { get; set; }
+    
+    [CommandOption("overwrite-album-artist", 
+        Description = "Overwrite the Album Artist name when tagging from MusicBrainz.", 
+        IsRequired = false,
+        EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_OVERWRITEALBUMARTIST")]
+    public bool OverwriteAlbumArtist { get; set; }
+    
+    [CommandOption("overwrite-album", 
+        Description = "Overwrite the Album name when tagging from MusicBrainz.", 
+        IsRequired = false,
+        EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_OVERWRITEALBUM")]
+    public bool OverwriteAlbum { get; set; }
+    
+    [CommandOption("overwrite-track", 
+        Description = "Overwrite the Track name when tagging from MusicBrainz.", 
+        IsRequired = false,
+        EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_OVERWRITETRACK")]
+    public bool OverwriteTrack { get; set; }
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -50,11 +68,11 @@ public class GroupTaggingDeezerMetadataCommand : ICommand
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.TagMetadataAsync(Album, OverwriteTag, Confirm, OverwriteAlbumTag);
+            await handler.TagMetadataAsync(Album, OverwriteTag, Confirm, OverwriteArtist, OverwriteAlbumArtist, OverwriteAlbum, OverwriteTrack);
         }
         else
         {
-            await handler.TagMetadataAsync(Artist, Album, OverwriteTag, Confirm, OverwriteAlbumTag);
+            await handler.TagMetadataAsync(Artist, Album, OverwriteTag, Confirm, OverwriteArtist, OverwriteAlbumArtist, OverwriteAlbum, OverwriteTrack);
         }
     }
 }

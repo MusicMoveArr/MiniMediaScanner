@@ -37,15 +37,31 @@ public class GroupTaggingDeezerMetadataCommandHandler
         _cache = new MemoryCache(options);
     }
     
-    public async Task TagMetadataAsync(string album, bool overwriteTagValue, bool confirm, bool overwriteAlbumTag)
+    public async Task TagMetadataAsync(
+        string album, 
+        bool overwriteTagValue, 
+        bool confirm, 
+        bool overwriteArtist, 
+        bool overwriteAlbumArtist, 
+        bool overwriteAlbum, 
+        bool overwriteTrack)
     {
         foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
         {
-            await TagMetadataAsync(artist, album, overwriteTagValue, confirm, overwriteAlbumTag);
+            await TagMetadataAsync(artist, album, overwriteTagValue, confirm, 
+                                   overwriteArtist, overwriteAlbumArtist, overwriteAlbum, overwriteTrack);
         }
     }
 
-    public async Task TagMetadataAsync(string artist, string album, bool overwriteTagValue, bool confirm, bool overwriteAlbumTag)
+    public async Task TagMetadataAsync(
+        string artist, 
+        string album, 
+        bool overwriteTagValue, 
+        bool confirm, 
+        bool overwriteArtist, 
+        bool overwriteAlbumArtist, 
+        bool overwriteAlbum, 
+        bool overwriteTrack)
     {
         var metadata = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || 
@@ -60,7 +76,7 @@ public class GroupTaggingDeezerMetadataCommandHandler
             try
             {
                 await ProcessAlumGroupAsync(record.ToList(), artist, record.First().AlbumName!, overwriteTagValue,
-                    confirm, overwriteAlbumTag);
+                    confirm, overwriteArtist, overwriteAlbumArtist, overwriteAlbum, overwriteTrack);
             }
             catch (Exception e)
             {
@@ -69,12 +85,16 @@ public class GroupTaggingDeezerMetadataCommandHandler
         }
     }
                 
-    private async Task ProcessAlumGroupAsync(List<MetadataModel> metadataModels
-        , string artist
-        , string album
-        , bool overwriteTagValue
-        , bool confirm
-        , bool overwriteAlbumTag)
+    private async Task ProcessAlumGroupAsync(
+        List<MetadataModel> metadataModels,
+        string artist,
+        string album,
+        bool overwriteTagValue,
+        bool confirm,
+        bool overwriteArtist,
+        bool overwriteAlbumArtist,
+        bool overwriteAlbum,
+        bool overwriteTrack)
     {
         Guid? artistId = metadataModels.FirstOrDefault()?.ArtistId;
         long deezerArtistId = 0;
@@ -143,7 +163,6 @@ public class GroupTaggingDeezerMetadataCommandHandler
                     .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.AlbumName, match.DeezerTrack.AlbumName))
                     .OrderByDescending(match => match.MatchedFor)
                     .ToList()
-                        
                 })
             })
             .OrderByDescending(tracks => tracks.Matches.Sum(matches => matches.MetadataTracks.Count))
@@ -165,7 +184,7 @@ public class GroupTaggingDeezerMetadataCommandHandler
                     try
                     {
                         await ProcessFileAsync(metadata.MetadataTrack, metadata.DeezerTrack, overwriteTagValue, 
-                                               confirm, overwriteAlbumTag, deezerArtistId);
+                                               confirm, deezerArtistId, overwriteArtist, overwriteAlbumArtist, overwriteAlbum, overwriteTrack);
                         processedMetadataIds.Add(metadata.MetadataTrack.MetadataId!.Value);
                     }
                     catch (Exception e)
@@ -192,7 +211,7 @@ public class GroupTaggingDeezerMetadataCommandHandler
             
             try
             {
-                await ProcessFileAsync(metadata, foundTrack, overwriteTagValue, confirm, overwriteAlbumTag, deezerArtistId);
+                await ProcessFileAsync(metadata, foundTrack, overwriteTagValue, confirm, deezerArtistId, overwriteArtist, overwriteAlbumArtist, overwriteAlbum, overwriteTrack);
             }
             catch (Exception e)
             {
@@ -201,7 +220,8 @@ public class GroupTaggingDeezerMetadataCommandHandler
         }
     }
     
-    private DeezerTrackDbModel? GetSecondBestTrackMatch(List<DeezerTrackDbModel> deezerTracks, 
+    private DeezerTrackDbModel? GetSecondBestTrackMatch(
+        List<DeezerTrackDbModel> deezerTracks, 
         string trackTitle,
         string albumTitle)
     {
@@ -225,12 +245,15 @@ public class GroupTaggingDeezerMetadataCommandHandler
     }
 
     private async Task ProcessFileAsync(
-        MetadataModel metadata
-        , DeezerTrackDbModel deezerTrack
-        , bool overwriteTagValue
-        , bool autoConfirm
-        , bool overwriteAlbumTag
-        , long deezerArtistId)
+        MetadataModel metadata,
+        DeezerTrackDbModel deezerTrack,
+        bool overwriteTagValue,
+        bool autoConfirm,
+        long deezerArtistId,
+        bool overwriteArtist,
+        bool overwriteAlbumArtist,
+        bool overwriteAlbum,
+        bool overwriteTrack)
     {
         Track track = new Track(metadata.Path);
         Console.WriteLine($"Processing file: {metadata.Path}");
@@ -240,19 +263,19 @@ public class GroupTaggingDeezerMetadataCommandHandler
         var trackArtists = await _deezerRepository.GetTrackArtistsAsync(deezerTrack.TrackId, deezerArtistId);
         string artists = string.Join(';', trackArtists);
 
-        if (string.IsNullOrWhiteSpace(track.Title) || overwriteTagValue)
+        if (string.IsNullOrWhiteSpace(track.Title) || overwriteTrack)
         {
             _mediaTagWriteService.UpdateTag(track, metadataInfo, "Title", deezerTrack.TrackName, ref trackInfoUpdated, overwriteTagValue);
         }
-        if (string.IsNullOrWhiteSpace(track.Album) || overwriteAlbumTag)
+        if (string.IsNullOrWhiteSpace(track.Album) || overwriteAlbum)
         {
             _mediaTagWriteService.UpdateTag(track, metadataInfo, "Album", deezerTrack.AlbumName, ref trackInfoUpdated, overwriteTagValue);
         }
-        if (string.IsNullOrWhiteSpace(track.AlbumArtist)  || track.AlbumArtist.ToLower().Contains("various"))
+        if (string.IsNullOrWhiteSpace(track.AlbumArtist)  || overwriteAlbumArtist)
         {
             _mediaTagWriteService.UpdateTag(track, metadataInfo, "AlbumArtist", deezerTrack.ArtistName, ref trackInfoUpdated, overwriteTagValue);
         }
-        if (string.IsNullOrWhiteSpace(track.Artist) || track.Artist.ToLower().Contains("various"))
+        if (string.IsNullOrWhiteSpace(track.Artist) || overwriteArtist)
         {
             _mediaTagWriteService.UpdateTag(track, metadataInfo, "Artist",  deezerTrack.ArtistName, ref trackInfoUpdated, overwriteTagValue);
         }
