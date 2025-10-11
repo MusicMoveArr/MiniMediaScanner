@@ -80,6 +80,7 @@ public class TidalService
             DateTime? lastSyncTime = await _updateTidalRepository.GetArtistLastSyncTimeAsync(artistId);
             if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < this.PreventUpdateWithinDays)
             {
+                await _updateTidalRepository.CommitAsync();
                 callback?.Invoke(new UpdateTidalCallback(artistId, UpdateTidalStatus.SkippedSyncedWithin));
                 return;
             }
@@ -89,6 +90,7 @@ public class TidalService
 
             if (artistInfo == null)
             {
+                await _updateTidalRepository.CommitAsync();
                 return;
             }
 
