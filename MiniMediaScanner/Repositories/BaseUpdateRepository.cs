@@ -22,8 +22,8 @@ public abstract class BaseUpdateRepository
             await connection.OpenAsync();
             this.Connection = connection;
         }
-        
-        this.Transaction = await this.Connection.BeginTransactionAsync();
+
+        this.Transaction = await this.Connection.BeginTransactionAsync(IsolationLevel.ReadCommitted);
     }
     
     public async Task CommitAsync()
