@@ -6,68 +6,14 @@ using SpotifyAPI.Web;
 
 namespace MiniMediaScanner.Repositories;
 
-public class UpdateSpotifyRepository
+public class UpdateSpotifyRepository : BaseUpdateRepository
 {
-    private readonly string _connectionString;
-    private NpgsqlConnection _connection;
-    private NpgsqlTransaction _transaction;
-    
     public UpdateSpotifyRepository(string connectionString)
+        : base(connectionString)
     {
-        _connectionString = connectionString;
-    }
-
-    public async Task SetConnectionAsync()
-    {
-        if (_connection?.State == ConnectionState.Open)
-        {
-            await _connection.CloseAsync();
-        }
         
-        NpgsqlConnection connection = new NpgsqlConnection(_connectionString);
-        await connection.OpenAsync();
-        _transaction = await connection.BeginTransactionAsync();
-        _connection = connection;
     }
 
-    public async Task CommitAsync()
-    {
-        try
-        {
-            await _transaction.CommitAsync();
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
-        }
-        finally
-        {
-            if (_connection?.State == ConnectionState.Open)
-            {
-                await _connection.CloseAsync();
-            }
-        }
-    }
-
-    public async Task RollbackAsync()
-    {
-        try
-        {
-            await _transaction.RollbackAsync();
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
-        }
-        finally
-        {
-            if (_connection?.State == ConnectionState.Open)
-            {
-                await _connection.CloseAsync();
-            }
-        }
-    }
-    
     public async Task UpsertArtistAsync(FullArtist artist)
     {
         string query = @"
@@ -96,7 +42,7 @@ public class UpdateSpotifyRepository
                 Href = EXCLUDED.Href,
                 Genres = EXCLUDED.Genres";
         
-        await _connection.ExecuteAsync(query, param: new
+        await base.Connection.ExecuteAsync(query, param: new
         {
             Id = artist.Id,
             Name = artist.Name,
@@ -107,7 +53,7 @@ public class UpdateSpotifyRepository
             Href = artist.Href,
             Genres = string.Join(',', artist.Genres),
             lastsynctime = new DateTime(2000, 1,1)
-        }, transaction: _transaction);
+        }, transaction: base.Transaction);
     }
     
     public async Task UpsertArtistImageAsync(FullArtist artist)
@@ -124,13 +70,13 @@ public class UpdateSpotifyRepository
 
         foreach (var artistImage in artist.Images)
         {
-            await _connection.ExecuteAsync(query, param: new
+            await base.Connection.ExecuteAsync(query, param: new
             {
                 ArtistId = artist.Id,
                 Height = artistImage.Height,
                 Width = artistImage.Width,
                 Url = artistImage.Url
-            }, transaction: _transaction);
+            }, transaction: base.Transaction);
         }
     }
     
@@ -166,7 +112,7 @@ public class UpdateSpotifyRepository
                 Popularity = EXCLUDED.Popularity,
                 ArtistId = EXCLUDED.ArtistId";
 
-        await _connection.ExecuteAsync(query, param: new
+        await base.Connection.ExecuteAsync(query, param: new
         {
             AlbumId = album.Id,
             AlbumGroup = albumGroup,
@@ -180,7 +126,7 @@ public class UpdateSpotifyRepository
             Label = album.Label,
             Popularity = album.Popularity,
             artistId
-        }, transaction: _transaction);
+        }, transaction: base.Transaction);
     }
     
     public async Task UpsertAlbumImageAsync(FullAlbum album)
@@ -197,13 +143,13 @@ public class UpdateSpotifyRepository
 
         foreach (var artistImage in album.Images)
         {
-            await _connection.ExecuteAsync(query, param: new
+            await base.Connection.ExecuteAsync(query, param: new
             {
                 AlbumId = album.Id,
                 Height = artistImage.Height,
                 Width = artistImage.Width,
                 Url = artistImage.Url
-            }, transaction: _transaction);
+            }, transaction: base.Transaction);
         }
     }
     
@@ -220,12 +166,12 @@ public class UpdateSpotifyRepository
 
         foreach (var artist in album.Artists)
         {
-            await _connection.ExecuteAsync(query, param: new
+            await base.Connection.ExecuteAsync(query, param: new
             {
                 AlbumId = album.Id,
                 ArtistId = artist.Id,
                 Type = album.Type
-            }, transaction: _transaction);
+            }, transaction: base.Transaction);
         }
     }
     
@@ -242,12 +188,12 @@ public class UpdateSpotifyRepository
 
         foreach (var externalId in album.ExternalIds)
         {
-            await _connection.ExecuteAsync(query, param: new
+            await base.Connection.ExecuteAsync(query, param: new
             {
                 AlbumId = album.Id,
                 Name = externalId.Key,
                 Value = externalId.Value
-            }, transaction: _transaction);
+            }, transaction: base.Transaction);
         }
     }
     
@@ -282,7 +228,7 @@ public class UpdateSpotifyRepository
                 Type = EXCLUDED.Type,
                 Uri = EXCLUDED.Uri";
 
-        await _connection.ExecuteAsync(query, param: new
+        await base.Connection.ExecuteAsync(query, param: new
         {
             TrackId = track.Id,
             AlbumId = track.Album.Id,
@@ -296,7 +242,7 @@ public class UpdateSpotifyRepository
             TrackNumber = track.TrackNumber,
             Type = track.Type.ToString(),
             Uri = track.Uri
-        }, transaction: _transaction);
+        }, transaction: base.Transaction);
     }
     
     public async Task UpsertTrack_ArtistAsync(FullTrack track)
@@ -311,11 +257,11 @@ public class UpdateSpotifyRepository
 
         foreach (var artist in track.Artists)
         {
-            await _connection.ExecuteAsync(query, param: new
+            await base.Connection.ExecuteAsync(query, param: new
             {
                 TrackId = track.Id,
                 ArtistId = artist.Id
-            }, transaction: _transaction);
+            }, transaction: base.Transaction);
         }
     }
     
@@ -323,21 +269,21 @@ public class UpdateSpotifyRepository
     {
         string query = @"SELECT lastsynctime FROM spotify_artist WHERE Id = @id";
 
-        return await _connection.ExecuteScalarAsync<DateTime>(query, new
+        return await base.Connection.ExecuteScalarAsync<DateTime>(query, new
         {
             id = artistId
-        }, transaction: _transaction);
+        }, transaction: base.Transaction);
     }
     
     public async Task<DateTime?> SetArtistLastSyncTimeAsync(string artistId)
     {
         string query = @"UPDATE spotify_artist SET lastsynctime = @lastsynctime WHERE Id = @id";
 
-        return await _connection.ExecuteScalarAsync<DateTime>(query, new
+        return await base.Connection.ExecuteScalarAsync<DateTime>(query, new
         {
             id = artistId,
             lastsynctime = DateTime.Now
-        }, transaction: _transaction);
+        }, transaction: base.Transaction);
     }
     
     public async Task UpsertTrackExternalIdAsync(FullTrack track)
@@ -353,12 +299,12 @@ public class UpdateSpotifyRepository
 
         foreach (var externalId in track.ExternalIds)
         {
-            await _connection.ExecuteAsync(query, param: new
+            await base.Connection.ExecuteAsync(query, param: new
             {
                 TrackId = track.Id,
                 Name = externalId.Key,
                 Value = externalId.Value
-            }, transaction: _transaction);
+            }, transaction: base.Transaction);
         }
     }
     
@@ -370,11 +316,11 @@ public class UpdateSpotifyRepository
                          where album.albumid = @albumId
                          limit 1";
 
-        return await _connection
+        return await base.Connection
             .ExecuteScalarAsync<int>(query,
                 param: new
                 {
                     albumId
-                }, transaction: _transaction);
+                }, transaction: base.Transaction);
     }
 }

@@ -12,7 +12,7 @@ public class TidalService
 {
     public readonly int PreventUpdateWithinDays; 
     private readonly TidalAPICacheLayerService _tidalAPIService;
-    private readonly TidalRepository _tidalRepository;
+    private readonly UpdateTidalRepository _updateTidalRepository;
 
     public TidalService(string connectionString, 
         string clientId, 
@@ -24,7 +24,7 @@ public class TidalService
         int preventUpdateWithinDays)
     {
         this.PreventUpdateWithinDays = preventUpdateWithinDays;
-        _tidalRepository = new TidalRepository(connectionString);
+        _updateTidalRepository = new UpdateTidalRepository(connectionString);
         _tidalAPIService = new TidalAPICacheLayerService(clientId, clientSecret, countryCode, proxyFile, singleProxy, proxyMode);
     }
 
@@ -49,6 +49,7 @@ public class TidalService
             foreach (var artist in searchResult
                          ?.Included
                          ?.Where(artist => !string.IsNullOrWhiteSpace(artist?.Attributes?.Name))
+                         ?.OrderByDescending(artist => Fuzz.Ratio(artistName, artist.Attributes.Name))
                          ?.Where(artist => Fuzz.Ratio(artistName, artist.Attributes.Name) > 80))
             {
                 if (_tidalAPIService.ProxyManagerService.ProxyMode == ProxyModeType.PerArtist)
@@ -58,10 +59,13 @@ public class TidalService
                 
                 try
                 {
+                    await _updateTidalRepository.SetConnectionAsync();
                     await UpdateArtistByIdAsync(int.Parse(artist.Id), callback);
+                    await _updateTidalRepository.CommitAsync();
                 }
                 catch (Exception e)
                 {
+                    await _updateTidalRepository.RollbackAsync();
                     Console.WriteLine($"{e.Message}, {e.StackTrace}");
                 }
             }
@@ -73,7 +77,7 @@ public class TidalService
     {
         await RefreshTokenAsync();
 
-        DateTime? lastSyncTime = await _tidalRepository.GetArtistLastSyncTimeAsync(artistId);
+        DateTime? lastSyncTime = await _updateTidalRepository.GetArtistLastSyncTimeAsync(artistId);
         if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < this.PreventUpdateWithinDays)
         {
             callback?.Invoke(new UpdateTidalCallback(artistId, UpdateTidalStatus.SkippedSyncedWithin));
@@ -131,7 +135,7 @@ public class TidalService
             string albumMediaTags = string.Join(',', album.Attributes?.MediaTags ?? []);
 
             //insert album info
-            await _tidalRepository.UpsertAlbumAsync(int.Parse(album.Id),
+            await _updateTidalRepository.UpsertAlbumAsync(int.Parse(album.Id),
                 artistId,
                 album.Attributes.Title ?? string.Empty,
                 album.Attributes.BarcodeId ?? string.Empty,
@@ -149,7 +153,7 @@ public class TidalService
             {
                 foreach (var imageLink in album.Attributes.ImageLinks)
                 {
-                    await _tidalRepository.UpsertAlbumImageLinkAsync(int.Parse(album.Id),
+                    await _updateTidalRepository.UpsertAlbumImageLinkAsync(int.Parse(album.Id),
                         imageLink.Href,
                         imageLink.Meta.Width,
                         imageLink.Meta.Height);
@@ -159,13 +163,13 @@ public class TidalService
             {
                 foreach (var externalLink in album.Attributes.ExternalLinks)
                 {
-                    await _tidalRepository.UpsertAlbumExternalLinkAsync(int.Parse(album.Id),
+                    await _updateTidalRepository.UpsertAlbumExternalLinkAsync(int.Parse(album.Id),
                         externalLink.Href,
                         externalLink.Meta.Type);
                 }
             }
             
-            int dbTrackCount = await _tidalRepository.GetTidalAlbumTrackCountAsync(int.Parse(album.Id), artistId);
+            int dbTrackCount = await _updateTidalRepository.GetTidalAlbumTrackCountAsync(int.Parse(album.Id), artistId);
             if (dbTrackCount == album.Attributes.NumberOfItems)
             {
                 progress++;
@@ -248,7 +252,7 @@ public class TidalService
                 {
                     foreach (var trackArtist in track.RelationShips.Artists.Data)
                     {
-                        _tidalRepository.UpsertTrackArtistIdAsync(int.Parse(track.Id), int.Parse(trackArtist.Id));
+                        _updateTidalRepository.UpsertTrackArtistIdAsync(int.Parse(track.Id), int.Parse(trackArtist.Id));
                     }
                 }
                 
@@ -274,13 +278,13 @@ public class TidalService
             foreach (var provider in tracks.Included
                          .Where(t => t.Type == "providers"))
             {
-                await _tidalRepository.UpsertProviderAsync(int.Parse(provider.Id), provider.Attributes.Name);
+                await _updateTidalRepository.UpsertProviderAsync(int.Parse(provider.Id), provider.Attributes.Name);
 
                 //not sure if this is correct, wasn't documented, joining Track to Provider
                 foreach (var track in tracks.Included
                              .Where(t => t.Type == "tracks"))
                 {
-                    await _tidalRepository.UpsertTrackProviderAsync(int.Parse(track.Id), int.Parse(provider.Id));
+                    await _updateTidalRepository.UpsertTrackProviderAsync(int.Parse(track.Id), int.Parse(provider.Id));
                 }
             }
 
@@ -311,7 +315,7 @@ public class TidalService
                 
                 //not always is our own ArtistId added to the track_artist table
                 //for some reason Tidal does always give back our own ArtistId in the artists list
-                _tidalRepository.UpsertTrackArtistIdAsync(int.Parse(track.Id), artistId);
+                _updateTidalRepository.UpsertTrackArtistIdAsync(int.Parse(track.Id), artistId);
                 
                 string trackAvailability = string.Join(',', track?.Attributes?.Availability ?? []);
                 string trackMediaTags = string.Join(',', track?.Attributes?.MediaTags ?? []);
@@ -320,7 +324,7 @@ public class TidalService
                 {
                     foreach (var externalLink in track.Attributes.ExternalLinks)
                     {
-                        await _tidalRepository.UpsertTrackExternalLinkAsync(int.Parse(track.Id),
+                        await _updateTidalRepository.UpsertTrackExternalLinkAsync(int.Parse(track.Id),
                             externalLink.Href,
                             externalLink.Meta.Type);
                     }
@@ -330,14 +334,14 @@ public class TidalService
                 {
                     foreach (var imageLink in track.Attributes.ImageLinks)
                     {
-                        await _tidalRepository.UpsertTrackImageLinkAsync(int.Parse(track.Id),
+                        await _updateTidalRepository.UpsertTrackImageLinkAsync(int.Parse(track.Id),
                             imageLink.Href,
                             imageLink.Meta.Width,
                             imageLink.Meta.Height);
                     }
                 }
 
-                await _tidalRepository.UpsertTrackAsync(int.Parse(track.Id),
+                await _updateTidalRepository.UpsertTrackAsync(int.Parse(track.Id),
                     int.Parse(album.Id),
                     track.Attributes.Title ?? string.Empty,
                     track.Attributes.ISRC ?? string.Empty,
@@ -355,14 +359,14 @@ public class TidalService
             progress++;
         }
 
-        await _tidalRepository.SetArtistLastSyncTimeAsync(artistId);
+        await _updateTidalRepository.SetArtistLastSyncTimeAsync(artistId);
     }
 
     private async Task<TidalSearchResponse?> InsertArtistInfoAsync(int artistId, bool ignorePeventCheck = false)
     {
         if (!ignorePeventCheck)
         {
-            DateTime? lastSyncTime = await _tidalRepository.GetArtistLastSyncTimeAsync(artistId);
+            DateTime? lastSyncTime = await _updateTidalRepository.GetArtistLastSyncTimeAsync(artistId);
             if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < PreventUpdateWithinDays)
             {
                 return null;
@@ -378,18 +382,18 @@ public class TidalService
             return null;
         }
         
-        await _tidalRepository.UpsertArtistAsync(artistId,
+        await _updateTidalRepository.UpsertArtistAsync(artistId,
             artistInfo.Data.Attributes.Name,
             artistInfo.Data.Attributes.Popularity);
 
         foreach (var externalLink in artistInfo?.Data?.Attributes?.ExternalLinks ?? [])
         {
-            await _tidalRepository.UpsertArtistExternalLinkAsync(artistId, externalLink.Href, externalLink.Meta.Type);
+            await _updateTidalRepository.UpsertArtistExternalLinkAsync(artistId, externalLink.Href, externalLink.Meta.Type);
         }
 
         foreach (var imageLink in artistInfo?.Data?.Attributes?.ImageLinks ?? [])
         {
-            await _tidalRepository.UpsertArtistImageLinkAsync(artistId,
+            await _updateTidalRepository.UpsertArtistImageLinkAsync(artistId,
                 imageLink.Href,
                 imageLink.Meta.Width,
                 imageLink.Meta.Height);
