@@ -17,30 +17,27 @@ public class TidalAPIService
     private const string TracksUrl = "https://openapi.tidal.com/v2/tracks";
     private const string TidalApiPrefix = "https://openapi.tidal.com/v2";
 
-    private readonly string _clientId;
-    private readonly string _clientSecret;
+    public const int ApiDelay = 4500;
+    private List<TidalTokenClientSecret> _secretTokens;
     private readonly string _countryCode;
-
-    public TidalAuthenticationResponse? AuthenticationResponse { get; private set; }
     public ProxyManagerService ProxyManagerService { get; private set; }
 
-    public TidalAPIService(string clientId, 
-        string clientSecret, 
+    public TidalAPIService(
+        List<TidalTokenClientSecret> secretTokens,
         string countryCode, 
         string proxyFile, 
         string singleProxy, 
         string proxyMode)
     {
-        _clientId = clientId;
-        _clientSecret = clientSecret;
+        _secretTokens = secretTokens;
         _countryCode = countryCode;
         ProxyManagerService = new ProxyManagerService("https://tidal.com", proxyFile, singleProxy, proxyMode);
     }
     
-    public async Task<TidalAuthenticationResponse?> AuthenticateAsync()
+    public async Task<TidalAuthenticationResponse?> AuthenticateAsync(TidalTokenClientSecret secretToken)
     {
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
-        Debug.WriteLine($"Requesting Tidal Authenticate");
+        Debug.WriteLine($"Requesting Tidal Authenticate ClientId '{secretToken.ClientId}'");
 
         var token = await retryPolicy.ExecuteAsync(async () =>
         {
@@ -49,7 +46,7 @@ public class TidalAPIService
             using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
             
-            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_clientId}:{_clientSecret}"));
+            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{secretToken.ClientId}:{secretToken.ClientSecret}"));
             request.AddHeader("Authorization", $"Basic {credentials}");
             request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
             request.AddParameter("grant_type", "client_credentials");
@@ -59,13 +56,15 @@ public class TidalAPIService
 
         if (token != null)
         {
-            this.AuthenticationResponse = token;
+            secretToken.AuthenticationResponse = token;
+            secretToken.AuthenticationResponse.RequestedAt = DateTime.Now;
         }
         return token;
     }
     
     public async Task<TidalSearchResponse?> SearchResultsArtistsAsync(string searchTerm)
     {
+        TidalTokenClientSecret? secretToken = await GetNextTokenSecretAsync();
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal SearchResults '{searchTerm}'");
 
@@ -75,7 +74,7 @@ public class TidalAPIService
             await ProxyManagerService.SetProxySettingsAsync(options);
             using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
-            request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
+            request.AddHeader("Authorization", $"Bearer {secretToken.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
             request.AddHeader("Content-Type", "application/vnd.api+json");
             request.AddParameter("countryCode", _countryCode);
@@ -87,6 +86,7 @@ public class TidalAPIService
     
     public async Task<TidalSearchResponse?> GetArtistInfoByIdAsync(int artistId)
     {
+        TidalTokenClientSecret? secretToken = await GetNextTokenSecretAsync();
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal GetArtistById '{artistId}'");
 
@@ -96,7 +96,7 @@ public class TidalAPIService
             await ProxyManagerService.SetProxySettingsAsync(options);
             using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
-            request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
+            request.AddHeader("Authorization", $"Bearer {secretToken.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
             request.AddHeader("Content-Type", "application/vnd.api+json");
             request.AddParameter("countryCode", _countryCode);
@@ -108,6 +108,7 @@ public class TidalAPIService
     
     public async Task<TidalSearchArtistNextResponse?> GetArtistNextInfoByIdAsync(int artistId, string next)
     {
+        TidalTokenClientSecret? secretToken = await GetNextTokenSecretAsync();
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal GetArtistNextInfoById '{artistId}'");
 
@@ -124,7 +125,7 @@ public class TidalAPIService
             await ProxyManagerService.SetProxySettingsAsync(options);
             using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
-            request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
+            request.AddHeader("Authorization", $"Bearer {secretToken.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
             request.AddHeader("Content-Type", "application/vnd.api+json");
             
@@ -134,6 +135,7 @@ public class TidalAPIService
     
     public async Task<TidalSearchResponse?> GetTracksByAlbumIdAsync(int albumId)
     {
+        TidalTokenClientSecret? secretToken = await GetNextTokenSecretAsync();
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal GetTracksByAlbumId '{albumId}'");
 
@@ -143,7 +145,7 @@ public class TidalAPIService
             await ProxyManagerService.SetProxySettingsAsync(options);
             using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
-            request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
+            request.AddHeader("Authorization", $"Bearer {secretToken.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
             request.AddHeader("Content-Type", "application/vnd.api+json");
             request.AddParameter("countryCode", _countryCode);
@@ -155,6 +157,7 @@ public class TidalAPIService
     
     public async Task<TidalSearchTracksNextResponse?> GetTracksNextByAlbumIdAsync(int albumId, string next)
     {
+        TidalTokenClientSecret? secretToken = await GetNextTokenSecretAsync();
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal GetTracksNextByAlbumId '{albumId}'");
         
@@ -171,7 +174,7 @@ public class TidalAPIService
             await ProxyManagerService.SetProxySettingsAsync(options);
             using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
-            request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
+            request.AddHeader("Authorization", $"Bearer {secretToken.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
             request.AddHeader("Content-Type", "application/vnd.api+json");
 
@@ -181,6 +184,7 @@ public class TidalAPIService
     
     public async Task<TidalTrackArtistResponse?> GetTrackArtistsByTrackIdAsync(int[] trackIds)
     {
+        TidalTokenClientSecret? secretToken = await GetNextTokenSecretAsync();
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Tidal GetTrackArtistsByTrackId for {trackIds.Length} tracks");
 
@@ -190,7 +194,7 @@ public class TidalAPIService
             await ProxyManagerService.SetProxySettingsAsync(options);
             using RestClient client = new RestClient(options);
             RestRequest request = new RestRequest();
-            request.AddHeader("Authorization", $"Bearer {this.AuthenticationResponse.AccessToken}");
+            request.AddHeader("Authorization", $"Bearer {secretToken.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
             request.AddHeader("Content-Type", "application/vnd.api+json");
             request.AddParameter("filter[id]", string.Join(',', trackIds));
@@ -199,6 +203,44 @@ public class TidalAPIService
             
             return await client.GetAsync<TidalTrackArtistResponse>(request);
         });
+    }
+
+    private async Task<TidalTokenClientSecret?> GetNextTokenSecretAsync()
+    {
+        //get secret token that was used >ApiDelay time
+        TidalTokenClientSecret? nextSecretToken = _secretTokens
+            .Where(token => token.AuthenticationResponse != null)
+            .FirstOrDefault(token => token.LastUsedTime.ElapsedMilliseconds > ApiDelay);
+
+        //authenticate another secret token
+        if (nextSecretToken == null)
+        {
+            nextSecretToken = _secretTokens.FirstOrDefault(token => token.AuthenticationResponse == null);
+            if (nextSecretToken != null)
+            {
+                await AuthenticateAsync(nextSecretToken);
+                return nextSecretToken;
+            }
+        }
+        
+        //last resort, delay
+        if (nextSecretToken == null)
+        {
+            nextSecretToken = _secretTokens.FirstOrDefault(token => token.AuthenticationResponse != null);
+            Thread.Sleep(ApiDelay);
+        }
+        
+        if (nextSecretToken != null &&
+            string.IsNullOrWhiteSpace(nextSecretToken.AuthenticationResponse?.AccessToken) ||
+            (nextSecretToken?.AuthenticationResponse?.ExpiresIn > 0 &&
+             DateTime.Now > nextSecretToken.AuthenticationResponse?.ExpiresAt))
+        {
+            await AuthenticateAsync(nextSecretToken);
+        }
+
+        nextSecretToken?.LastUsedTime?.Restart();
+
+        return nextSecretToken;
     }
     
     private AsyncRetryPolicy GetRetryPolicy()

@@ -1,5 +1,6 @@
 using ListRandomizer;
 using MiniMediaScanner.Callbacks.Status;
+using MiniMediaScanner.Models.Tidal;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 using Spectre.Console;
@@ -12,8 +13,7 @@ public class UpdateTidalCommandHandler
     private readonly TidalService _tidalService;
 
     public UpdateTidalCommandHandler(string connectionString, 
-        string clientId, 
-        string clientSecret, 
+        List<TidalTokenClientSecret> secretTokens, 
         string countryCode, 
         string proxyFile, 
         string singleProxy, 
@@ -21,7 +21,7 @@ public class UpdateTidalCommandHandler
         int preventUpdateWithinDays)
     {
         _tidalRepository = new TidalRepository(connectionString);
-        _tidalService = new TidalService(connectionString, clientId, clientSecret, countryCode, proxyFile, singleProxy, proxyMode, preventUpdateWithinDays);
+        _tidalService = new TidalService(connectionString, secretTokens, countryCode, proxyFile, singleProxy, proxyMode, preventUpdateWithinDays);
     }
     
     public async Task UpdateTidalArtistsByNameAsync(string artistName)

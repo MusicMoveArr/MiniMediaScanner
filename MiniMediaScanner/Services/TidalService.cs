@@ -15,8 +15,7 @@ public class TidalService
     private readonly UpdateTidalRepository _updateTidalRepository;
 
     public TidalService(string connectionString, 
-        string clientId, 
-        string clientSecret, 
+        List<TidalTokenClientSecret> secretTokens,
         string countryCode, 
         string proxyFile, 
         string singleProxy, 
@@ -25,23 +24,12 @@ public class TidalService
     {
         this.PreventUpdateWithinDays = preventUpdateWithinDays;
         _updateTidalRepository = new UpdateTidalRepository(connectionString);
-        _tidalAPIService = new TidalAPICacheLayerService(clientId, clientSecret, countryCode, proxyFile, singleProxy, proxyMode);
-    }
-
-    private async Task RefreshTokenAsync()
-    {
-        if (string.IsNullOrWhiteSpace(_tidalAPIService.AuthenticationResponse?.AccessToken) ||
-            (_tidalAPIService.AuthenticationResponse?.ExpiresIn > 0 &&
-             DateTime.Now > _tidalAPIService.AuthenticationResponse?.ExpiresAt))
-        {
-            await _tidalAPIService.AuthenticateAsync();
-        }
+        _tidalAPIService = new TidalAPICacheLayerService(secretTokens, countryCode, proxyFile, singleProxy, proxyMode);
     }
     
     public async Task UpdateArtistByNameAsync(string artistName,
         Action<UpdateTidalCallback>? callback = null)
     {
-        await RefreshTokenAsync();
         var searchResult = await _tidalAPIService.SearchResultsArtistsAsync(artistName);
 
         if (searchResult?.Included?.Any() == true)
@@ -72,7 +60,6 @@ public class TidalService
     public async Task UpdateArtistByIdAsync(int artistId,
         Action<UpdateTidalCallback>? callback = null)
     {
-        await RefreshTokenAsync();
         await _updateTidalRepository.SetConnectionAsync();
 
         try

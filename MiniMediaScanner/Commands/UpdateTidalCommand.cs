@@ -1,6 +1,7 @@
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
+using MiniMediaScanner.Models.Tidal;
 
 namespace MiniMediaScanner.Commands;
 
@@ -24,13 +25,13 @@ public class UpdateTidalCommand : ICommand
         Description = "Tidal Client Id, to use for the Tidal API.", 
         IsRequired = true,
         EnvironmentVariable = "UPDATETIDAL_TIDAL_CLIENT_ID")]
-    public required string TidalClientId { get; init; }
+    public required List<string> TidalClientIds { get; init; }
     
     [CommandOption("tidal-secret-id", 's', 
         Description = "Tidal Secret Id, to use for the Tidal API.", 
         IsRequired = true,
         EnvironmentVariable = "UPDATETIDAL_TIDAL_SECRET_ID")]
-    public required string TidalSecretId { get; init; }
+    public required List<string> TidalSecretIds { get; init; }
 
     [CommandOption("country-code", 'G',
         Description = "Tidal's CountryCode (e.g. US, FR, NL, DE etc).",
@@ -64,10 +65,21 @@ public class UpdateTidalCommand : ICommand
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
+        if (TidalClientIds.Count != TidalSecretIds.Count)
+        {
+            Console.WriteLine("Tidal Id/Secret amount must match");
+            return;
+        }
+
+        List<TidalTokenClientSecret> secretTokens = new List<TidalTokenClientSecret>();
+        for (int i = 0; i < TidalClientIds.Count; i++)
+        {
+            secretTokens.Add(new TidalTokenClientSecret(TidalClientIds[i],  TidalSecretIds[i]));
+        }
+        
         var handler = new UpdateTidalCommandHandler(
             ConnectionString, 
-            TidalClientId, 
-            TidalSecretId, 
+            secretTokens, 
             TidalCountryCode, 
             ProxyFile, 
             Proxy, 
