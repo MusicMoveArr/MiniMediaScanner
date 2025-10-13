@@ -62,6 +62,12 @@ public class UpdateTidalCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "UPDATETIDAL_PREVENT_UPDATE_WITHIN_DAYS")]
     public int PreventUpdateWithinDays { get; set; } = 7;
+
+    [CommandOption("artist-file",
+        Description = "Read from a file line by line to import the artist names",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATETIDAL_ARTIST_FILE")]
+    public string ArtistFilePath { get; set; }
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -86,6 +92,15 @@ public class UpdateTidalCommand : ICommand
             ProxyMode, 
             PreventUpdateWithinDays);
 
+        if (!string.IsNullOrWhiteSpace(ArtistFilePath) && File.Exists(ArtistFilePath))
+        {
+            string[] artistNames = File.ReadAllLines(ArtistFilePath);
+            foreach (var artistName in artistNames)
+            {
+                await handler.UpdateTidalArtistsByNameAsync(artistName);
+            }
+        }
+        
         if (!string.IsNullOrWhiteSpace(Artist))
         {
             await handler.UpdateTidalArtistsByNameAsync(Artist);
