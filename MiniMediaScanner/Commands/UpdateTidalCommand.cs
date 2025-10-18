@@ -80,7 +80,7 @@ public class UpdateTidalCommand : ICommand
         List<TidalTokenClientSecret> secretTokens = new List<TidalTokenClientSecret>();
         for (int i = 0; i < TidalClientIds.Count; i++)
         {
-            secretTokens.Add(new TidalTokenClientSecret(TidalClientIds[i],  TidalSecretIds[i]));
+            secretTokens.Add(new TidalTokenClientSecret(TidalClientIds[i], TidalSecretIds[i]));
         }
         
         var handler = new UpdateTidalCommandHandler(
@@ -95,20 +95,24 @@ public class UpdateTidalCommand : ICommand
         if (!string.IsNullOrWhiteSpace(ArtistFilePath) && File.Exists(ArtistFilePath))
         {
             string[] artistNames = File.ReadAllLines(ArtistFilePath);
+            int process = 0;
             foreach (var artistName in artistNames)
             {
+                Console.WriteLine($"Processing from reading the file: '{artistName}', {process} / {artistNames.Length}");
                 await handler.UpdateTidalArtistsByNameAsync(artistName);
+                process++;
             }
-        }
-        
-        if (!string.IsNullOrWhiteSpace(Artist))
-        {
-            await handler.UpdateTidalArtistsByNameAsync(Artist);
         }
         else
         {
-            await handler.UpdateAllTidalArtistsAsync();
+            if (!string.IsNullOrWhiteSpace(Artist))
+            {
+                await handler.UpdateTidalArtistsByNameAsync(Artist);
+            }
+            else
+            {
+                await handler.UpdateAllTidalArtistsAsync();
+            }
         }
-        
     }
 }

@@ -8,6 +8,7 @@ public class TidalTokenClientSecret
     public string ClientSecret { get; private set; }
     public Stopwatch LastUsedTime { get; private set; }
     public TidalAuthenticationResponse? AuthenticationResponse { get; set; }
+    public int UseCount { get; set; }
 
     public TidalTokenClientSecret(string clientId, string clientSecret)
     {

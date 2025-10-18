@@ -219,6 +219,11 @@ public class TidalAPIService
             if (nextSecretToken != null)
             {
                 await AuthenticateAsync(nextSecretToken);
+                
+                if (nextSecretToken != null)
+                {
+                    nextSecretToken.UseCount++;
+                }
                 return nextSecretToken;
             }
         }
@@ -239,6 +244,10 @@ public class TidalAPIService
         }
 
         nextSecretToken?.LastUsedTime?.Restart();
+        if (nextSecretToken != null)
+        {
+            nextSecretToken.UseCount++;
+        }
 
         return nextSecretToken;
     }

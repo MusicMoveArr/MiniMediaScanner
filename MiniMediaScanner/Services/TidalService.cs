@@ -49,6 +49,11 @@ public class TidalService
                 {
                     await UpdateArtistByIdAsync(int.Parse(artist.Id), callback);
                 }
+                catch (Npgsql.NpgsqlException e)
+                {
+                    Console.WriteLine($"{e.Message}, {e.StackTrace}");
+                    throw;
+                }
                 catch (Exception e)
                 {
                     Console.WriteLine($"{e.Message}, {e.StackTrace}");
@@ -350,6 +355,12 @@ public class TidalService
 
             await _updateTidalRepository.SetArtistLastSyncTimeAsync(artistId);
             await _updateTidalRepository.CommitAsync();
+        }
+        catch (Npgsql.NpgsqlException e)
+        {
+            await _updateTidalRepository.RollbackAsync();
+            Console.WriteLine($"{e.Message}, {e.StackTrace}");
+            throw;
         }
         catch (Exception e)
         {
