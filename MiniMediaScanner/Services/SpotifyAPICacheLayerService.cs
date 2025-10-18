@@ -9,22 +9,17 @@ namespace MiniMediaScanner.Services;
 public class SpotifyAPICacheLayerService
 {
     private int _apiDelay;
-    private readonly string _spotifyClientId;
-    private readonly string _spotifySecretId;
-    private static SpotifyAuthenticationResponse _spotifyAuthentication;
-    private Stopwatch _apiStopwatch = Stopwatch.StartNew();
+    private readonly List<string> _spotifyClientIds;
+    private readonly List<string> _spotifySecretIds;
+    private static List<SpotifyTokenClientSecret> _secretTokens;
     private readonly MemoryCache _cache;
     
-    public SpotifyClient  SpotifyClient { get; private set; }
-
     public SpotifyAPICacheLayerService(
         int apiDelay,
-        string spotifyClientId, 
-        string spotifySecretId)
+        List<SpotifyTokenClientSecret> secretTokens)
     {
         _apiDelay = apiDelay * 1000;
-        _spotifyClientId = spotifyClientId;
-        _spotifySecretId = spotifySecretId;
+        _secretTokens =  secretTokens;
         
         var options = new MemoryCacheOptions();
         _cache = new MemoryCache(options);
@@ -32,13 +27,16 @@ public class SpotifyAPICacheLayerService
 
     public async Task<FullArtist?> GetArtistAsync(string artistId)
     {
+        
         string cacheKey = $"GetArtist_{artistId}";
         if (!_cache.TryGetValue(cacheKey, out FullArtist? result))
         {
-            ApiDelaySleep();
-            result = await SpotifyClient.Artists.Get(artistId);
+            result = await TrySpotifyRequestAsync<FullArtist>(async secretToken => 
+                await secretToken?.SpotifyClient?.Artists?.Get(artistId));
+            
             AddToCache(cacheKey, result);
         }
+        
         return result;
     }
 
@@ -47,35 +45,123 @@ public class SpotifyAPICacheLayerService
         string cacheKey = $"GetAlbum_{albumId}";
         if (!_cache.TryGetValue(cacheKey, out FullAlbum? result))
         {
-            ApiDelaySleep();
-            result = await SpotifyClient.Albums.Get(albumId);
+            result = await TrySpotifyRequestAsync<FullAlbum>(async secretToken => 
+                await secretToken?.SpotifyClient?.Albums?.Get(albumId));
+
             AddToCache(cacheKey, result);
         }
         return result;
     }
-    
-    private void ApiDelaySleep()
+
+    public async Task<T> TrySpotifyRequestAsync<T>(Func<SpotifyTokenClientSecret, Task<T>> action)
     {
-        if (_apiStopwatch.ElapsedMilliseconds < _apiDelay)
+        T result =  default(T);
+        while (true)
         {
-            Thread.Sleep(_apiDelay);
+            SpotifyTokenClientSecret? secretToken = await GetNextTokenSecretAsync();
+
+            if (secretToken == null)
+            {
+                break;
+            }
+                
+            try
+            {
+                result = await action(secretToken);
+                break;
+            }
+            catch (APITooManyRequestsException ex)
+            {
+                secretToken.TooManyRequestsTimeout = DateTime.Now.Add(ex.RetryAfter.Add(TimeSpan.FromSeconds(_apiDelay)));
+            }
         }
-        _apiStopwatch.Restart();
+
+        return result;
     }
 
-    public async Task AuthenticateAsync()
+    public async Task AuthenticateAsync(SpotifyTokenClientSecret secretToken)
     {
         bool newTokenApplied = false;
-        if (string.IsNullOrWhiteSpace(_spotifyAuthentication?.AccessToken) ||
-            (_spotifyAuthentication.ExpiresIn > 0 && DateTime.Now > _spotifyAuthentication.ExpiresAt))
+        if (string.IsNullOrWhiteSpace(secretToken.AuthenticationResponse?.AccessToken) ||
+            (secretToken.AuthenticationResponse?.ExpiresIn > 0 && DateTime.Now > secretToken?.AuthenticationResponse?.ExpiresAt))
         {
-            _spotifyAuthentication = await GetTokenAsync();
+            SpotifyAuthenticationResponse authResponse = await GetTokenAsync(secretToken);
+            secretToken.AuthenticationResponse = authResponse;
+            secretToken.SpotifyClient = new SpotifyClient(authResponse.AccessToken);
+        }
+    }
+    
+    private async Task<SpotifyAuthenticationResponse> GetTokenAsync(SpotifyTokenClientSecret secretToken)
+    {
+        using var client = new RestClient("https://accounts.spotify.com/api/token");
+        var request = new RestRequest();
+        request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
+        request.AddParameter("grant_type", "client_credentials");
+        request.AddParameter("client_id", secretToken.ClientId);
+        request.AddParameter("client_secret", secretToken.SecretId);
+        
+        var response = await client.PostAsync<SpotifyAuthenticationResponse>(request);
+        if (response != null)
+        {
+            response.RequestedAt = DateTime.Now;
+        }
+        return response;
+    }
+    
+    public async Task<SpotifyTokenClientSecret?> GetNextTokenSecretAsync()
+    {
+        //get secret token that was used >ApiDelay time
+        SpotifyTokenClientSecret? nextSecretToken = _secretTokens
+            .Where(token => token.AuthenticationResponse != null)
+            .Where(token => !token.TooManyRequestsTimeout.HasValue || DateTime.Now > token.TooManyRequestsTimeout)
+            .FirstOrDefault(token => token.LastUsedTime.ElapsedMilliseconds > _apiDelay);
+
+        //authenticate another secret token
+        if (nextSecretToken == null)
+        {
+            nextSecretToken = _secretTokens.FirstOrDefault(token => token.AuthenticationResponse == null);
+            if (nextSecretToken != null)
+            {
+                await AuthenticateAsync(nextSecretToken);
+                
+                if (nextSecretToken != null)
+                {
+                    nextSecretToken.UseCount++;
+                }
+                return nextSecretToken;
+            }
+        }
+        
+        //last resort, delay
+        if (nextSecretToken == null)
+        {
+            nextSecretToken = _secretTokens
+                .Where(token => !token.TooManyRequestsTimeout.HasValue || DateTime.Now > token.TooManyRequestsTimeout)
+                .OrderBy(token => token.TooManyRequestsTimeout)
+                .FirstOrDefault(token => token.AuthenticationResponse != null);
+
+            if (nextSecretToken != null && nextSecretToken.TooManyRequestsTimeout.HasValue)
+            {
+                TimeSpan delay =  nextSecretToken.TooManyRequestsTimeout.Value - DateTime.Now;
+                Thread.Sleep(delay);
+            }
+        }
+        
+        if (nextSecretToken != null &&
+            string.IsNullOrWhiteSpace(nextSecretToken.AuthenticationResponse?.AccessToken) ||
+            (nextSecretToken?.AuthenticationResponse?.ExpiresIn > 0 &&
+             DateTime.Now > nextSecretToken.AuthenticationResponse?.ExpiresAt))
+        {
+            await AuthenticateAsync(nextSecretToken);
         }
 
-        if (SpotifyClient == null || newTokenApplied)
+        nextSecretToken?.LastUsedTime?.Restart();
+        if (nextSecretToken != null)
         {
-            SpotifyClient = new SpotifyClient(_spotifyAuthentication?.AccessToken);
+            nextSecretToken.UseCount++;
         }
+
+        return nextSecretToken;
     }
     
     private void AddToCache(string key, object? value)
@@ -88,19 +174,5 @@ public class SpotifyAPICacheLayerService
             };
             _cache.Set(key, value, options);
         }
-    }
-    
-    private async Task<SpotifyAuthenticationResponse> GetTokenAsync()
-    {
-        using var client = new RestClient("https://accounts.spotify.com/api/token");
-        var request = new RestRequest();
-        request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
-        request.AddParameter("grant_type", "client_credentials");
-        request.AddParameter("client_id", _spotifyClientId);
-        request.AddParameter("client_secret", _spotifySecretId);
-        
-        var response = await client.PostAsync<SpotifyAuthenticationResponse>(request);
-        response.RequestedAt = DateTime.Now;
-        return response;
     }
 }

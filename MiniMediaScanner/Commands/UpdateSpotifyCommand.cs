@@ -1,6 +1,7 @@
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
+using MiniMediaScanner.Models.Spotify;
 
 namespace MiniMediaScanner.Commands;
 
@@ -24,13 +25,13 @@ public class UpdateSpotifyCommand : ICommand
         Description = "Spotify Client Id, to use for the Spotify API.", 
         IsRequired = true,
         EnvironmentVariable = "UPDATESPOTIFY_SPOTIFY_CLIENT_ID")]
-    public required string SpotifyClientId { get; init; }
+    public required List<string> SpotifyClientIds { get; init; }
     
     [CommandOption("spotify-secret-id", 's', 
         Description = "Spotify Secret Id, to use for the Spotify API.", 
         IsRequired = true,
         EnvironmentVariable = "UPDATESPOTIFY_SPOTIFY_SECRET_ID")]
-    public required string SpotifySecretId { get; init; }
+    public required List<string> SpotifySecretIds { get; init; }
 
     [CommandOption("api-delay", 'D', 
         Description = "Api Delay in seconds after each API call to prevent rate limiting.", 
@@ -44,17 +45,49 @@ public class UpdateSpotifyCommand : ICommand
         EnvironmentVariable = "UPDATESPOTIFY_PREVENT_UPDATE_WITHIN_DAYS")]
     public int PreventUpdateWithinDays { get; set; } = 7;
     
+    [CommandOption("artist-file",
+        Description = "Read from a file line by line to import the artist names",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATESPOTIFY_ARTIST_FILE")]
+    public string ArtistFilePath { get; set; }
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new UpdateSpotifyCommandHandler(ConnectionString, SpotifyClientId, SpotifySecretId, ApiDelay, PreventUpdateWithinDays);
-
-        if (!string.IsNullOrWhiteSpace(Artist))
+        if (SpotifyClientIds.Count != SpotifySecretIds.Count)
         {
-            await handler.UpdateSpotifyArtistsByNameAsync(Artist);
+            Console.WriteLine("Spotify Id/Secret amount must match");
+            return;
+        }
+
+        List<SpotifyTokenClientSecret> secretTokens = new List<SpotifyTokenClientSecret>();
+        for (int i = 0; i < SpotifyClientIds.Count; i++)
+        {
+            secretTokens.Add(new SpotifyTokenClientSecret(SpotifyClientIds[i], SpotifySecretIds[i]));
+        }
+        
+        var handler = new UpdateSpotifyCommandHandler(ConnectionString, secretTokens, ApiDelay, PreventUpdateWithinDays);
+
+        if (!string.IsNullOrWhiteSpace(ArtistFilePath) && File.Exists(ArtistFilePath))
+        {
+            string[] artistNames = File.ReadAllLines(ArtistFilePath);
+            int process = 0;
+            foreach (var artistName in artistNames)
+            {
+                Console.WriteLine($"Processing from reading the file: '{artistName}', {process} / {artistNames.Length}");
+                await handler.UpdateSpotifyArtistsByNameAsync(artistName);
+                process++;
+            }
         }
         else
         {
-            await handler.UpdateAllSpotifyArtistsAsync();
+            if (!string.IsNullOrWhiteSpace(Artist))
+            {
+                await handler.UpdateSpotifyArtistsByNameAsync(Artist);
+            }
+            else
+            {
+                await handler.UpdateAllSpotifyArtistsAsync();
+            }
         }
     }
 }

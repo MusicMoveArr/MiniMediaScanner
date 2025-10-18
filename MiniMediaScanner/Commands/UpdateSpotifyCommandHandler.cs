@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using MiniMediaScanner.Callbacks.Status;
+using MiniMediaScanner.Models.Spotify;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
 using Spectre.Console;
@@ -12,12 +13,11 @@ public class UpdateSpotifyCommandHandler
     private readonly SpotifyService _spotifyService;
     private readonly ArtistRepository _artistRepository;
     public UpdateSpotifyCommandHandler(string connectionString, 
-        string spotifyClientId,
-        string spotifySecretId,
+        List<SpotifyTokenClientSecret> secretTokens,
         int apiDelay,
         int preventUpdateWithinDays)
     {
-        _spotifyService = new SpotifyService(spotifyClientId, spotifySecretId, connectionString, apiDelay, preventUpdateWithinDays);
+        _spotifyService = new SpotifyService(secretTokens, connectionString, apiDelay, preventUpdateWithinDays);
         _artistRepository = new ArtistRepository(connectionString);
     }
     
@@ -50,8 +50,7 @@ public class UpdateSpotifyCommandHandler
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            throw;  
+            Console.WriteLine(e.Message + "\r\n" + e.StackTrace);
         }
     }
     

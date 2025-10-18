@@ -14,8 +14,7 @@ public class SpotifyService
     private readonly UpdateSpotifyRepository _updateSpotifyRepository;
     private readonly SpotifyAPICacheLayerService _cacheLayerService;
 
-    public SpotifyService(string spotifyClientId, 
-        string spotifySecretId, 
+    public SpotifyService(List<SpotifyTokenClientSecret> secretTokens, 
         string connectionString, 
         int apiDelay,
         int preventUpdateWithinDays)
@@ -23,19 +22,21 @@ public class SpotifyService
         this.PreventUpdateWithinDays = preventUpdateWithinDays;
         _connectionString = connectionString;
         _updateSpotifyRepository = new UpdateSpotifyRepository(_connectionString);
-        _cacheLayerService = new SpotifyAPICacheLayerService(apiDelay, spotifyClientId, spotifySecretId);
+        _cacheLayerService = new SpotifyAPICacheLayerService(apiDelay, secretTokens);
     }
     
     public async Task UpdateArtistByNameAsync(string artistName, 
             Action<UpdateSpotifyCallback>? callback = null)
     {
-        await _cacheLayerService.AuthenticateAsync();
-        
         var search = new SearchRequest(SearchRequest.Types.Artist, artistName);
-        var searchResult = await _cacheLayerService.SpotifyClient.Search.Item(search);
+
+        SearchResponse? searchResult = await _cacheLayerService
+            .TrySpotifyRequestAsync<SearchResponse?>(async secretToken => 
+                await secretToken?.SpotifyClient?.Search?.Item(search));
+            
         
-        foreach(var artist in searchResult.Artists.Items
-                   /* .Where(artist => string.Equals(artist.Name, artistName, StringComparison.OrdinalIgnoreCase))*/)
+        foreach(var artist in searchResult?.Artists?.Items
+                   .Where(artist => string.Equals(artist.Name, artistName, StringComparison.OrdinalIgnoreCase)) ?? [])
         {
             await UpdateArtistByIdAsync(artist.Id, artist, callback);
         }
@@ -45,7 +46,6 @@ public class SpotifyService
         FullArtist? artist = null, 
         Action<UpdateSpotifyCallback>? callback = null)
     {
-        await _cacheLayerService.AuthenticateAsync();
         await _updateSpotifyRepository.SetConnectionAsync();
 
         try
@@ -66,9 +66,11 @@ public class SpotifyService
             await _updateSpotifyRepository.UpsertArtistAsync(artist);
             await _updateSpotifyRepository.UpsertArtistImageAsync(artist);
             
+            SpotifyTokenClientSecret? secretToken = await _cacheLayerService.GetNextTokenSecretAsync();
             List<SimpleAlbum> simpleAlbums = new List<SimpleAlbum>();
-            await foreach (var simpleAlbum in _cacheLayerService.SpotifyClient.Paginate(
-                               await _cacheLayerService.SpotifyClient.Artists.GetAlbums(artistId)))
+            
+            await foreach (var simpleAlbum in secretToken.SpotifyClient.Paginate(
+                               await secretToken.SpotifyClient.Artists.GetAlbums(artistId)))
             {
                 simpleAlbums.Add(simpleAlbum);
             }
@@ -90,14 +92,22 @@ public class SpotifyService
                 await _updateSpotifyRepository.UpsertAlbumArtistAsync(album);
                 await _updateSpotifyRepository.UpsertAlbumImageAsync(album);
                 await _updateSpotifyRepository.UpsertAlbumExternalIdAsync(album);
-                
-                TracksRequest req = new TracksRequest(album.Tracks.Items.Take(50).Select(track => track.Id).ToList());
-                var fullTracks = await _cacheLayerService.SpotifyClient.Tracks.GetSeveral(req);
 
-                if (await _updateSpotifyRepository.GetAlbumTrackCountAsync(simpleAlbum.Id) == fullTracks.Tracks.Count)
+                List<string> trackIds = album.Tracks.Items
+                    .Take(50)
+                    .Select(track => track.Id)
+                    .ToList();
+
+                int dbAlbumTrackCount = await _updateSpotifyRepository.GetAlbumTrackCountAsync(simpleAlbum.Id);
+                if (dbAlbumTrackCount == trackIds.Count)
                 {
                     continue;
                 }
+                
+                TracksRequest req = new TracksRequest(trackIds);
+                TracksResponse fullTracks = await _cacheLayerService
+                    .TrySpotifyRequestAsync<TracksResponse>(async secretToken => 
+                        await secretToken.SpotifyClient.Tracks.GetSeveral(req));
                 
                 foreach (var track in fullTracks.Tracks)
                 {
