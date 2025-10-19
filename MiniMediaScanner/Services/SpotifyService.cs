@@ -1,3 +1,4 @@
+using FuzzySharp;
 using MiniMediaScanner.Callbacks;
 using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Models.Spotify;
@@ -34,9 +35,8 @@ public class SpotifyService
             .TrySpotifyRequestAsync<SearchResponse?>(async secretToken => 
                 await secretToken?.SpotifyClient?.Search?.Item(search));
             
-        
         foreach(var artist in searchResult?.Artists?.Items
-                   .Where(artist => string.Equals(artist.Name, artistName, StringComparison.OrdinalIgnoreCase)) ?? [])
+                    ?.Where(artist => Fuzz.Ratio(artistName, artist.Name) > 80) ?? [])
         {
             await UpdateArtistByIdAsync(artist.Id, artist, callback);
         }
@@ -66,14 +66,17 @@ public class SpotifyService
             await _updateSpotifyRepository.UpsertArtistAsync(artist);
             await _updateSpotifyRepository.UpsertArtistImageAsync(artist);
             
-            SpotifyTokenClientSecret? secretToken = await _cacheLayerService.GetNextTokenSecretAsync();
-            List<SimpleAlbum> simpleAlbums = new List<SimpleAlbum>();
-            
-            await foreach (var simpleAlbum in secretToken.SpotifyClient.Paginate(
-                               await secretToken.SpotifyClient.Artists.GetAlbums(artistId)))
-            {
-                simpleAlbums.Add(simpleAlbum);
-            }
+            List<SimpleAlbum> simpleAlbums = await _cacheLayerService
+                .TrySpotifyRequestAsync<List<SimpleAlbum>>(async secretToken =>
+                {
+                    List<SimpleAlbum> tempAlbums = new List<SimpleAlbum>();
+                    await foreach (var simpleAlbum in secretToken.SpotifyClient.Paginate(
+                                       await secretToken.SpotifyClient.Artists.GetAlbums(artistId)))
+                    {
+                        tempAlbums.Add(simpleAlbum);
+                    }
+                    return tempAlbums;
+                });
 
             int progress = 1;
 

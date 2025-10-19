@@ -143,6 +143,7 @@ public class SpotifyAPICacheLayerService
             if (nextSecretToken != null && nextSecretToken.TooManyRequestsTimeout.HasValue)
             {
                 TimeSpan delay =  nextSecretToken.TooManyRequestsTimeout.Value - DateTime.Now;
+                Console.WriteLine($"Too many requests to synced artist, waiting {delay.TotalHours}hour(s), {delay.Minutes}minute(s)...");
                 Thread.Sleep(delay);
             }
         }
