@@ -66,7 +66,7 @@ public class SpotifyService
             await _updateSpotifyRepository.UpsertArtistAsync(artist);
             await _updateSpotifyRepository.UpsertArtistImageAsync(artist);
             
-            List<SimpleAlbum> simpleAlbums = await _cacheLayerService
+            List<SimpleAlbum>? simpleAlbums = await _cacheLayerService
                 .TrySpotifyRequestAsync<List<SimpleAlbum>>(async secretToken =>
                 {
                     List<SimpleAlbum> tempAlbums = new List<SimpleAlbum>();
@@ -80,7 +80,7 @@ public class SpotifyService
 
             int progress = 1;
 
-            foreach(var simpleAlbum in simpleAlbums)
+            foreach(var simpleAlbum in simpleAlbums ?? [])
             {
                 callback?.Invoke(new UpdateSpotifyCallback(artist, simpleAlbum, simpleAlbums, UpdateSpotifyStatus.Updating, progress++));
                 
@@ -90,6 +90,11 @@ public class SpotifyService
                 }
                 
                 var album = await _cacheLayerService.GetAlbumAsync(simpleAlbum.Id);
+
+                if (album == null)
+                {
+                    break;
+                }
                 
                 await _updateSpotifyRepository.UpsertAlbumAsync(album, simpleAlbum?.AlbumGroup ?? string.Empty, artistId);
                 await _updateSpotifyRepository.UpsertAlbumArtistAsync(album);
@@ -134,7 +139,7 @@ public class SpotifyService
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
+            Console.WriteLine(e.Message + "\r\n" + e.StackTrace);
             await _updateSpotifyRepository.RollbackAsync();
         }
     }

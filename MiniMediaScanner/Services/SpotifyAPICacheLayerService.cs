@@ -53,7 +53,7 @@ public class SpotifyAPICacheLayerService
         return result;
     }
 
-    public async Task<T> TrySpotifyRequestAsync<T>(Func<SpotifyTokenClientSecret, Task<T>> action)
+    public async Task<T?> TrySpotifyRequestAsync<T>(Func<SpotifyTokenClientSecret, Task<T>> action)
     {
         T result =  default(T);
         while (true)
@@ -64,7 +64,7 @@ public class SpotifyAPICacheLayerService
             {
                 break;
             }
-                
+
             try
             {
                 result = await action(secretToken);
@@ -73,6 +73,11 @@ public class SpotifyAPICacheLayerService
             catch (APITooManyRequestsException ex)
             {
                 secretToken.TooManyRequestsTimeout = DateTime.Now.Add(ex.RetryAfter.Add(TimeSpan.FromSeconds(_apiDelay)));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"error from TrySpotifyRequestAsync, {ex.Message}, {ex.StackTrace}");
+                throw;
             }
         }
 
@@ -119,7 +124,10 @@ public class SpotifyAPICacheLayerService
         //authenticate another secret token
         if (nextSecretToken == null)
         {
-            nextSecretToken = _secretTokens.FirstOrDefault(token => token.AuthenticationResponse == null);
+            nextSecretToken = _secretTokens
+                .Where(token => !token.TooManyRequestsTimeout.HasValue || DateTime.Now > token.TooManyRequestsTimeout)
+                .FirstOrDefault(token => token.AuthenticationResponse == null);
+            
             if (nextSecretToken != null)
             {
                 await AuthenticateAsync(nextSecretToken);
@@ -136,15 +144,22 @@ public class SpotifyAPICacheLayerService
         if (nextSecretToken == null)
         {
             nextSecretToken = _secretTokens
-                .Where(token => !token.TooManyRequestsTimeout.HasValue || DateTime.Now > token.TooManyRequestsTimeout)
+                .Where(token => token.TooManyRequestsTimeout.HasValue && DateTime.Now < token.TooManyRequestsTimeout)
                 .OrderBy(token => token.TooManyRequestsTimeout)
                 .FirstOrDefault(token => token.AuthenticationResponse != null);
 
             if (nextSecretToken != null && nextSecretToken.TooManyRequestsTimeout.HasValue)
             {
-                TimeSpan delay =  nextSecretToken.TooManyRequestsTimeout.Value - DateTime.Now;
-                Console.WriteLine($"Too many requests to synced artist, waiting {delay.TotalHours}hour(s), {delay.Minutes}minute(s)...");
-                Thread.Sleep(delay);
+                while (DateTime.Now < nextSecretToken.TooManyRequestsTimeout)
+                {
+                    TimeSpan delay =  nextSecretToken.TooManyRequestsTimeout.Value - DateTime.Now;
+                    TimeSpan delayLeft =  nextSecretToken.TooManyRequestsTimeout.Value - DateTime.Now > TimeSpan.FromMinutes(15) 
+                        ? TimeSpan.FromMinutes(15) : nextSecretToken.TooManyRequestsTimeout.Value - DateTime.Now;
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Too many requests to synced artist, waiting {(int)delay.TotalHours}hour(s), {delay.Minutes}minute(s)...");
+                    
+                    Thread.Sleep(delayLeft);
+                }
+                nextSecretToken.TooManyRequestsTimeout = null;
             }
         }
         
