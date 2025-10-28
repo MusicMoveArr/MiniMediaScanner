@@ -56,13 +56,17 @@ public class SpotifyAPICacheLayerService
     public async Task<T?> TrySpotifyRequestAsync<T>(Func<SpotifyTokenClientSecret, Task<T>> action)
     {
         T result =  default(T);
-        while (true)
+        int tries = 0;
+        const int retries = 5;
+        
+        while (tries++ < retries)
         {
             SpotifyTokenClientSecret? secretToken = await GetNextTokenSecretAsync();
 
             if (secretToken == null)
             {
-                break;
+                Thread.Sleep(TimeSpan.FromSeconds(1));
+                continue;
             }
 
             try

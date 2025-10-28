@@ -117,7 +117,7 @@ public class SpotifyService
                     .TrySpotifyRequestAsync<TracksResponse>(async secretToken => 
                         await secretToken.SpotifyClient.Tracks.GetSeveral(req));
                 
-                foreach (var track in fullTracks.Tracks)
+                foreach (var track in fullTracks?.Tracks ?? [])
                 {
                     await _updateSpotifyRepository.UpsertTrackAsync(track);
                     await _updateSpotifyRepository.UpsertTrack_ArtistAsync(track);
