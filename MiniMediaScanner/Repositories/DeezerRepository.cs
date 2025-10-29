@@ -145,4 +145,22 @@ public class DeezerRepository
 
         return tracks;
     }
+    
+    public async Task<List<int>> GetAllDeezerArtistIdsAsync(int offset)
+    {
+        string query = @"SELECT artistid FROM deezer_artist 
+                         order by name asc 
+                         offset @offset
+                         limit @PagingSize";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn
+                .QueryAsync<int>(query, param: new
+                {
+                    offset,
+                    PagingSize
+                }))
+            .ToList();
+    }
 }
