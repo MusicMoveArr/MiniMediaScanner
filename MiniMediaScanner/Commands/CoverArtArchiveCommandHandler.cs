@@ -33,7 +33,9 @@ public class CoverArtArchiveCommandHandler
     
     public async Task CheckAllMissingCoversAsync(string artist, string album, string coverFileName)
     {
-        var coverModels = (await _metadataRepository.GetFolderPathsByArtistForCoversAsync(artist, album))
+        var coverModels = 
+            (await _metadataRepository.GetFolderPathsByArtistForCoversAsync(artist, album))
+            .Where(cover => !string.IsNullOrWhiteSpace(cover.MusicBrainzReleaseId))
             .ToList();
 
         string coverFileNameWithoutExtension = Path.GetFileNameWithoutExtension(coverFileName);

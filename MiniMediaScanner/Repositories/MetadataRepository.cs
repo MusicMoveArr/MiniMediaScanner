@@ -782,7 +782,6 @@ public class MetadataRepository
                           JOIN albums album ON album.artistid = artist.artistid
                           JOIN metadata m ON m.albumid = album.albumid
                           where lower(artist.name) = lower(@artistName)
-                                and length(m.MusicBrainzReleaseId) > 0
                                 and (length(@album) = 0 or @album is null or lower(album.title) = lower(@album))";
 
         await using var conn = new NpgsqlConnection(_connectionString);
