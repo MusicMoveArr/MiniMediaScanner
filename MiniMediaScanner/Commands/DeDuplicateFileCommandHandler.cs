@@ -92,7 +92,7 @@ public class DeDuplicateFileCommandHandler
                 new
                 {
                     group.AlbumId,
-                    group.FileName
+                    FileName = group.FileName.ToLower()
                 });
         
         foreach (var albumDuplicates in duplicateFiles)

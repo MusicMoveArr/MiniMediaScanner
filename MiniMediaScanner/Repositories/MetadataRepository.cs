@@ -231,8 +231,8 @@ public class MetadataRepository
           	                       REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g'), 
           			   				                     '\.([a-zA-Z0-9]{2,5})$', '') AS FileName,
                                  COUNT(*) OVER (PARTITION BY album.albumId, 
-          	                       REGEXP_REPLACE(REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g'), 
-          			   								                    '\.([a-zA-Z0-9]{2,5})$', '')) AS duplicate_count
+          	                       lower(REGEXP_REPLACE(REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g'), 
+          			   								                    '\.([a-zA-Z0-9]{2,5})$', ''))) AS duplicate_count
                              FROM artists artist
                              JOIN albums album ON album.artistid = artist.artistid
                              JOIN metadata m ON m.albumid = album.albumid
