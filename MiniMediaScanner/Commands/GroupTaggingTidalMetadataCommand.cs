@@ -38,23 +38,47 @@ public class GroupTaggingTidalMetadataCommand : ICommand
         EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_OVERWRITE_TAG")]
     public bool OverwriteTag { get; set; } = true;
 
-    [CommandOption("overwrite-album-tag", 'B', 
-        Description = "Overwrite the existing album tag value, only overwrites it if the Album is tagged incorrectly before.", 
+    [CommandOption("overwrite-artist", 
+        Description = "Overwrite the Artist name when tagging from Tidal.", 
         IsRequired = false,
-        EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_OVERWRITE_ALBUM_TAG")]
-    public bool OverwriteAlbumTag { get; set; } = true;
+        EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_OVERWRITEARTIST")]
+    public bool OverwriteArtist { get; set; }
+    
+    [CommandOption("overwrite-album-artist", 
+        Description = "Overwrite the Album Artist name when tagging from Tidal.", 
+        IsRequired = false,
+        EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_OVERWRITEALBUMARTIST")]
+    public bool OverwriteAlbumArtist { get; set; }
+    
+    [CommandOption("overwrite-album", 
+        Description = "Overwrite the Album name when tagging from Tidal.", 
+        IsRequired = false,
+        EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_OVERWRITEALBUM")]
+    public bool OverwriteAlbum { get; set; }
+    
+    [CommandOption("overwrite-track", 
+        Description = "Overwrite the Track name when tagging from Tidal.", 
+        IsRequired = false,
+        EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_OVERWRITETRACK")]
+    public bool OverwriteTrack { get; set; }
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new GroupTaggingTidalMetadataCommandHandler(ConnectionString);
+        handler.Confirm = Confirm;
+        handler.OverwriteTag = OverwriteTag;
+        handler.OverwriteArtist = OverwriteArtist;
+        handler.OverwriteAlbumArtist = OverwriteAlbumArtist;
+        handler.OverwriteAlbum = OverwriteAlbum;
+        handler.OverwriteTrack = OverwriteTrack;
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.TagMetadataAsync(Album, OverwriteTag, Confirm, OverwriteAlbumTag);
+            await handler.TagMetadataAsync(Album);
         }
         else
         {
-            await handler.TagMetadataAsync(Artist, Album, OverwriteTag, Confirm, OverwriteAlbumTag);
+            await handler.TagMetadataAsync(Artist, Album);
         }
     }
 }
