@@ -1,0 +1,16 @@
+alter table metadata drop column tag_subtitle;
+alter table metadata drop column tag_albumsort;
+alter table metadata drop column tag_comment;
+alter table metadata drop column tag_lyrics;
+alter table metadata drop column tag_grouping;
+alter table metadata drop column tag_beatsperminute;
+alter table metadata drop column tag_conductor;
+alter table metadata drop column tag_copyright;
+alter table metadata drop column tag_amazonid;
+alter table metadata drop column tag_replaygaintrackgain;
+alter table metadata drop column tag_replaygaintrackpeak;
+alter table metadata drop column tag_replaygainalbumgain;
+alter table metadata drop column tag_replaygainalbumpeak;
+alter table metadata drop column tag_initialkey;
+alter table metadata drop column tag_remixedby;
+alter table metadata drop column tag_publisher;
