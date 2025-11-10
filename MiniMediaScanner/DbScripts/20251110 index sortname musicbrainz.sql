@@ -1,0 +1,1 @@
+CREATE INDEX idx_musicbrainz_artist_sortname_lower_trgm ON musicbrainz_artist USING gin (lower(sortname) gin_trgm_ops);
