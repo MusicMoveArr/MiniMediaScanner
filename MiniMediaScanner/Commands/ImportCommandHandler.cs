@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Threading.Channels;
 using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Repositories;
 using MiniMediaScanner.Services;
@@ -14,6 +15,7 @@ public class ImportCommandHandler
     private readonly MetadataRepository _metadataRepository;
     private readonly AlbumRepository _albumRepository;
     private readonly AsyncLock _asyncLock = new AsyncLock();
+    private const int BatchFileProcessing = 100;
 
     public static string[] MediaFileExtensions = new string[]
     {
@@ -34,17 +36,11 @@ public class ImportCommandHandler
         _albumRepository =  new AlbumRepository(connectionString);
     }
     
+    
     public async Task ProcessDirectoryAsync(string directoryPath, bool forceImport, bool updateMb)
     {
         try
         {
-            var sortedTopDirectories = Directory
-                .EnumerateFileSystemEntries(directoryPath, "*.*", SearchOption.TopDirectoryOnly)
-                .Where(dir => File.GetAttributes(dir).HasFlag(FileAttributes.Directory))
-                .Where(dir => !new DirectoryInfo(dir).Name.StartsWith("."))
-                .OrderBy(dir => dir)
-                .ToList();
-
             await AnsiConsole.Progress()
                 .HideCompleted(true)
                 .AutoClear(true)
@@ -61,35 +57,78 @@ public class ImportCommandHandler
                 .StartAsync(async ctx =>
                 {
                     int threads = updateMb ? 1 : 8;
-                    await ParallelHelper.ForEachAsync(sortedTopDirectories, threads, async dir =>
+                    var totalTask = ctx.AddTask(Markup.Escape($"Scanning directories {directoryPath}"));
+                    totalTask.MaxValue = 0;
+                    int fileChunkSize = 100;
+                    
+                    int directoryChunkSize = 100;
+                    int directoryIndex = 0;
+
+                    while (true)
                     {
-                        var task = ctx.AddTask(Markup.Escape($"Importing {dir}"));
-
-                        var allFilePaths = Directory
-                            .EnumerateFileSystemEntries(dir, "*.*", SearchOption.AllDirectories)
-                            .Where(dir => !File.GetAttributes(dir).HasFlag(FileAttributes.Directory))
-                            .Where(file => !new FileInfo(file).Name.StartsWith("."))
-                            .Where(file => MediaFileExtensions.Any(ext => file.EndsWith(ext)))
+                        var chunkedDirPaths = Directory
+                            .EnumerateDirectories(directoryPath, "*.*", SearchOption.AllDirectories)
+                            .Skip(directoryIndex)
+                            .Take(directoryChunkSize)
                             .ToList();
+                        directoryIndex += directoryChunkSize;
 
-                        List<string> updatePaths = forceImport ? allFilePaths : await _metadataRepository.MetadataCanUpdatePathListAsync(allFilePaths);
-                        task.MaxValue = updatePaths.Count;
-                        
-                        foreach (var file in updatePaths)
+                        if (!chunkedDirPaths.Any())
                         {
-                            await ProcessFileAsync(file, true, updateMb);
-                            task.Value++;
+                            break;
                         }
 
-                        task.Value = task.MaxValue;
-                    });
-            });
+                        totalTask.MaxValue += chunkedDirPaths.Count;
+                        
+                        await ParallelHelper.ForEachAsync(chunkedDirPaths, threads, async dir =>
+                        {
+                            totalTask.Value++;
+                            totalTask.Description = $"Scanning directories {totalTask.Value}/{totalTask.MaxValue}";
+                            var fileScanTask = ctx.AddTask(Markup.Escape($"Scanning directory '{dir}'"));
+                            fileScanTask.MaxValue = 0;
+                            
+                            int fileIndex = 0;
+                            while (true)
+                            {
+                                var chunkedFilePaths = Directory
+                                    .EnumerateFiles(dir, "*.*", SearchOption.AllDirectories)
+                                    .Where(file => !Path.GetFileName(file).StartsWith("."))
+                                    .Skip(fileIndex)
+                                    .Take(fileChunkSize)
+                                    .ToList();
+
+                                fileIndex += fileChunkSize;
+
+                                chunkedFilePaths = chunkedFilePaths
+                                    .Where(file => MediaFileExtensions.Any(ext => file.EndsWith(ext)))
+                                    .ToList();
+
+                                if (!chunkedFilePaths.Any())
+                                {
+                                    return;
+                                }
+                        
+                                List<string> updatePaths = forceImport ? chunkedFilePaths : await _metadataRepository.MetadataCanUpdatePathListAsync(chunkedFilePaths);
+                                fileScanTask.MaxValue += updatePaths.Count;
+                                
+                                foreach (var file in updatePaths)
+                                {
+                                    await ProcessFileAsync(file, true, updateMb);
+                                    fileScanTask.Value++;
+                                }
+                            }
+                            
+                        });
+                    }
+                });
         }
         catch (Exception e)
         {
             Debug.WriteLine(e.Message);
         }
     }
+    
+    
 
     public async Task<bool> ProcessFileAsync(string filePath, bool forceReimport = false, bool updateMb = false)
     {
