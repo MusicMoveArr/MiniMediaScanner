@@ -39,25 +39,25 @@ public class GroupTaggingDeezerMetadataCommand : ICommand
     public bool OverwriteTag { get; set; } = true;
 
     [CommandOption("overwrite-artist", 
-        Description = "Overwrite the Artist name when tagging from MusicBrainz.", 
+        Description = "Overwrite the Artist name when tagging from Deezer.", 
         IsRequired = false,
         EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_OVERWRITEARTIST")]
     public bool OverwriteArtist { get; set; }
     
     [CommandOption("overwrite-album-artist", 
-        Description = "Overwrite the Album Artist name when tagging from MusicBrainz.", 
+        Description = "Overwrite the Album Artist name when tagging from Deezer.", 
         IsRequired = false,
         EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_OVERWRITEALBUMARTIST")]
     public bool OverwriteAlbumArtist { get; set; }
     
     [CommandOption("overwrite-album", 
-        Description = "Overwrite the Album name when tagging from MusicBrainz.", 
+        Description = "Overwrite the Album name when tagging from Deezer.", 
         IsRequired = false,
         EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_OVERWRITEALBUM")]
     public bool OverwriteAlbum { get; set; }
     
     [CommandOption("overwrite-track", 
-        Description = "Overwrite the Track name when tagging from MusicBrainz.", 
+        Description = "Overwrite the Track name when tagging from Deezer.", 
         IsRequired = false,
         EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_OVERWRITETRACK")]
     public bool OverwriteTrack { get; set; }
