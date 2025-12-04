@@ -144,7 +144,7 @@ public class GroupTaggingTidalMetadataCommandHandler
                     {
                         MetadataTrack = metadata,
                         TidalTrack = track,
-                        MatchedFor = Fuzz.Ratio(metadata.Title, track.FullTrackName)
+                        MatchedFor = FuzzyHelper.FuzzRatioToLower(metadata.Title, track.FullTrackName)
                     })
                     .Where(match => match.MatchedFor >= 90)
                     .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.Title, match.TidalTrack.FullTrackName))
@@ -217,8 +217,8 @@ public class GroupTaggingTidalMetadataCommandHandler
             .Select(tidalTrack => new
             {
                 TidalTrack = tidalTrack,
-                TrackMatchedFor = Fuzz.Ratio(trackTitle, tidalTrack.FullTrackName),
-                AlbumMatchedFor = Fuzz.Ratio(albumTitle, tidalTrack.AlbumName)
+                TrackMatchedFor = FuzzyHelper.FuzzRatioToLower(trackTitle, tidalTrack.FullTrackName),
+                AlbumMatchedFor = FuzzyHelper.FuzzRatioToLower(albumTitle, tidalTrack.AlbumName)
             })
             .Where(match => match.TrackMatchedFor >= 80)
             .Where(match => match.AlbumMatchedFor >= 80)

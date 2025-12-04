@@ -112,7 +112,7 @@ public class GroupTaggingSpotifyMetadataCommandHandler
                     {
                         MetadataTrack = metadata,
                         SpotifyTrack = track,
-                        MatchedFor = Fuzz.Ratio(metadata.Title, track.TrackName)
+                        MatchedFor = FuzzyHelper.FuzzRatioToLower(metadata.Title, track.TrackName)
                     })
                     .Where(match => match.MatchedFor >= 90)
                     .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.Title, match.SpotifyTrack.TrackName))
@@ -185,8 +185,8 @@ public class GroupTaggingSpotifyMetadataCommandHandler
             .Select(spotifyTrack => new
             {
                 SpotifyTrack = spotifyTrack,
-                TrackMatchedFor = Fuzz.Ratio(trackTitle, spotifyTrack.TrackName),
-                AlbumMatchedFor = Fuzz.Ratio(albumTitle, spotifyTrack.AlbumName)
+                TrackMatchedFor = FuzzyHelper.FuzzRatioToLower(trackTitle, spotifyTrack.TrackName),
+                AlbumMatchedFor = FuzzyHelper.FuzzRatioToLower(albumTitle, spotifyTrack.AlbumName)
             })
             .Where(match => match.TrackMatchedFor >= 80)
             .Where(match => match.AlbumMatchedFor >= 80)

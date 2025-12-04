@@ -156,7 +156,7 @@ public class GroupTaggingDeezerMetadataCommandHandler
                     {
                         MetadataTrack = metadata,
                         DeezerTrack = track,
-                        MatchedFor = Fuzz.Ratio(metadata.Title, track.TrackName)
+                        MatchedFor = FuzzyHelper.FuzzRatioToLower(metadata.Title, track.TrackName)
                     })
                     .Where(match => match.MatchedFor >= 90)
                     .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.Title, match.DeezerTrack.TrackName))
@@ -229,8 +229,8 @@ public class GroupTaggingDeezerMetadataCommandHandler
             .Select(deezerTrack => new
             {
                 DeezerTrack = deezerTrack,
-                TrackMatchedFor = Fuzz.Ratio(trackTitle, deezerTrack.TrackName),
-                AlbumMatchedFor = Fuzz.Ratio(albumTitle, deezerTrack.AlbumName)
+                TrackMatchedFor = FuzzyHelper.FuzzRatioToLower(trackTitle, deezerTrack.TrackName),
+                AlbumMatchedFor = FuzzyHelper.FuzzRatioToLower(albumTitle, deezerTrack.AlbumName)
             })
             .Where(match => match.TrackMatchedFor >= 80)
             .Where(match => match.AlbumMatchedFor >= 80)

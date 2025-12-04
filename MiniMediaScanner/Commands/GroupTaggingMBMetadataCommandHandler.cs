@@ -80,8 +80,8 @@ public class GroupTaggingMBMetadataCommandHandler
                     .Select(release => new
                     {
                         Release = release,
-                        CountryMatchedFor = Fuzz.Ratio(release.Country, artistCountry),
-                        AlbumMatchedFor = Fuzz.Ratio(release.Title.ToLower(), album.ToLower())
+                        CountryMatchedFor = FuzzyHelper.FuzzRatioToLower(release.Country, artistCountry),
+                        AlbumMatchedFor = FuzzyHelper.FuzzRatioToLower(release.Title, album)
                     })
                     .OrderByDescending(match => match.CountryMatchedFor)
                     .ThenByDescending(match => match.AlbumMatchedFor)
@@ -109,7 +109,7 @@ public class GroupTaggingMBMetadataCommandHandler
                 ?.Tracks
                 .Select(t => new
                 {
-                    MatchedFor = Fuzz.Ratio(t.Title.ToLower(), track.Title.ToLower()),
+                    MatchedFor = FuzzyHelper.FuzzRatioToLower(t.Title, track.Title),
                     Track = t
                 })
                 ?.Where(t => t.MatchedFor >= MustMatchFor)
@@ -163,8 +163,8 @@ public class GroupTaggingMBMetadataCommandHandler
                     {
                         Track = t,
                         TrackTitle = t.Title,
-                        TrackMatchedFor = Fuzz.Ratio(track.Title.ToLower(), t.Title.ToLower()),
-                        AlbumMatchedFor = Fuzz.Ratio(track.Album.ToLower(), release.Title.ToLower())
+                        TrackMatchedFor = FuzzyHelper.FuzzRatioToLower(track.Title, t.Title),
+                        AlbumMatchedFor = FuzzyHelper.FuzzRatioToLower(track.Album, release.Title)
                     })
                     .Where(t => t.TrackMatchedFor >= MustMatchFor)
                     .Where(t => t.AlbumMatchedFor >= MustMatchFor)
