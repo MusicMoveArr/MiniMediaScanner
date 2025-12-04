@@ -14,6 +14,7 @@ public class RemoveTagCommandHandler
     private readonly ArtistRepository _artistRepository;
     private readonly MediaTagWriteService _mediaTagWriteService;
     private readonly ImportCommandHandler _importCommandHandler;
+    private readonly FileMetaDataService _fileMetaDataService;
 
     public RemoveTagCommandHandler(string connectionString)
     {
@@ -21,6 +22,7 @@ public class RemoveTagCommandHandler
         _artistRepository = new ArtistRepository(connectionString);
         _mediaTagWriteService = new MediaTagWriteService();
         _importCommandHandler = new ImportCommandHandler(connectionString);
+        _fileMetaDataService = new FileMetaDataService();
     }
 
     public async Task RemoveTagFromMediaAsync(string album, List<string> tagNames, bool autoConfirm)
@@ -86,10 +88,11 @@ public class RemoveTagCommandHandler
         
         bool trackInfoUpdated = false;
         Track track = new Track(metadata.Path);
+        var metadataInfo = _fileMetaDataService.GetMetadataInfo(track);
 
         foreach (string tagName in tagNames)
         {
-            UpdateTag(track, tagName, string.Empty, ref trackInfoUpdated);
+            UpdateTag(track, tagName, string.Empty, ref trackInfoUpdated, metadataInfo);
         }
 
         if (!trackInfoUpdated)
@@ -106,13 +109,13 @@ public class RemoveTagCommandHandler
         }
     }
 
-    private void UpdateTag(Track track, string tagName, string? value, ref bool trackInfoUpdated)
+    private void UpdateTag(Track track, string tagName, string? value, ref bool trackInfoUpdated, MetadataInfo metadataInfo)
     {
         tagName = _mediaTagWriteService.GetFieldName(track, tagName);
         
         string orgValue = string.Empty;
         bool tempIsUpdated = false;
-        _mediaTagWriteService.UpdateTrackTag(track, tagName, value, ref tempIsUpdated, ref orgValue);
+        _mediaTagWriteService.UpdateTrackTag(track, tagName, value, ref tempIsUpdated, ref orgValue, metadataInfo);
 
         if (tempIsUpdated)
         {

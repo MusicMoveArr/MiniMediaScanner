@@ -16,17 +16,38 @@ public class MediaTagWriteService
         string orgValue = string.Empty;
         bool isUpdated = false;
         Track track = new Track(targetFile.FullName);
-        UpdateTrackTag(track, "artist", artistName, ref isUpdated, ref orgValue);
-        UpdateTrackTag(track, "album", albumName, ref isUpdated, ref orgValue);
-        UpdateTrackTag(track, "title", title, ref isUpdated, ref orgValue);
+        var fileMetaDataService = new FileMetaDataService();
+        var metadataInfo = fileMetaDataService.GetMetadataInfo(track);
+        
+        UpdateTrackTag(track, "artist", artistName, ref isUpdated, ref orgValue, metadataInfo);
+        UpdateTrackTag(track, "album", albumName, ref isUpdated, ref orgValue, metadataInfo);
+        UpdateTrackTag(track, "title", title, ref isUpdated, ref orgValue, metadataInfo);
+
+        return await SafeSaveAsync(track);
+    }
+    
+    public async Task<bool> SaveTagAsync(FileInfo targetFile, string tag, string value)
+    {
+        string orgValue = string.Empty;
+        bool isUpdated = false;
+        Track track = new Track(targetFile.FullName);
+        var fileMetaDataService = new FileMetaDataService();
+        var metadataInfo = fileMetaDataService.GetMetadataInfo(track);
+        UpdateTrackTag(track, tag, value, ref isUpdated, ref orgValue, metadataInfo);
 
         return await SafeSaveAsync(track);
     }
 
-    public bool UpdateTrackTag(Track track, string tag, string value, ref bool updated, ref string orgValue)
+    public bool UpdateTrackTag(
+        Track track, 
+        string tag, 
+        string value, 
+        ref bool updated, 
+        ref string orgValue,
+        MetadataInfo metadataInfo)
     {
         value = value.Trim();
-        var oldValues = track.AdditionalFields.ToDictionary();
+        var oldValues = metadataInfo.MediaTags;
         switch (tag.ToLower())
         {
             case "title":
@@ -53,9 +74,9 @@ public class MediaTagWriteService
                 track.SortAlbumArtist = value;
                 return true;
             case "albumartistsort":
-                orgValue = GetDictionaryValue(track, "ALBUMARTISTSORT");
+                orgValue = GetDictionaryValue(oldValues, "ALBUMARTISTSORT");
                 track.AdditionalFields[GetFieldName(track,"ALBUMARTISTSORT")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "ALBUMARTISTSORT");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "artistsort":
             case "artist-sort":
@@ -67,14 +88,14 @@ public class MediaTagWriteService
                 track.SortArtist = value;
                 return true;
             case "artists":
-                orgValue = GetDictionaryValue(track, "ARTISTS");
+                orgValue = GetDictionaryValue(oldValues, "ARTISTS");
                 track.AdditionalFields[GetFieldName(track,"ARTISTS")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "ARTISTS");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "artists_sort":
-                orgValue = GetDictionaryValue(track, "ARTISTS_SORT");
+                orgValue = GetDictionaryValue(oldValues, "ARTISTS_SORT");
                 track.AdditionalFields[GetFieldName(track,"ARTISTS_SORT")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "ARTISTS_SORT");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "artist":
                 orgValue = track.Artist;
@@ -82,7 +103,7 @@ public class MediaTagWriteService
                 track.Artist = value;
                 return true;
             case "date":
-                orgValue = GetDictionaryValue(track, "date");
+                orgValue = GetDictionaryValue(oldValues, "date");
                 if (DateTime.TryParse(value, out var result))
                 {
                     DateTime? oldDate = track.Date;
@@ -96,7 +117,7 @@ public class MediaTagWriteService
                     int? oldYear = track.Year;
                     track.Year = result2;
                     track.AdditionalFields[GetFieldName(track,"date")] = value;
-                    updated = track.Year != oldYear || IsDictionaryUpdated(track, oldValues, "date");
+                    updated = track.Year != oldYear || !string.Equals(orgValue, value);;
                     return true;
                 }
                 return false;
@@ -109,9 +130,9 @@ public class MediaTagWriteService
                 }
                 return true;
             case "asin":
-                orgValue = GetDictionaryValue(track, "asin");
+                orgValue = GetDictionaryValue(oldValues, "asin");
                 track.AdditionalFields[GetFieldName(track,"asin")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "asin");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "year":
                 orgValue = track.Year?.ToString() ?? string.Empty;
@@ -124,18 +145,18 @@ public class MediaTagWriteService
                 track.Year = year;
                 return true;
             case "originalyear":
-                orgValue = GetDictionaryValue(track, "originalyear");
+                orgValue = GetDictionaryValue(oldValues, "originalyear");
                 if (!int.TryParse(value, out int originalyear))
                 {
                     return false;
                 }
                 track.AdditionalFields[GetFieldName(track,"originalyear")] = originalyear.ToString();
-                updated = IsDictionaryUpdated(track, oldValues, "originalyear");
+                updated = !string.Equals(orgValue, originalyear.ToString());
                 return true;
             case "originaldate":
-                orgValue = GetDictionaryValue(track, "originaldate");
+                orgValue = GetDictionaryValue(oldValues, "originaldate");
                 track.AdditionalFields[GetFieldName(track,"originaldate")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "originaldate");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "disc":
             case "disc number":
@@ -179,89 +200,89 @@ public class MediaTagWriteService
                 track.DiscTotal = totalDiscs;
                 return true;
             case "musicbrainz artist id":
-                orgValue = GetDictionaryValue(track, "MusicBrainz Artist Id");
+                orgValue = GetDictionaryValue(oldValues, "MusicBrainz Artist Id");
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Artist Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Artist Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "musicbrainz release group id":
-                orgValue = GetDictionaryValue(track, "MusicBrainz Release Group Id");
+                orgValue = GetDictionaryValue(oldValues, "MusicBrainz Release Group Id");
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Release Group Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Release Group Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "musicbrainz release artist id":
-                orgValue = GetDictionaryValue(track, "MusicBrainz Release Artist Id");
+                orgValue = GetDictionaryValue(oldValues, "MusicBrainz Release Artist Id");
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Release Artist Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Release Artist Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "musicbrainz release id":
-                orgValue = GetDictionaryValue(track, "MusicBrainz Release Id");
+                orgValue = GetDictionaryValue(oldValues, "MusicBrainz Release Id");
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Release Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Release Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "musicbrainz release track id":
-                orgValue = GetDictionaryValue(track, "MusicBrainz Release Track Id");
+                orgValue = GetDictionaryValue(oldValues, "MusicBrainz Release Track Id");
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Release Track Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Release Track Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "musicbrainz track id":
-                orgValue = GetDictionaryValue(track, "MusicBrainz Track Id");
+                orgValue = GetDictionaryValue(oldValues, "MusicBrainz Track Id");
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Track Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Track Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "musicbrainz album artist id":
-                orgValue = GetDictionaryValue(track, "MusicBrainz Album Artist Id");
+                orgValue = GetDictionaryValue(oldValues, "MusicBrainz Album Artist Id");
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Album Artist Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Album Artist Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "musicbrainz album id":
-                orgValue = GetDictionaryValue(track, "MusicBrainz Album Id");
+                orgValue = GetDictionaryValue(oldValues, "MusicBrainz Album Id");
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Album Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Album Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "musicbrainz album type":
-                orgValue = GetDictionaryValue(track, "MusicBrainz Album Type");
+                orgValue = GetDictionaryValue(oldValues, "MusicBrainz Album Type");
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Album Type")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Album Type");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "musicbrainz album release country":
-                orgValue = GetDictionaryValue(track, "MusicBrainz Album Release Country");
+                orgValue = GetDictionaryValue(oldValues, "MusicBrainz Album Release Country");
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Album Release Country")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Album Release Country");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "musicbrainz album status":
-                orgValue = GetDictionaryValue(track, "MusicBrainz Album Status");
+                orgValue = GetDictionaryValue(oldValues, "MusicBrainz Album Status");
                 track.AdditionalFields[GetFieldName(track,"MusicBrainz Album Status")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MusicBrainz Album Status");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "script":
-                orgValue = GetDictionaryValue(track, "SCRIPT");
+                orgValue = GetDictionaryValue(oldValues, "SCRIPT");
                 track.AdditionalFields[GetFieldName(track,"SCRIPT")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "SCRIPT");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "barcode":
-                orgValue = GetDictionaryValue(track, "BARCODE");
+                orgValue = GetDictionaryValue(oldValues, "BARCODE");
                 track.AdditionalFields[GetFieldName(track, "BARCODE")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "BARCODE");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "media":
-                orgValue = GetDictionaryValue(track, "MEDIA");
+                orgValue = GetDictionaryValue(oldValues, "MEDIA");
                 track.AdditionalFields[GetFieldName(track, "MEDIA")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "MEDIA");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "acoustid id":
-                orgValue = GetDictionaryValue(track, "Acoustid Id");
+                orgValue = GetDictionaryValue(oldValues, "Acoustid Id");
                 track.AdditionalFields[GetFieldName(track, "Acoustid Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Acoustid Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "acoustid fingerprint":
-                orgValue = GetDictionaryValue(track, "Acoustid Fingerprint");
+                orgValue = GetDictionaryValue(oldValues, "Acoustid Fingerprint");
                 track.AdditionalFields[GetFieldName(track, "Acoustid Fingerprint")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Acoustid Fingerprint");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "acoustid fingerprint duration":
-                orgValue = GetDictionaryValue(track, "Acoustid Fingerprint Duration");
+                orgValue = GetDictionaryValue(oldValues, "Acoustid Fingerprint Duration");
                 track.AdditionalFields[GetFieldName(track, "Acoustid Fingerprint Duration")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Acoustid Fingerprint Duration");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "isrc":
                 orgValue = track.ISRC;
@@ -271,155 +292,155 @@ public class MediaTagWriteService
             case "label":
                 if (!string.Equals(value, "[no label]", StringComparison.OrdinalIgnoreCase))
                 {
-                    orgValue = GetDictionaryValue(track, "LABEL");
+                    orgValue = GetDictionaryValue(oldValues, "LABEL");
                     track.AdditionalFields[GetFieldName(track, "LABEL")] = value;
-                    updated = IsDictionaryUpdated(track, oldValues, "LABEL");
+                    updated = !string.Equals(orgValue, value);
                 }
                 return true;
             case "spotify track id":
-                orgValue = GetDictionaryValue(track, "Spotify Track Id");
+                orgValue = GetDictionaryValue(oldValues, "Spotify Track Id");
                 track.AdditionalFields[GetFieldName(track, "Spotify Track Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Spotify Track Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "spotify track explicit":
-                orgValue = GetDictionaryValue(track, "Spotify Track Explicit");
+                orgValue = GetDictionaryValue(oldValues, "Spotify Track Explicit");
                 track.AdditionalFields[GetFieldName(track, "Spotify Track Explicit")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Spotify Track Explicit");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "spotify track uri":
-                orgValue = GetDictionaryValue(track, "Spotify Track Uri");
+                orgValue = GetDictionaryValue(oldValues, "Spotify Track Uri");
                 track.AdditionalFields[GetFieldName(track, "Spotify Track Uri")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Spotify Track Uri");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "spotify track href":
-                orgValue = GetDictionaryValue(track, "Spotify Track Href");
+                orgValue = GetDictionaryValue(oldValues, "Spotify Track Href");
                 track.AdditionalFields[GetFieldName(track, "Spotify Track Href")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Spotify Track Href");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "spotify album id":
-                orgValue = GetDictionaryValue(track, "Spotify Album Id");
+                orgValue = GetDictionaryValue(oldValues, "Spotify Album Id");
                 track.AdditionalFields[GetFieldName(track, "Spotify Album Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Spotify Album Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "spotify album group":
-                orgValue = GetDictionaryValue(track, "Spotify Album Group");
+                orgValue = GetDictionaryValue(oldValues, "Spotify Album Group");
                 track.AdditionalFields[GetFieldName(track, "Spotify Album Group")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Spotify Album Group");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "spotify album release date":
-                orgValue = GetDictionaryValue(track, "Spotify Album Release Date");
+                orgValue = GetDictionaryValue(oldValues, "Spotify Album Release Date");
                 track.AdditionalFields[GetFieldName(track, "Spotify Album Release Date")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Spotify Album Release Date");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "spotify artist href":
-                orgValue = GetDictionaryValue(track, "Spotify Artist Href");
+                orgValue = GetDictionaryValue(oldValues, "Spotify Artist Href");
                 track.AdditionalFields[GetFieldName(track, "Spotify Artist Href")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Spotify Artist Href");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "spotify artist genres":
-                orgValue = GetDictionaryValue(track, "Spotify Artist Genres");
+                orgValue = GetDictionaryValue(oldValues, "Spotify Artist Genres");
                 track.AdditionalFields[GetFieldName(track, "Spotify Artist Genres")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Spotify Artist Genres");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "spotify artist id":
-                orgValue = GetDictionaryValue(track, "Spotify Artist Id");
+                orgValue = GetDictionaryValue(oldValues, "Spotify Artist Id");
                 track.AdditionalFields[GetFieldName(track, "Spotify Artist Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Spotify Artist Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "upc":
-                orgValue = GetDictionaryValue(track, "UPC");
+                orgValue = GetDictionaryValue(oldValues, "UPC");
                 track.AdditionalFields[GetFieldName(track, "UPC")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "UPC");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "genre":
-                orgValue = GetDictionaryValue(track, "genre");
+                orgValue = GetDictionaryValue(oldValues, "genre");
                 track.AdditionalFields[GetFieldName(track, "genre")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "genre");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "tidal track id":
-                orgValue = GetDictionaryValue(track, "Tidal Track Id");
+                orgValue = GetDictionaryValue(oldValues, "Tidal Track Id");
                 track.AdditionalFields[GetFieldName(track, "Tidal Track Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Tidal Track Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "tidal track explicit":
-                orgValue = GetDictionaryValue(track, "Tidal Track Explicit");
+                orgValue = GetDictionaryValue(oldValues, "Tidal Track Explicit");
                 track.AdditionalFields[GetFieldName(track, "Tidal Track Explicit")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Tidal Track Explicit");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "tidal track href":
-                orgValue = GetDictionaryValue(track, "Tidal Track Href");
+                orgValue = GetDictionaryValue(oldValues, "Tidal Track Href");
                 track.AdditionalFields[GetFieldName(track, "Tidal Track Href")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Tidal Track Href");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "tidal album id":
-                orgValue = GetDictionaryValue(track, "Tidal Album Id");
+                orgValue = GetDictionaryValue(oldValues, "Tidal Album Id");
                 track.AdditionalFields[GetFieldName(track, "Tidal Album Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Tidal Album Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "tidal album href":
-                orgValue = GetDictionaryValue(track, "Tidal Album Href");
+                orgValue = GetDictionaryValue(oldValues, "Tidal Album Href");
                 track.AdditionalFields[GetFieldName(track, "Tidal Album Href")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Tidal Album Href");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "tidal album release date":
-                orgValue = GetDictionaryValue(track, "Tidal Album Release Date");
+                orgValue = GetDictionaryValue(oldValues, "Tidal Album Release Date");
                 track.AdditionalFields[GetFieldName(track, "Tidal Album Release Date")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Tidal Album Release Date");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "tidal artist id":
-                orgValue = GetDictionaryValue(track, "Tidal Artist Id");
+                orgValue = GetDictionaryValue(oldValues, "Tidal Artist Id");
                 track.AdditionalFields[GetFieldName(track, "Tidal Artist Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Tidal Artist Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "tidal artist href":
-                orgValue = GetDictionaryValue(track, "Tidal Artist Href");
+                orgValue = GetDictionaryValue(oldValues, "Tidal Artist Href");
                 track.AdditionalFields[GetFieldName(track, "Tidal Artist Href")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Tidal Artist Href");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "copyright":
-                orgValue = GetDictionaryValue(track, "Copyright");
-                track.AdditionalFields[GetFieldName(track, "Copyright")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Copyright");
+                orgValue = GetDictionaryValue(oldValues, "Copyright");
+                track.Copyright = value;
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "deezer track id":
-                orgValue = GetDictionaryValue(track, "Deezer Track Id");
+                orgValue = GetDictionaryValue(oldValues, "Deezer Track Id");
                 track.AdditionalFields[GetFieldName(track, "Deezer Track Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Deezer Track Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "deezer track explicit":
-                orgValue = GetDictionaryValue(track, "Deezer Track Explicit");
+                orgValue = GetDictionaryValue(oldValues, "Deezer Track Explicit");
                 track.AdditionalFields[GetFieldName(track, "Deezer Track Explicit")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Deezer Track Explicit");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "deezer track href":
-                orgValue = GetDictionaryValue(track, "Deezer Track Href");
+                orgValue = GetDictionaryValue(oldValues, "Deezer Track Href");
                 track.AdditionalFields[GetFieldName(track, "Deezer Track Href")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Deezer Track Href");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "deezer album id":
-                orgValue = GetDictionaryValue(track, "Deezer Album Id");
+                orgValue = GetDictionaryValue(oldValues, "Deezer Album Id");
                 track.AdditionalFields[GetFieldName(track, "Deezer Album Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Deezer Album Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "deezer album href":
-                orgValue = GetDictionaryValue(track, "Deezer Album Href");
+                orgValue = GetDictionaryValue(oldValues, "Deezer Album Href");
                 track.AdditionalFields[GetFieldName(track, "Deezer Album Href")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Deezer Album Href");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "deezer album release date":
-                orgValue = GetDictionaryValue(track, "Deezer Album Release Date");
+                orgValue = GetDictionaryValue(oldValues, "Deezer Album Release Date");
                 track.AdditionalFields[GetFieldName(track, "Deezer Album Release Date")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Deezer Album Release Date");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "deezer artist id":
-                orgValue = GetDictionaryValue(track, "Deezer Artist Id");
+                orgValue = GetDictionaryValue(oldValues, "Deezer Artist Id");
                 track.AdditionalFields[GetFieldName(track, "Deezer Artist Id")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Deezer Artist Id");
+                updated = !string.Equals(orgValue, value);
                 return true;
             case "deezer artist href":
-                orgValue = GetDictionaryValue(track, "Deezer Artist Href");
+                orgValue = GetDictionaryValue(oldValues, "Deezer Artist Href");
                 track.AdditionalFields[GetFieldName(track, "Deezer Artist Href")] = value;
-                updated = IsDictionaryUpdated(track, oldValues, "Deezer Artist Href");
+                updated = !string.Equals(orgValue, value);
                 return true;
         }
 
@@ -512,16 +533,6 @@ public class MediaTagWriteService
         return string.Empty;
     }
     
-    public async Task<bool> SaveTagAsync(FileInfo targetFile, string tag, string value)
-    {
-        string orgValue = string.Empty;
-        bool isUpdated = false;
-        Track track = new Track(targetFile.FullName);
-        UpdateTrackTag(track, tag, value, ref isUpdated, ref orgValue);
-
-        return await SafeSaveAsync(track);
-    }
-    
     public async Task<bool> SafeSaveAsync(Track track)
     {
         FileInfo targetFile = new FileInfo(track.Path);
@@ -583,13 +594,13 @@ public class MediaTagWriteService
         
         string orgValue = string.Empty;
         bool tempIsUpdated = false;
-        UpdateTrackTag(track, tagName, value, ref tempIsUpdated, ref orgValue);
+        UpdateTrackTag(track, tagName, value, ref tempIsUpdated, ref orgValue, metadataInfo);
 
         //double check incase the same check above somehow failed (because of tag typos etc)
         //write back the original value
         if (!overwriteTagValue && tempIsUpdated && !string.IsNullOrWhiteSpace(orgValue))
         {
-            UpdateTrackTag(track, tagName, orgValue, ref tempIsUpdated, ref orgValue);
+            UpdateTrackTag(track, tagName, orgValue, ref tempIsUpdated, ref orgValue, metadataInfo);
         }
         
         if (tempIsUpdated && !string.Equals(orgValue, value))
