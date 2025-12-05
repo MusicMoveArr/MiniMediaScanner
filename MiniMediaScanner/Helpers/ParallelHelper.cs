@@ -8,7 +8,6 @@ public static class ParallelHelper
         Func<T, Task> asyncAction)
     {
         using var semaphore = new SemaphoreSlim(maxDegreeOfParallelism);
-
         var tasks = source.Select(async item =>
         {
             await semaphore.WaitAsync();
@@ -21,7 +20,6 @@ public static class ParallelHelper
                 semaphore.Release();
             }
         });
-
         await Task.WhenAll(tasks);
     }
 }

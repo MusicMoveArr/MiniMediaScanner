@@ -39,7 +39,7 @@ public class ImportCommand : ICommand
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new ImportCommandHandler(ConnectionString, PreventUpdateWithinDays);
-        await handler.ProcessDirectoryAsync(Path, Force, UpdateMb);
+        var handler = new ImportCommandHandler(ConnectionString, PreventUpdateWithinDays, Force, UpdateMb);
+        await handler.ProcessDirectoryAsync(Path);
     }
 }
