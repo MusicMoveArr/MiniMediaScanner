@@ -102,8 +102,6 @@ public class ImportCommandHandler
                         {
                             totalTask.Value++;
                             totalTask.Description = $"Scanning directories {totalTask.Value}/{totalTask.MaxValue}";
-                            var fileScanTask = ctx.AddTask(Markup.Escape($"Scanning directory '{dir}'"));
-                            fileScanTask.MaxValue = 0;
                             
                             int fileIndex = 0;
                             while (true)
