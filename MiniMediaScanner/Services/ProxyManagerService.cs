@@ -11,7 +11,7 @@ public class ProxyManagerService
 {
     public ProxyModeType ProxyMode { get; set; }
     private readonly string _proxyFile;
-    private List<string> _proxies;
+    public readonly List<ProxyModel> WebProxies;
     private string _singleProxy;
     private string _testUrl;
     
@@ -21,7 +21,7 @@ public class ProxyManagerService
     private Stopwatch _stopwatch = Stopwatch.StartNew();
     private string _currentProxyUri;
     
-    public int WorkingProxies => _proxies?.Count ?? 0;
+    public int WorkingProxies => WebProxies?.Count ?? 0;
     
     public ProxyManagerService(string testUrl, string proxyFile, string singleProxy, string proxyMode)
     {
@@ -32,32 +32,36 @@ public class ProxyManagerService
         Enum.TryParse<ProxyModeType>(proxyMode, out proxyModeType);
         this.ProxyMode = proxyModeType;
         
-        _proxies = new List<string>();
+        WebProxies = new List<ProxyModel>();
         _singleProxy = singleProxy;
     }
 
     public async Task SetProxySettingsAsync(RestClientOptions options)
     {
-        if (string.IsNullOrWhiteSpace(_proxyFile) && string.IsNullOrWhiteSpace(_singleProxy))
+        if (string.IsNullOrWhiteSpace(_proxyFile) && 
+            string.IsNullOrWhiteSpace(_singleProxy))
         {
             return;
         }
         
         ProxyModel? proxy = await GetProxyAsync();
         options.Proxy = proxy?.Proxy;
-        if (options.Proxy != null)
+        if (options.Proxy != null && 
+            proxy != null)
         {
             options.Proxy.Credentials = proxy?.Credentials;
+            proxy.LastUsage = DateTime.Now;
+            proxy.RequestCount++;
         }
 
         if (!string.Equals(_currentProxyUri, proxy?.ProxyUri))
         {
-            Debug.WriteLine($"Switched to proxy {proxy?.ProxyUri}");
+            //Debug.WriteLine($"Switched to proxy {proxy?.ProxyUri}");
         }
 
         if (proxy != null && string.IsNullOrWhiteSpace(_currentProxyUri))
         {
-            Debug.WriteLine($"Switched to proxy {proxy.ProxyUri}");
+            //Debug.WriteLine($"Switched to proxy {proxy.ProxyUri}");
         }
         _currentProxyUri = proxy?.ProxyUri;
     }
@@ -65,37 +69,37 @@ public class ProxyManagerService
     public void PickNextProxy()
     {
         _currentProxyIndex++;
-        if (_currentProxyIndex >= _proxies.Count)
+        if (_currentProxyIndex >= WebProxies.Count)
         {
             _currentProxyIndex = 0;
         }
     }
     
-    public async Task<ProxyModel> GetProxyAsync()
+    public async Task<ProxyModel?> GetProxyAsync()
     {
-        if (!_testedProxies || _proxies.Count == 0)
+        if (!_testedProxies || WebProxies.Count == 0)
         {
             await LoadProxyFileAsync();
         }
         
-        string? proxy = string.Empty;
+        ProxyModel? proxy = null;
 
         switch (ProxyMode)
         {
             case ProxyModeType.Random:
-                proxy = _proxies
-                    .Skip(_random.Next(0, _proxies.Count))
+                proxy = WebProxies
+                    .Skip(_random.Next(0, WebProxies.Count))
                     .FirstOrDefault();
                 break;
             case ProxyModeType.RoundRobin:
-                proxy = _proxies
+                proxy = WebProxies
                     .Skip(_currentProxyIndex)
                     .FirstOrDefault();
                 _currentProxyIndex++;
                 break;
             case ProxyModeType.StickyTillError:
             case ProxyModeType.PerArtist:
-                proxy = _proxies
+                proxy = WebProxies
                     .Skip(_currentProxyIndex)
                     .FirstOrDefault();
                 break;
@@ -106,22 +110,18 @@ public class ProxyManagerService
                     _stopwatch.Restart();
                 }
                 
-                proxy = _proxies
+                proxy = WebProxies
                     .Skip(_currentProxyIndex)
                     .FirstOrDefault();
                 break;
         }
 
-        if (_currentProxyIndex >= _proxies.Count)
+        if (_currentProxyIndex >= WebProxies.Count)
         {
             _currentProxyIndex = 0;
         }
         
-        if (string.IsNullOrWhiteSpace(proxy))
-        {
-            return null;
-        }
-        return GetProxy(proxy);
+        return proxy;
     }
 
     private ProxyModel GetProxy(string proxy)
@@ -149,7 +149,7 @@ public class ProxyManagerService
 
     private async Task LoadProxyFileAsync()
     {
-        List<string> testProxies = new List<string>();
+        List<ProxyModel> testProxies = new List<ProxyModel>();
 
         if (string.IsNullOrWhiteSpace(_proxyFile))
         {
@@ -166,12 +166,13 @@ public class ProxyManagerService
             
             testProxies = File
                 .ReadAllLines(_proxyFile)
+                .Select(proxy => GetProxy(proxy))
                 .ToList();
         }
 
         if (!string.IsNullOrWhiteSpace(_singleProxy))
         {
-            testProxies.Add(_singleProxy);
+            testProxies.Add(GetProxy(_singleProxy));
         }
 
         AsyncLock asyncLock = new AsyncLock();
@@ -183,7 +184,7 @@ public class ProxyManagerService
         {
             if (stopwatch.Elapsed.Seconds >= 5)
             {
-                Debug.WriteLine($"Tested proxies: {testedProxies} of {testProxies.Count}, working proxies: {_proxies.Count}");
+                Debug.WriteLine($"Tested proxies: {testedProxies} of {testProxies.Count}, working proxies: {WebProxies.Count}");
                 stopwatch.Restart();
             }
             
@@ -191,15 +192,15 @@ public class ProxyManagerService
             {
                 using (await asyncLock.LockAsync())
                 {
-                    _proxies.Add(proxy);
+                    WebProxies.Add(proxy);
                 }
             }
             testedProxies++;
         });
         
-        Console.WriteLine($"Proxies working: {_proxies.Count}");
+        Console.WriteLine($"Proxies working: {WebProxies.Count}");
 
-        if (testProxies.Count > 0 && _proxies.Count == 0)
+        if (testProxies.Count > 0 && WebProxies.Count == 0)
         {
             throw new Exception("None of the proxies are working");
         }
@@ -207,10 +208,8 @@ public class ProxyManagerService
         _testedProxies = true;
     }
 
-    private async Task<bool> TestProxyAsync(string proxyUri)
+    private async Task<bool> TestProxyAsync(ProxyModel proxyModel)
     {
-        ProxyModel proxyModel = GetProxy(proxyUri);
-
         try
         {
             
@@ -220,7 +219,6 @@ public class ProxyManagerService
             options.Timeout = new TimeSpan(0, 0, 15);
             
             using RestClient client = new RestClient(options);
-
             RestRequest request = new RestRequest();
             var response = await client.GetAsync(request);
             

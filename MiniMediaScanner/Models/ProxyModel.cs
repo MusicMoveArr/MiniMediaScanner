@@ -11,6 +11,8 @@ public class ProxyModel
     public WebProxy Proxy => new WebProxy(ProxyUri);
 
     public NetworkCredential Credentials => new NetworkCredential(Username, Password);
+    public DateTime? LastUsage { get; set; }
+    public int RequestCount { get; set; }
 
     public ProxyModel(string proxyUri)
     {
@@ -21,5 +23,10 @@ public class ProxyModel
         this.ProxyUri = proxyUri;
         this.Username = username;
         this.Password = password;
+    }
+
+    public override string ToString()
+    {
+        return $"{ProxyUri}, Last Usage: {LastUsage},  RequestCount: {RequestCount}";
     }
 }
