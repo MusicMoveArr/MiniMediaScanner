@@ -10,7 +10,7 @@ public class SpotifyTrackModel
     public TimeSpan Duration { get; set; }
     public bool Explicit { get; set; }
     public string  TrackHref { get; set; }
-    public string TrackNumber { get; set; }
+    public int TrackNumber { get; set; }
     public string Uri { get; set; }
     public string AlbumGroup { get; set; }
     public string AlbumType { get; set; }
@@ -21,4 +21,6 @@ public class SpotifyTrackModel
     public string Genres { get; set; }
     public string ArtistName { get; set; }
     public string ArtistId { get; set; }
+    public string Isrc { get; set; }
+    public string Upc { get; set; }
 }

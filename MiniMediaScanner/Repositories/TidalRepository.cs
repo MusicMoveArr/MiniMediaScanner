@@ -130,6 +130,7 @@ public class TidalRepository
     {
         string query = @"SELECT tail.href
                          FROM tidal_album_image_link tail
+                             
                          join tidal_album album on 
                              album.albumid = tail.albumid 
                              and lower(album.title) = lower(@albumName) 

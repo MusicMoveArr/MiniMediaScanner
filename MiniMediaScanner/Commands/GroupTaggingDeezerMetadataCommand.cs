@@ -65,14 +65,20 @@ public class GroupTaggingDeezerMetadataCommand : ICommand
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new GroupTaggingDeezerMetadataCommandHandler(ConnectionString);
+        handler.Confirm = Confirm;
+        handler.OverwriteTag = OverwriteTag;
+        handler.OverwriteArtist = OverwriteArtist;
+        handler.OverwriteAlbumArtist = OverwriteAlbumArtist;
+        handler.OverwriteAlbum = OverwriteAlbum;
+        handler.OverwriteTrack = OverwriteTrack;
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.TagMetadataAsync(Album, OverwriteTag, Confirm, OverwriteArtist, OverwriteAlbumArtist, OverwriteAlbum, OverwriteTrack);
+            await handler.TagMetadataAsync();
         }
         else
         {
-            await handler.TagMetadataAsync(Artist, Album, OverwriteTag, Confirm, OverwriteArtist, OverwriteAlbumArtist, OverwriteAlbum, OverwriteTrack);
+            await handler.TagMetadataAsync(Artist, Album);
         }
     }
 }

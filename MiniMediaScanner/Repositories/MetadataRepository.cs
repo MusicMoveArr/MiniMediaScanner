@@ -546,11 +546,11 @@ public class MetadataRepository
     
     public async Task<List<MetadataModel>> GetMetadataByArtistAsync(string artistName)
     {
-        string query = @$"SELECT m.MetadataId, 
+        string query = @$"SELECT distinct on (m.MetadataId)
+                                 m.MetadataId, 
                                  m.Path, 
                                  m.Title, 
                                  m.AlbumId,
-                                 tag_alljsontags,
                                  album.title AS AlbumName,
                                  tag_track,
                                  tag_trackcount,
@@ -560,10 +560,24 @@ public class MetadataRepository
                                  m.MusicBrainzArtistId,
                                  m.tag_acoustid,
                                  m.Tag_AllJsonTags,
-                                 artist.ArtistId
+                                 artist.ArtistId,
+                                 m.Tag_Isrc,
+                                 CASE
+                                    WHEN m.Tag_Length !~ ':' THEN NULL 
+                                    WHEN m.Tag_Length ~ '^\d{{1,2}}:\d{{2}}$' THEN ('0:' || m.Tag_Length)::interval
+                                    ELSE m.Tag_Length::interval
+                                  END AS TrackLength,
+                                 m.Tag_AllJsonTags->>upcQuery.key AS Tag_Upc,
+                                 m.Tag_AllJsonTags->>dateQuery.key AS Tag_Date
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
+                        left JOIN LATERAL (
+	                         SELECT jsonb_object_keys(m.tag_alljsontags) AS key
+	                     ) upcQuery ON lower(upcQuery.key) = 'upc'
+                        left JOIN LATERAL (
+	                         SELECT jsonb_object_keys(m.tag_alljsontags) AS key
+	                     ) dateQuery ON lower(dateQuery.key) = 'date'
                         where lower(artist.name) = lower(@artistName)";
 
         await using var conn = new NpgsqlConnection(_connectionString);

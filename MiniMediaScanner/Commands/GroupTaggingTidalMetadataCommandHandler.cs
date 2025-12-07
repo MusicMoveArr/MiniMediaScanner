@@ -21,6 +21,7 @@ public class GroupTaggingTidalMetadataCommandHandler
     private readonly FileMetaDataService _fileMetaDataService;
     private readonly AsyncLock _asyncLock;
     private readonly MemoryCache _cache;
+    private readonly TrackScoreService _trackScoreService;
     
     public bool Confirm { get; set; }
     public bool OverwriteTag { get; set; }
@@ -43,13 +44,14 @@ public class GroupTaggingTidalMetadataCommandHandler
         _asyncLock = new AsyncLock();
         var options = new MemoryCacheOptions();
         _cache = new MemoryCache(options);
+        _trackScoreService = new TrackScoreService();
     }
     
-    public async Task TagMetadataAsync(string album)
+    public async Task TagMetadataAsync()
     {
         foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
         {
-            await TagMetadataAsync(artist, album);
+            await TagMetadataAsync(artist, string.Empty);
         }
     }
 
@@ -103,24 +105,28 @@ public class GroupTaggingTidalMetadataCommandHandler
         }
         
         var tidalTracks = await _tidalRepository.GetTrackByArtistIdAsync(tidalArtistId, album, string.Empty);
-
+        tidalTracks = tidalTracks.OrderBy(x => x.AlbumId).ToList();
         if (tidalTracks?.Count == 0)
         {
             Console.WriteLine($"For Artist '{artist}', Album '{album}' information not found in our Tidal database");
             return;
         }
 
-        var allTidalTracks = new List<TidalTrackModel>();
+        var allTidalTracks = new List<TrackScoreComparerTidalModel>();
         string tidalArtistTracksKey = $"TidalArtistTracks_{tidalArtistId}";
         using (await _asyncLock.LockAsync())
         {
-            if (!_cache.TryGetValue(tidalArtistTracksKey, out List<TidalTrackModel>? result))
+            if (!_cache.TryGetValue(tidalArtistTracksKey, out List<TrackScoreComparerTidalModel>? result))
             {
-                allTidalTracks = await _tidalRepository.GetTrackByArtistIdAsync(tidalArtistId, string.Empty, string.Empty);
+                var tempTidalTracks = await _tidalRepository.GetTrackByArtistIdAsync(tidalArtistId, string.Empty, string.Empty);
+                allTidalTracks.AddRange(tempTidalTracks
+                    .Select(model => new TrackScoreComparerTidalModel(model)));
+                
                 MemoryCacheEntryOptions options = new()
                 {
                     SlidingExpiration = TimeSpan.FromHours(1)
                 };
+                
                 _cache.Set(tidalArtistTracksKey, allTidalTracks, options);
             }
             else
@@ -129,107 +135,56 @@ public class GroupTaggingTidalMetadataCommandHandler
             }
         }
 
-        //match Tidal Tracks against our database
-        //sort descending album's by the amount of matches
-        //this method will prevent getting different AlbumId's for each track
-        var matchedAlbums = tidalTracks
-            .GroupBy(track => track.AlbumId)
-            .Select(tracks => new
+        var trackScoreTargetModels = metadataModels
+            .Select(track => new TrackScoreTargetModel
             {
-                AlbumId = tracks.Key,
-                Matches = tracks.Select(track => new
-                {
-                    Track = track,
-                    MetadataTracks = metadataModels.Select(metadata => new
-                    {
-                        MetadataTrack = metadata,
-                        TidalTrack = track,
-                        MatchedFor = FuzzyHelper.FuzzRatioToLower(metadata.Title, track.FullTrackName)
-                    })
-                    .Where(match => match.MatchedFor >= 90)
-                    .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.Title, match.TidalTrack.FullTrackName))
-                    .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.AlbumName, match.TidalTrack.AlbumName))
-                    .OrderByDescending(match => match.MatchedFor)
-                    .ToList()
-                        
-                })
+                MetadataId = track.MetadataId!.Value,
+                Artist = track.ArtistName ?? string.Empty,
+                Album = track.AlbumName ?? string.Empty,
+                AlbumId = track.AlbumId?.ToString() ?? string.Empty,
+                Date = track.Tag_Date ?? string.Empty,
+                Isrc = track.Tag_Isrc ?? string.Empty,
+                Title = track.Title ?? string.Empty,
+                Duration = track.TrackLength,
+                TrackNumber = track.Tag_Track,
+                TrackTotalCount = track.Tag_TrackCount,
+                Upc = track.Tag_Upc ?? string.Empty
             })
-            .OrderByDescending(tracks => tracks.Matches.Sum(matches => matches.MetadataTracks.Count))
             .ToList();
+
+        var trackList = _trackScoreService
+            .GetAllTrackScore(trackScoreTargetModels, allTidalTracks, 80)
+            .GroupBy(tracks => tracks.TrackScoreComparer.AlbumId)
+            .OrderByDescending(tracks => tracks.Count());
+        
         
         List<Guid> processedMetadataIds = new List<Guid>();
-        
-        foreach(var matchedAlbum in matchedAlbums)
+        foreach (var groupedTracks in trackList)
         {
-            foreach (var matchedTrack in matchedAlbum.Matches)
+            foreach (var matchedTrack in groupedTracks)
             {
-                foreach (var metadata in matchedTrack.MetadataTracks)
+                if (processedMetadataIds.Contains(matchedTrack.TrackScore.MetadataId))
                 {
-                    if (processedMetadataIds.Contains(metadata.MetadataTrack.MetadataId!.Value))
-                    {
-                        continue;
-                    }
+                    continue;
+                }
+
+                var metadataModel = metadataModels
+                    .FirstOrDefault(m => m.MetadataId == matchedTrack.TrackScore.MetadataId);
+                
+                try
+                {
+                    TidalTrackModel tidalTrackModel = ((TrackScoreComparerTidalModel)matchedTrack.TrackScoreComparer).TrackModel;
                     
-                    try
-                    {
-                        await ProcessFileAsync(metadata.MetadataTrack, metadata.TidalTrack, tidalArtistId);
-                        processedMetadataIds.Add(metadata.MetadataTrack.MetadataId!.Value);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
+                    Console.WriteLine($"Processing file '{metadataModel.Path}'");
+                    await ProcessFileAsync(metadataModel, tidalTrackModel, tidalArtistId);
+                    processedMetadataIds.Add(metadataModel.MetadataId.Value);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
                 }
             }
         }
-        
-        var notProcessed = metadataModels
-            .Where(metadata => !processedMetadataIds.Contains(metadata.MetadataId!.Value))
-            .ToList();
-
-        foreach (var metadata in notProcessed)
-        {
-            //handle incorrectly tagged albums
-            var foundTrack = GetSecondBestTrackMatch(allTidalTracks, metadata.Title, metadata.AlbumName);
-            if (foundTrack == null)
-            {
-                Console.WriteLine($"Could not find Track title '{metadata.Title}' of album '{album}' in our Tidal database");
-                continue;
-            }
-            
-            try
-            {
-                await ProcessFileAsync(metadata, foundTrack, tidalArtistId);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-        }
-    }
-    
-    private TidalTrackModel? GetSecondBestTrackMatch(
-        List<TidalTrackModel> tidalTracks, 
-        string trackTitle,
-        string albumTitle)
-    {
-        var foundTracks = tidalTracks
-            .Select(tidalTrack => new
-            {
-                TidalTrack = tidalTrack,
-                TrackMatchedFor = FuzzyHelper.FuzzRatioToLower(trackTitle, tidalTrack.FullTrackName),
-                AlbumMatchedFor = FuzzyHelper.FuzzRatioToLower(albumTitle, tidalTrack.AlbumName)
-            })
-            .Where(match => match.TrackMatchedFor >= 80)
-            .Where(match => match.AlbumMatchedFor >= 80)
-            .Where(match => FuzzyHelper.ExactNumberMatch(trackTitle, match.TidalTrack.FullTrackName))
-            .Where(match => FuzzyHelper.ExactNumberMatch(albumTitle, match.TidalTrack.AlbumName))
-            .OrderByDescending(match => match.TrackMatchedFor)
-            .ThenByDescending(match => match.AlbumMatchedFor)
-            .Select(match => match.TidalTrack)
-            .ToList();
-
-        return foundTracks.FirstOrDefault();
     }
 
     private async Task ProcessFileAsync(
@@ -252,7 +207,7 @@ public class GroupTaggingTidalMetadataCommandHandler
         {
             _mediaTagWriteService.UpdateTag(track, metadataInfo, "Album", tidalTrack.AlbumName, ref trackInfoUpdated, OverwriteTag);
         }
-        if (string.IsNullOrWhiteSpace(track.AlbumArtist)  || OverwriteAlbumArtist)
+        if (string.IsNullOrWhiteSpace(track.AlbumArtist) || OverwriteAlbumArtist)
         {
             _mediaTagWriteService.UpdateTag(track, metadataInfo, "AlbumArtist", tidalTrack.ArtistName, ref trackInfoUpdated, OverwriteTag);
         }
@@ -283,7 +238,7 @@ public class GroupTaggingTidalMetadataCommandHandler
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "Track Number", tidalTrack.TrackNumber.ToString(), ref trackInfoUpdated, OverwriteTag);
         _mediaTagWriteService.UpdateTag(track, metadataInfo, "Total Tracks", tidalTrack.TotalTracks.ToString(), ref trackInfoUpdated, OverwriteTag);
 
-        if (!trackInfoUpdated)
+        if (!trackInfoUpdated )
         {
             return;
         }

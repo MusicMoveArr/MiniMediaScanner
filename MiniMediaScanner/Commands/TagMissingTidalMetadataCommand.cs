@@ -26,29 +26,59 @@ public class TagMissingTidalMetadataCommand : ICommand
         EnvironmentVariable = "TAGMISSINGTIDALMETADATA_ALBUM")]
     public string Album { get; set; }
     
-    [CommandOption("write", 'w', 
-        Description = "Write missing metadata to media on disk.", 
+    [CommandOption("confirm", 'y', 
+        Description = "Always confirm automatically.", 
         IsRequired = false,
-        EnvironmentVariable = "TAGMISSINGTIDALMETADATA_WRITE")]
-    public bool Write { get; set; }
+        EnvironmentVariable = "GROUPTAGGINGTIDALMETADATA_CONFIRM")]
+    public bool Confirm { get; set; } = false;
 
     [CommandOption("overwrite-tag", 'o', 
         Description = "Overwrite existing tag values.", 
         IsRequired = false,
         EnvironmentVariable = "TAGMISSINGTIDALMETADATA_OVERWRITE_TAG")]
     public bool OverwriteTag { get; set; } = true;
+
+    [CommandOption("overwrite-artist", 
+        Description = "Overwrite the Artist name when tagging from Tidal.", 
+        IsRequired = false,
+        EnvironmentVariable = "TAGMISSINGTIDALMETADATA_OVERWRITEARTIST")]
+    public bool OverwriteArtist { get; set; }
+    
+    [CommandOption("overwrite-album-artist", 
+        Description = "Overwrite the Album Artist name when tagging from Tidal.", 
+        IsRequired = false,
+        EnvironmentVariable = "TAGMISSINGTIDALMETADATA_OVERWRITEALBUMARTIST")]
+    public bool OverwriteAlbumArtist { get; set; }
+    
+    [CommandOption("overwrite-album", 
+        Description = "Overwrite the Album name when tagging from Tidal.", 
+        IsRequired = false,
+        EnvironmentVariable = "TAGMISSINGTIDALMETADATA_OVERWRITEALBUM")]
+    public bool OverwriteAlbum { get; set; }
+    
+    [CommandOption("overwrite-track", 
+        Description = "Overwrite the Track name when tagging from Tidal.", 
+        IsRequired = false,
+        EnvironmentVariable = "TAGMISSINGTIDALMETADATA_OVERWRITETRACK")]
+    public bool OverwriteTrack { get; set; }
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new TagMissingTidalMetadataCommandHandler(ConnectionString);
+        handler.Confirm = Confirm;
+        handler.OverwriteTag = OverwriteTag;
+        handler.OverwriteArtist = OverwriteArtist;
+        handler.OverwriteAlbumArtist = OverwriteAlbumArtist;
+        handler.OverwriteAlbum = OverwriteAlbum;
+        handler.OverwriteTrack = OverwriteTrack;
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.TagMetadataAsync(Write, Album, OverwriteTag);
+            await handler.TagMetadataAsync();
         }
         else
         {
-            await handler.TagMetadataAsync(Write, Artist, Album, OverwriteTag);
+            await handler.TagMetadataAsync(Artist, Album);
         }
     }
 }

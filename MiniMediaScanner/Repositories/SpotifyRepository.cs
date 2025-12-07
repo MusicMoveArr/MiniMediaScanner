@@ -42,32 +42,35 @@ public class SpotifyRepository
     public async Task<List<SpotifyTrackModel>> GetTrackByArtistIdAsync(string artistId, string albumName, string trackName)
     {
         string query = @"SET LOCAL pg_trgm.similarity_threshold = 0.8;
-                         select
+                         select distinct on (track.TrackId)
                              track.name As TrackName,
-	                         track.TrackId,
-	                         track.AlbumId,
-	                         track.DiscNumber,
-	                         (track.durationms / 1000.0) * interval '1 second' as Duration,
-	                         track.Explicit,
-	                         track.Href as TrackHref,
-	                         track.TrackNumber,
-	                         track.Uri,
-	                         album.AlbumGroup,
-	                         album.AlbumType,
-	                         album.ReleaseDate,
-	                         album.TotalTracks,
-	                         album.Label,
-	                         album.name as AlbumName,
-	                         artist.Href as ArtistHref,
-	                         artist.Genres,
-	                         artist.name as ArtistName,
-	                         artist.id as ArtistId
+                             track.TrackId,
+                             track.AlbumId,
+                             track.DiscNumber,
+                             (track.durationms / 1000.0) * interval '1 second' as Duration,
+                             track.Explicit,
+                             track.Href as TrackHref,
+                             track.TrackNumber,
+                             track.Uri,
+                             album.AlbumGroup,
+                             album.AlbumType,
+                             album.ReleaseDate,
+                             album.TotalTracks,
+                             album.Label,
+                             album.name as AlbumName,
+                             artist.Href as ArtistHref,
+                             artist.Genres,
+                             artist.name as ArtistName,
+                             artist.id as ArtistId,
+                             ste.value as Isrc,
+                             sbe.value as Upc
                          from spotify_track track
                          join spotify_album album on album.albumid = track.albumid and album.albumgroup in ('album', 'single') and album.albumtype in ('album', 'single')
                          join spotify_track_artist track_artist on track_artist.trackid = track.trackid
                          join spotify_album_artist album_artist on album_artist.albumid = album.albumid 
-                         join spotify_artist artist on artist.id = track_artist.artistid or 
-						 	                           artist.id = album_artist.artistid
+                         join spotify_artist artist on artist.id = track_artist.artistid
+                         left join spotify_track_externalid ste on ste.trackid = track.trackid and ste.name = 'isrc'
+                         left join spotify_album_externalid sbe on sbe.albumid = album.albumid and sbe.name = 'upc'
                          where artist.id = @artistId
 	                         and (length(@albumName) = 0 OR lower(album.name) % lower(@albumName))
 	                         and (length(@trackName) = 0 OR lower(track.name) % lower(@trackName))";

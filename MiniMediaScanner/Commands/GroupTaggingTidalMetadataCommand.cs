@@ -74,7 +74,7 @@ public class GroupTaggingTidalMetadataCommand : ICommand
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.TagMetadataAsync(Album);
+            await handler.TagMetadataAsync();
         }
         else
         {

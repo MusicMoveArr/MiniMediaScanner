@@ -21,6 +21,14 @@ public class GroupTaggingDeezerMetadataCommandHandler
     private readonly FileMetaDataService _fileMetaDataService;
     private readonly AsyncLock _asyncLock;
     private readonly MemoryCache _cache;
+    private readonly TrackScoreService _trackScoreService;
+    
+    public bool Confirm { get; set; }
+    public bool OverwriteTag { get; set; }
+    public bool OverwriteArtist { get; set; }
+    public bool OverwriteAlbumArtist { get; set; }
+    public bool OverwriteAlbum { get; set; }
+    public bool OverwriteTrack { get; set; }
     
     public GroupTaggingDeezerMetadataCommandHandler(string connectionString)
     {
@@ -35,33 +43,18 @@ public class GroupTaggingDeezerMetadataCommandHandler
         _asyncLock = new AsyncLock();
         var options = new MemoryCacheOptions();
         _cache = new MemoryCache(options);
+        _trackScoreService = new TrackScoreService();
     }
     
-    public async Task TagMetadataAsync(
-        string album, 
-        bool overwriteTagValue, 
-        bool confirm, 
-        bool overwriteArtist, 
-        bool overwriteAlbumArtist, 
-        bool overwriteAlbum, 
-        bool overwriteTrack)
+    public async Task TagMetadataAsync()
     {
         foreach (var artist in await _artistRepository.GetAllArtistNamesAsync())
         {
-            await TagMetadataAsync(artist, album, overwriteTagValue, confirm, 
-                                   overwriteArtist, overwriteAlbumArtist, overwriteAlbum, overwriteTrack);
+            await TagMetadataAsync(artist, string.Empty);
         }
     }
 
-    public async Task TagMetadataAsync(
-        string artist, 
-        string album, 
-        bool overwriteTagValue, 
-        bool confirm, 
-        bool overwriteArtist, 
-        bool overwriteAlbumArtist, 
-        bool overwriteAlbum, 
-        bool overwriteTrack)
+    public async Task TagMetadataAsync( string artist, string album)
     {
         var metadata = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || 
@@ -75,8 +68,7 @@ public class GroupTaggingDeezerMetadataCommandHandler
         {
             try
             {
-                await ProcessAlumGroupAsync(record.ToList(), artist, record.First().AlbumName!, overwriteTagValue,
-                    confirm, overwriteArtist, overwriteAlbumArtist, overwriteAlbum, overwriteTrack);
+                await ProcessAlumGroupAsync(record.ToList(), artist, record.First().AlbumName!);
             }
             catch (Exception e)
             {
@@ -84,17 +76,11 @@ public class GroupTaggingDeezerMetadataCommandHandler
             }
         }
     }
-                
+    
     private async Task ProcessAlumGroupAsync(
         List<MetadataModel> metadataModels,
         string artist,
-        string album,
-        bool overwriteTagValue,
-        bool confirm,
-        bool overwriteArtist,
-        bool overwriteAlbumArtist,
-        bool overwriteAlbum,
-        bool overwriteTrack)
+        string album)
     {
         Guid? artistId = metadataModels.FirstOrDefault()?.ArtistId;
         long deezerArtistId = 0;
@@ -113,22 +99,17 @@ public class GroupTaggingDeezerMetadataCommandHandler
             Console.WriteLine($"No match found for Deezer metadata, artist '{artist}'");
             return;
         }
-        
-        var deezerTracks = await _deezerRepository.GetTrackByArtistIdAsync(deezerArtistId, album, string.Empty);
 
-        if (deezerTracks?.Count == 0)
-        {
-            Console.WriteLine($"For Artist '{artist}', Album '{album}' information not found in our Deezer database");
-            return;
-        }
-
-        var allDeezerTracks = new List<DeezerTrackDbModel>();
+        var allDeezerTracks = new List<TrackScoreComparerDeezerModel>();
         string deezerArtistTracksKey = $"DeezerArtistTracks_{deezerArtistId}";
         using (await _asyncLock.LockAsync())
         {
-            if (!_cache.TryGetValue(deezerArtistTracksKey, out List<DeezerTrackDbModel>? result))
+            if (!_cache.TryGetValue(deezerArtistTracksKey, out List<TrackScoreComparerDeezerModel>? result))
             {
-                allDeezerTracks = await _deezerRepository.GetTrackByArtistIdAsync(deezerArtistId, string.Empty, string.Empty);
+                var tempDeezerTracks = await _deezerRepository.GetTrackByArtistIdAsync(deezerArtistId, string.Empty, string.Empty);
+                allDeezerTracks.AddRange(tempDeezerTracks
+                    .Select(model => new TrackScoreComparerDeezerModel(model)));
+                
                 MemoryCacheEntryOptions options = new()
                 {
                     SlidingExpiration = TimeSpan.FromHours(1)
@@ -140,167 +121,108 @@ public class GroupTaggingDeezerMetadataCommandHandler
                 allDeezerTracks = result;
             }
         }
-
-        //match Deezer Tracks against our database
-        //sort descending album's by the amount of matches
-        //this method will prevent getting different AlbumId's for each track
-        var matchedAlbums = deezerTracks
-            .GroupBy(track => track.AlbumId)
-            .Select(tracks => new
+        
+        var trackScoreTargetModels = metadataModels
+            .Select(track => new TrackScoreTargetModel
             {
-                AlbumId = tracks.Key,
-                Matches = tracks.Select(track => new
-                {
-                    Track = track,
-                    MetadataTracks = metadataModels.Select(metadata => new
-                    {
-                        MetadataTrack = metadata,
-                        DeezerTrack = track,
-                        MatchedFor = FuzzyHelper.FuzzRatioToLower(metadata.Title, track.TrackName)
-                    })
-                    .Where(match => match.MatchedFor >= 90)
-                    .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.Title, match.DeezerTrack.TrackName))
-                    .Where(match => FuzzyHelper.ExactNumberMatch(match.MetadataTrack.AlbumName, match.DeezerTrack.AlbumName))
-                    .OrderByDescending(match => match.MatchedFor)
-                    .ToList()
-                })
+                MetadataId = track.MetadataId!.Value,
+                Artist = track.ArtistName ?? string.Empty,
+                Album = track.AlbumName ?? string.Empty,
+                AlbumId = track.AlbumId?.ToString() ?? string.Empty,
+                Date = track.Tag_Date ?? string.Empty,
+                Isrc = track.Tag_Isrc ?? string.Empty,
+                Title = track.Title ?? string.Empty,
+                Duration = track.TrackLength,
+                TrackNumber = track.Tag_Track,
+                TrackTotalCount = track.Tag_TrackCount,
+                Upc = track.Tag_Upc ?? string.Empty
             })
-            .OrderByDescending(tracks => tracks.Matches.Sum(matches => matches.MetadataTracks.Count))
             .ToList();
         
+        var trackList = _trackScoreService
+            .GetAllTrackScore(trackScoreTargetModels, allDeezerTracks, 80)
+            .GroupBy(tracks => tracks.TrackScoreComparer.AlbumId)
+            .OrderByDescending(tracks => tracks.Count());
+
         List<Guid> processedMetadataIds = new List<Guid>();
-        
-        foreach(var matchedAlbum in matchedAlbums)
+        foreach (var groupedTracks in trackList)
         {
-            foreach (var matchedTrack in matchedAlbum.Matches)
+            foreach (var matchedTrack in groupedTracks)
             {
-                foreach (var metadata in matchedTrack.MetadataTracks)
+                if (processedMetadataIds.Contains(matchedTrack.TrackScore.MetadataId))
                 {
-                    if (processedMetadataIds.Contains(metadata.MetadataTrack.MetadataId!.Value))
-                    {
-                        continue;
-                    }
+                    continue;
+                }
+
+                var metadataModel = metadataModels
+                    .FirstOrDefault(m => m.MetadataId == matchedTrack.TrackScore.MetadataId);
+                
+                try
+                {
+                    DeezerTrackDbModel deezerTrackModel = ((TrackScoreComparerDeezerModel)matchedTrack.TrackScoreComparer).TrackModel;
                     
-                    try
-                    {
-                        await ProcessFileAsync(metadata.MetadataTrack, metadata.DeezerTrack, overwriteTagValue, 
-                                               confirm, deezerArtistId, overwriteArtist, overwriteAlbumArtist, overwriteAlbum, overwriteTrack);
-                        processedMetadataIds.Add(metadata.MetadataTrack.MetadataId!.Value);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
+                    Console.WriteLine($"Processing file '{metadataModel.Path}'");
+                    await ProcessFileAsync(metadataModel, deezerTrackModel, deezerArtistId);
+                    processedMetadataIds.Add(metadataModel.MetadataId.Value);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
                 }
             }
         }
-        
-        var notProcessed = metadataModels
-            .Where(metadata => !processedMetadataIds.Contains(metadata.MetadataId!.Value))
-            .ToList();
-
-        foreach (var metadata in notProcessed)
-        {
-            //handle incorrectly tagged albums
-            var foundTrack = GetSecondBestTrackMatch(allDeezerTracks, metadata.Title, metadata.AlbumName);
-            if (foundTrack == null)
-            {
-                Console.WriteLine($"Could not find Track title '{metadata.Title}' of album '{album}' in our Deezer database");
-                continue;
-            }
-            
-            try
-            {
-                await ProcessFileAsync(metadata, foundTrack, overwriteTagValue, confirm, deezerArtistId, overwriteArtist, overwriteAlbumArtist, overwriteAlbum, overwriteTrack);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-        }
-    }
-    
-    private DeezerTrackDbModel? GetSecondBestTrackMatch(
-        List<DeezerTrackDbModel> deezerTracks, 
-        string trackTitle,
-        string albumTitle)
-    {
-        var foundTracks = deezerTracks
-            .Select(deezerTrack => new
-            {
-                DeezerTrack = deezerTrack,
-                TrackMatchedFor = FuzzyHelper.FuzzRatioToLower(trackTitle, deezerTrack.TrackName),
-                AlbumMatchedFor = FuzzyHelper.FuzzRatioToLower(albumTitle, deezerTrack.AlbumName)
-            })
-            .Where(match => match.TrackMatchedFor >= 80)
-            .Where(match => match.AlbumMatchedFor >= 80)
-            .Where(match => FuzzyHelper.ExactNumberMatch(trackTitle, match.DeezerTrack.TrackName))
-            .Where(match => FuzzyHelper.ExactNumberMatch(albumTitle, match.DeezerTrack.AlbumName))
-            .OrderByDescending(match => match.TrackMatchedFor)
-            .ThenByDescending(match => match.AlbumMatchedFor)
-            .Select(match => match.DeezerTrack)
-            .ToList();
-
-        return foundTracks.FirstOrDefault();
     }
 
     private async Task ProcessFileAsync(
         MetadataModel metadata,
         DeezerTrackDbModel deezerTrack,
-        bool overwriteTagValue,
-        bool autoConfirm,
-        long deezerArtistId,
-        bool overwriteArtist,
-        bool overwriteAlbumArtist,
-        bool overwriteAlbum,
-        bool overwriteTrack)
+        long deezerArtistId)
     {
         Track track = new Track(metadata.Path);
-        Console.WriteLine($"Processing file: {metadata.Path}");
         var metadataInfo = _fileMetaDataService.GetMetadataInfo(track);
         
         bool trackInfoUpdated = false;
         var trackArtists = await _deezerRepository.GetTrackArtistsAsync(deezerTrack.TrackId, deezerArtistId);
         string artists = string.Join(';', trackArtists);
 
-        if (string.IsNullOrWhiteSpace(track.Title) || overwriteTrack)
+        if (string.IsNullOrWhiteSpace(track.Title) || this.OverwriteTrack)
         {
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Title", deezerTrack.TrackName, ref trackInfoUpdated, overwriteTagValue);
+            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Title", deezerTrack.TrackName, ref trackInfoUpdated, this.OverwriteTag);
         }
-        if (string.IsNullOrWhiteSpace(track.Album) || overwriteAlbum)
+        if (string.IsNullOrWhiteSpace(track.Album) || this.OverwriteAlbum)
         {
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Album", deezerTrack.AlbumName, ref trackInfoUpdated, overwriteTagValue);
+            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Album", deezerTrack.AlbumName, ref trackInfoUpdated, this.OverwriteTag);
         }
-        if (string.IsNullOrWhiteSpace(track.AlbumArtist)  || overwriteAlbumArtist)
+        if (string.IsNullOrWhiteSpace(track.AlbumArtist)  || this.OverwriteAlbumArtist)
         {
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "AlbumArtist", deezerTrack.ArtistName, ref trackInfoUpdated, overwriteTagValue);
+            _mediaTagWriteService.UpdateTag(track, metadataInfo, "AlbumArtist", deezerTrack.ArtistName, ref trackInfoUpdated, this.OverwriteTag);
         }
-        if (string.IsNullOrWhiteSpace(track.Artist) || overwriteArtist)
+        if (string.IsNullOrWhiteSpace(track.Artist) || this.OverwriteArtist)
         {
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Artist",  deezerTrack.ArtistName, ref trackInfoUpdated, overwriteTagValue);
+            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Artist",  deezerTrack.ArtistName, ref trackInfoUpdated, this.OverwriteTag);
         }
         
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Track Id", deezerTrack.TrackId.ToString(), ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Track Explicit", deezerTrack.ExplicitLyrics ? "Y": "N", ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Track Href", deezerTrack.TrackHref, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Track Id", deezerTrack.TrackId.ToString(), ref trackInfoUpdated, this.OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Track Explicit", deezerTrack.ExplicitLyrics ? "Y": "N", ref trackInfoUpdated, this.OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Track Href", deezerTrack.TrackHref, ref trackInfoUpdated, this.OverwriteTag);
         
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Album Id", deezerTrack.AlbumId.ToString(), ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Album Href", deezerTrack.AlbumHref, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Album Release Date", deezerTrack.AlbumReleaseDate, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Album Id", deezerTrack.AlbumId.ToString(), ref trackInfoUpdated, this.OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Album Href", deezerTrack.AlbumHref, ref trackInfoUpdated, this.OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Album Release Date", deezerTrack.AlbumReleaseDate, ref trackInfoUpdated, this.OverwriteTag);
         
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Artist Id", deezerTrack.ArtistId.ToString(), ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Artist Href", deezerTrack.ArtistHref, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Artist Id", deezerTrack.ArtistId.ToString(), ref trackInfoUpdated, this.OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Deezer Artist Href", deezerTrack.ArtistHref, ref trackInfoUpdated, this.OverwriteTag);
         
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "ARTISTS", artists, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "ARTISTS", artists, ref trackInfoUpdated, this.OverwriteTag);
 
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "ISRC", deezerTrack.TrackISRC, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "UPC", deezerTrack.AlbumUPC, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "ISRC", deezerTrack.TrackISRC, ref trackInfoUpdated, this.OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "UPC", deezerTrack.AlbumUPC, ref trackInfoUpdated, this.OverwriteTag);
             
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Date", deezerTrack.AlbumReleaseDate, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Label", deezerTrack.Label, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Disc Number", deezerTrack.DiscNumber.ToString(), ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Track Number", deezerTrack.TrackPosition.ToString(), ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Total Tracks", deezerTrack.AlbumTotalTracks.ToString(), ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Date", deezerTrack.AlbumReleaseDate, ref trackInfoUpdated, this.OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Label", deezerTrack.Label, ref trackInfoUpdated, this.OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Disc Number", deezerTrack.DiscNumber.ToString(), ref trackInfoUpdated, this.OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Track Number", deezerTrack.TrackPosition.ToString(), ref trackInfoUpdated, this.OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Total Tracks", deezerTrack.AlbumTotalTracks.ToString(), ref trackInfoUpdated, this.OverwriteTag);
 
         if (!trackInfoUpdated)
         {
@@ -308,7 +230,7 @@ public class GroupTaggingDeezerMetadataCommandHandler
         }
 
         Console.WriteLine("Confirm changes? (Y/y or N/n)");
-        bool confirm = autoConfirm || Console.ReadLine()?.ToLower() == "y";
+        bool confirm = this.Confirm || Console.ReadLine()?.ToLower() == "y";
         
         if (confirm && trackInfoUpdated && await _mediaTagWriteService.SafeSaveAsync(track))
         {
