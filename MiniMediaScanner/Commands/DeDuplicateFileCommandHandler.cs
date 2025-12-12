@@ -91,14 +91,12 @@ public class DeDuplicateFileCommandHandler
             .GroupBy(group =>
                 new
                 {
-                    group.AlbumId,
-                    FileName = group.FileName.ToLower()
+                    AlbumTitle = group.AlbumTitle.ToLower(),
+                    Tracktitle = group.Title.ToLower()
                 });
         
         foreach (var albumDuplicates in duplicateFiles)
         {
-            var fileWithoutExtension = albumDuplicates.First().PathWithoutExtension;
-
             DuplicateAlbumFileNameModel recordToKeep = null;
 
             foreach (string extension in extensions)
@@ -133,13 +131,13 @@ public class DeDuplicateFileCommandHandler
             {
                 if (delete)
                 {
-                    Console.WriteLine($"Delete duplicate file {file.Path}");
+                    Console.WriteLine($"Delete duplicate file, Title '{albumDuplicates.Key.Tracktitle}', {file.Path}");
                     new FileInfo(file.Path).Delete();
                     await _metadataRepository.DeleteMetadataRecordsAsync(new List<string>(new string[] { file.MetadataId.ToString() }));
                 }
                 else
                 {
-                    Console.WriteLine($"Duplicate file {file.Path}");
+                    Console.WriteLine($"Duplicate file, Title '{albumDuplicates.Key.Tracktitle}', {file.Path}");
                 }
             }
             Console.WriteLine($"");

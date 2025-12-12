@@ -222,26 +222,26 @@ public class MetadataRepository
     {
         string query = @"WITH duplicates AS (
                              SELECT 
+     	                         artist.Name as ArtistName,
                                  m.MetadataId,
                                  m.Path,
                                  REGEXP_REPLACE(m.Path, '\.([a-zA-Z0-9]{2,5})$', '') AS PathWithoutExtension,
                                  m.Title,
                                  album.AlbumId,
+                                 lower(album.Title) as AlbumTitle,
                                  REGEXP_REPLACE(
           	                       REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g'), 
           			   				                     '\.([a-zA-Z0-9]{2,5})$', '') AS FileName,
-                                 COUNT(*) OVER (PARTITION BY album.albumId, 
-          	                       lower(REGEXP_REPLACE(REGEXP_REPLACE(m.Path, '^.*/([^/]*/[^/]+)$', '\1', 'g'), 
-          			   								                    '\.([a-zA-Z0-9]{2,5})$', ''))) AS duplicate_count
+                                    COUNT(*) OVER (PARTITION BY lower(album.Title), lower(m.Title)) AS duplicate_count
                              FROM artists artist
                              JOIN albums album ON album.artistid = artist.artistid
                              JOIN metadata m ON m.albumid = album.albumid
                              WHERE LOWER(artist.name) = lower(@artistName)
                          )
-                         SELECT MetadataId, PathWithoutExtension, Path, Title, AlbumId, FileName, duplicate_count
+                         SELECT MetadataId, PathWithoutExtension, Path, Title, AlbumId, AlbumTitle, FileName, duplicate_count
                          FROM duplicates
                          WHERE duplicate_count > 1
-                         ORDER BY AlbumId, FileName, Path";
+                         ORDER BY ArtistName, AlbumTitle, Title, Path";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync();
