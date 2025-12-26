@@ -257,6 +257,7 @@ public class TidalAPIService
         AsyncRetryPolicy retryPolicy = Policy
             .Handle<HttpRequestException>()
             .Or<TimeoutException>()
+            .Or<InvalidOperationException>()
             .WaitAndRetryAsync(5, retryAttempt => 
                     TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 (exception, timeSpan, retryCount, context) => {

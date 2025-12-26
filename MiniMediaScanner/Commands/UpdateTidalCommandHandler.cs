@@ -64,10 +64,22 @@ public class UpdateTidalCommandHandler
             });
     }
     
-    public async Task UpdateAllTidalArtistsAsync()
+    public async Task UpdateAllTidalArtistsAsync(bool updateNonpulledArtists)
     {
-        var artistIds = await _tidalRepository.GetAllTidalArtistIdsAsync();
-        artistIds.Shuffle();
+        var artistIds = new List<int>();
+
+        if (updateNonpulledArtists)
+        {
+            artistIds.AddRange(await _tidalRepository.GetNonpulledTidalArtistIdsAsync());
+        }
+                
+        var tempArtistIds = (await _tidalRepository
+            .GetAllTidalArtistIdsAsync())
+            .Except(artistIds)
+            .ToList();
+        
+        tempArtistIds.Shuffle();
+        artistIds.AddRange(tempArtistIds);
         
         await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
@@ -75,22 +87,29 @@ public class UpdateTidalCommandHandler
             {
                 foreach (var artistId in artistIds)
                 {
-                    await _tidalService.UpdateArtistByIdAsync(artistId, callback =>
+                    try
                     {
-                        if (callback.Status == UpdateTidalStatus.Updating)
+                        await _tidalService.UpdateArtistByIdAsync(artistId, callback =>
                         {
-                            if (string.IsNullOrWhiteSpace(callback.ExtraInfo))
+                            if (callback.Status == UpdateTidalStatus.Updating)
                             {
-                                AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
-                            }
+                                if (string.IsNullOrWhiteSpace(callback.ExtraInfo))
+                                {
+                                    AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
+                                }
                             
-                            ctx.Status(Markup.Escape($"Updating Tidal Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}{callback.ExtraInfo}"));
-                        }
-                        else if(callback.Status == UpdateTidalStatus.SkippedSyncedWithin)
-                        {
-                            AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Tidal ArtistId '{callback?.ArtistId}' synced already within {_tidalService.PreventUpdateWithinDays}days"));
-                        }
-                    });
+                                ctx.Status(Markup.Escape($"Updating Tidal Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}{callback.ExtraInfo}"));
+                            }
+                            else if(callback.Status == UpdateTidalStatus.SkippedSyncedWithin)
+                            {
+                                AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Tidal ArtistId '{callback?.ArtistId}' synced already within {_tidalService.PreventUpdateWithinDays}days"));
+                            }
+                        });
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message + "\r\n\r\n" + e.StackTrace);
+                    }
                 }
             });
     }

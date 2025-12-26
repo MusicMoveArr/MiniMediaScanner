@@ -148,4 +148,15 @@ public class TidalRepository
                     albumName
                 });
     }
+    public async Task<List<int>> GetNonpulledTidalArtistIdsAsync()
+    {
+        string query = @"SELECT artistid FROM tidal_artist 
+                         where lastsynctime < '2020-01-01'";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn
+                .QueryAsync<int>(query))
+            .ToList();
+    }
 }

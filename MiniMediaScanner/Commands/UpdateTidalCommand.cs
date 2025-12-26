@@ -69,6 +69,12 @@ public class UpdateTidalCommand : ICommand
         EnvironmentVariable = "UPDATETIDAL_ARTIST_FILE")]
     public string ArtistFilePath { get; set; }
     
+    [CommandOption("update-nonpulled-artists",
+        Description = "Update artists that have not been pulled fully before, first",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATETIDAL_NONPULLED_ARTISTS")]
+    public bool UpdateNonpulledArtists { get; set; }
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
         if (TidalClientIds.Count != TidalSecretIds.Count)
@@ -111,7 +117,7 @@ public class UpdateTidalCommand : ICommand
             }
             else
             {
-                await handler.UpdateAllTidalArtistsAsync();
+                await handler.UpdateAllTidalArtistsAsync(UpdateNonpulledArtists);
             }
         }
     }
