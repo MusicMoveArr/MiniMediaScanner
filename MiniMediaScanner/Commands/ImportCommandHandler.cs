@@ -21,6 +21,8 @@ public class ImportCommandHandler
     private List<Task> _channelThreads;
     private bool _forceImport;
     private bool _updateMb;
+    private ProgressTask _progressTask;
+    private string _scanningDirectoryPath;
 
     public static string[] MediaFileExtensions = new string[]
     {
@@ -49,6 +51,8 @@ public class ImportCommandHandler
     {
         int threads = _updateMb ? 1 : 8;
         int directoryIndex = 0;
+        _scanningDirectoryPath = directoryPath;
+        
         _importProcessing = true;
         _processingChannel = Channel.CreateBounded<string>(new BoundedChannelOptions(BatchFileProcessing * threads)
         {
@@ -78,59 +82,37 @@ public class ImportCommandHandler
                 })
                 .StartAsync(async ctx =>
                 {
-                    var totalTask = ctx.AddTask(Markup.Escape($"Scanning directories {directoryPath}"));
-                    totalTask.MaxValue = 0;
+                    _progressTask = ctx.AddTask("Scanning files");
+                    _progressTask.MaxValue = 0;
                     
-
+                    int fileIndex = 0;
                     while (true)
                     {
-                        var chunkedDirPaths = Directory
-                            .EnumerateDirectories(directoryPath, "*.*", SearchOption.AllDirectories)
-                            .Skip(directoryIndex)
+                        var chunkedFilePaths = Directory
+                            .EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories)
+                            .Where(file => !Path.GetFileName(file).StartsWith("."))
+                            .Skip(fileIndex)
                             .Take(BatchFileProcessing)
                             .ToList();
-                        directoryIndex += BatchFileProcessing;
 
-                        if (!chunkedDirPaths.Any())
+                        if (!chunkedFilePaths.Any())
                         {
                             break;
                         }
 
-                        totalTask.MaxValue += chunkedDirPaths.Count;
-                        
-                        await ParallelHelper.ForEachAsync(chunkedDirPaths, threads, async dir =>
+                        fileIndex += BatchFileProcessing;
+
+                        chunkedFilePaths = chunkedFilePaths
+                            .Where(file => MediaFileExtensions.Any(ext => file.EndsWith(ext)))
+                            .ToList();
+
+                        _progressTask.MaxValue += chunkedFilePaths.Count;
+                        _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
+
+                        foreach (var path in chunkedFilePaths)
                         {
-                            totalTask.Value++;
-                            totalTask.Description = $"Scanning directories {totalTask.Value}/{totalTask.MaxValue}";
-                            
-                            int fileIndex = 0;
-                            while (true)
-                            {
-                                var chunkedFilePaths = Directory
-                                    .EnumerateFiles(dir, "*.*", SearchOption.AllDirectories)
-                                    .Where(file => !Path.GetFileName(file).StartsWith("."))
-                                    .Skip(fileIndex)
-                                    .Take(BatchFileProcessing)
-                                    .ToList();
-
-                                fileIndex += BatchFileProcessing;
-
-                                chunkedFilePaths = chunkedFilePaths
-                                    .Where(file => MediaFileExtensions.Any(ext => file.EndsWith(ext)))
-                                    .ToList();
-
-                                if (!chunkedFilePaths.Any())
-                                {
-                                    return;
-                                }
-
-                                foreach (var path in chunkedFilePaths)
-                                {
-                                    await _processingChannel.Writer.WriteAsync(path);
-                                }
-                            }
-                            
-                        });
+                            await _processingChannel.Writer.WriteAsync(path);
+                        }
                     }
                 });
         }
@@ -185,6 +167,9 @@ public class ImportCommandHandler
 
     public async Task<bool> ProcessFileAsync(string filePath, bool forceReimport = false, bool updateMb = false)
     {
+        _progressTask.Value++;
+        _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
+        
         var metadata = default(MetadataInfo);
 
         try
