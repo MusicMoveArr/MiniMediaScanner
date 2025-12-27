@@ -139,7 +139,7 @@ public class ImportCommandHandler
                     updatePaths = _forceImport ? filePaths : await _metadataRepository.MetadataCanUpdatePathListAsync(filePaths);
                     foreach (var file in updatePaths)
                     {
-                        await ProcessFileAsync(file, true, _updateMb);
+                        await ProcessFileAsync(file, _forceImport, _updateMb);
                     }
 
                     filePaths.Clear();
@@ -159,7 +159,7 @@ public class ImportCommandHandler
             updatePaths = _forceImport ? filePaths : await _metadataRepository.MetadataCanUpdatePathListAsync(filePaths);
             foreach (var file in updatePaths)
             {
-                await ProcessFileAsync(file, true, _updateMb);
+                await ProcessFileAsync(file, _forceImport, _updateMb);
             }
             filePaths.Clear();
         }
