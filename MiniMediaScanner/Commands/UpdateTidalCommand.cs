@@ -74,6 +74,12 @@ public class UpdateTidalCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "UPDATETIDAL_NONPULLED_ARTISTS")]
     public bool UpdateNonpulledArtists { get; set; }
+
+    [CommandOption("ignore-artist-album-amount",
+        Description = "Ignore artists that have over a certain amount of albums, >500 albums is not normal",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATETIDAL_IGNORE_ARTIST_ALBUM_AMOUNT")]
+    public int IgnoreArtistAlbumAmount { get; set; } = 500;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -96,7 +102,8 @@ public class UpdateTidalCommand : ICommand
             ProxyFile, 
             Proxy, 
             ProxyMode, 
-            PreventUpdateWithinDays);
+            PreventUpdateWithinDays,
+            IgnoreArtistAlbumAmount);
 
         if (!string.IsNullOrWhiteSpace(ArtistFilePath) && File.Exists(ArtistFilePath))
         {

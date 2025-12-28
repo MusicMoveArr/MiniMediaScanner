@@ -3,8 +3,10 @@ using FuzzySharp;
 using MiniMediaScanner.Callbacks;
 using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Enums;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models.Tidal;
 using MiniMediaScanner.Repositories;
+using Spectre.Console;
 
 namespace MiniMediaScanner.Services;
 
@@ -12,7 +14,8 @@ public class TidalService
 {
     public readonly int PreventUpdateWithinDays; 
     private readonly TidalAPICacheLayerService _tidalAPIService;
-    private readonly UpdateTidalRepository _updateTidalRepository;
+    private readonly string _connectionString;
+    private readonly int _ignoreArtistAlbumAmount;
 
     public TidalService(string connectionString, 
         List<TidalTokenClientSecret> secretTokens,
@@ -20,10 +23,12 @@ public class TidalService
         string proxyFile, 
         string singleProxy, 
         string proxyMode,
-        int preventUpdateWithinDays)
+        int preventUpdateWithinDays,
+        int ignoreArtistAlbumAmount)
     {
+        _ignoreArtistAlbumAmount = ignoreArtistAlbumAmount;
+        _connectionString =  connectionString;
         this.PreventUpdateWithinDays = preventUpdateWithinDays;
-        _updateTidalRepository = new UpdateTidalRepository(connectionString);
         _tidalAPIService = new TidalAPICacheLayerService(secretTokens, countryCode, proxyFile, singleProxy, proxyMode);
     }
     
@@ -65,6 +70,7 @@ public class TidalService
     public async Task UpdateArtistByIdAsync(int artistId,
         Action<UpdateTidalCallback>? callback = null)
     {
+        UpdateTidalRepository _updateTidalRepository = new UpdateTidalRepository(_connectionString);
         await _updateTidalRepository.SetConnectionAsync();
 
         try
@@ -114,6 +120,12 @@ public class TidalService
             var albums = artistInfo.Included
                 .Where(x => x.Type == "albums")
                 .ToList();
+
+            if (albums.Count >= _ignoreArtistAlbumAmount)
+            {
+                await _updateTidalRepository.CommitAsync();
+                return;
+            }
 
             int progress = 1;
             foreach (var album in albums)
@@ -371,11 +383,14 @@ public class TidalService
 
     private async Task<TidalSearchResponse?> InsertArtistInfoAsync(int artistId, bool ignorePeventCheck = false)
     {
+        UpdateTidalRepository _updateTidalRepository = new UpdateTidalRepository(_connectionString);
+        await _updateTidalRepository.SetConnectionAsync();
         if (!ignorePeventCheck)
         {
             DateTime? lastSyncTime = await _updateTidalRepository.GetArtistLastSyncTimeAsync(artistId);
             if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < PreventUpdateWithinDays)
             {
+                await _updateTidalRepository.CommitAsync();
                 return null;
             }
         }
@@ -386,6 +401,7 @@ public class TidalService
             artistInfo?.Data == null || 
             artistInfo?.Included == null)
         {
+            await _updateTidalRepository.CommitAsync();
             return null;
         }
         
@@ -406,6 +422,7 @@ public class TidalService
                 imageLink.Meta.Height);
         }
 
+        await _updateTidalRepository.CommitAsync();
         return artistInfo;
     }
 }
