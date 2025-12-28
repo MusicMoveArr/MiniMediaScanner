@@ -1,0 +1,1 @@
+CREATE INDEX idx_discogs_release_title_lower_trgm ON discogs_release USING gin (lower(title) gin_trgm_ops);

@@ -188,4 +188,49 @@ public class MatchRepository
             });
     }
     
+    public async Task<int?> GetBestDiscogsMatchAsync(Guid artistId, string artistName)
+    {
+        string query = @"WITH MusicLibrary AS (
+                             SELECT distinct
+                                 a.artistid, 
+                                 a.name AS artist_name, 
+                                 al.albumid, 
+                                 al.title AS album_name
+                             FROM metadata m
+                             JOIN albums al ON m.albumid = al.albumid
+                             JOIN artists a ON al.artistid = a.artistid
+                             WHERE a.artistid = @artistId
+                         ),
+                         DiscogsData AS (
+                             select distinct
+                                 artist.artistid, 
+                                 artist.name AS artist_name,
+                                 album.title AS album_name
+                             from discogs_artist artist
+                             join discogs_release_artist dra on dra.artistid =  artist.artistid
+                             join discogs_release album on album.releaseid = dra.releaseid
+                             join discogs_release_track track on track.releaseid = album.releaseid
+                             WHERE lower(artist.name) = lower(@artistName)
+                         )
+                         SELECT 
+                             dd.artistid,
+                             dd.artist_name,
+                             ROUND(100.0 * COUNT(DISTINCT ml.album_name) / NULLIF((SELECT COUNT(DISTINCT album_name) FROM MusicLibrary ml), 0), 2) AS match_percentage
+                         FROM DiscogsData dd
+                         LEFT JOIN MusicLibrary ml 
+                             ON lower(dd.album_name) = lower(ml.album_name)
+                         GROUP BY dd.artistid, dd.artist_name
+                         ORDER BY match_percentage desc
+                         limit 1";
+        
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return await conn
+            .QueryFirstOrDefaultAsync<int>(query, param: new
+            {
+                artistId,
+                artistName
+            });
+    }
+    
 }

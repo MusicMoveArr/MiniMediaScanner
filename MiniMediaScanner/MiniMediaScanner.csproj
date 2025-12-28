@@ -89,6 +89,9 @@
       <None Update="DbScripts\20251110 index sortname musicbrainz.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="DbScripts\20251228 index discogs release title.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>
