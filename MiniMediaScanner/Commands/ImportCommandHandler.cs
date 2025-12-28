@@ -118,7 +118,7 @@ public class ImportCommandHandler
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
+            Console.WriteLine($"{e.Message}, {e.StackTrace}");
         }
         
         _importProcessing = false;
@@ -200,7 +200,7 @@ public class ImportCommandHandler
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e.Message);
+                Console.WriteLine($"{e.Message}, {e.StackTrace}");
                 return false;
             }
             
@@ -217,7 +217,7 @@ public class ImportCommandHandler
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
+            Console.WriteLine($"{e.Message}, {e.StackTrace}");
         }
 
         return true;
