@@ -137,7 +137,6 @@ public class ImportCommandHandler
     private async Task ChannelThread()
     {
         List<string> filePaths = new List<string>();
-        List<string> updatePaths = new List<string>();
         while (_importProcessing)
         {
             await foreach (var path in _processingChannel.Reader.ReadAllAsync())
@@ -145,11 +144,17 @@ public class ImportCommandHandler
                 filePaths.Add(path);
                 if (filePaths.Count == BatchFileProcessing)
                 {
-                    updatePaths = _forceImport ? filePaths : await _metadataRepository.MetadataCanUpdatePathListAsync(filePaths);
+                    var updatePaths = _forceImport ? filePaths : await _metadataRepository.MetadataCanUpdatePathListAsync(filePaths);
+                    
                     foreach (var file in updatePaths)
                     {
+                        _progressTask.Value++;
+                        _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
                         await ProcessFileAsync(file, _forceImport, _updateMb);
                     }
+                    
+                    _progressTask.Value += filePaths.Count - updatePaths.Count;
+                    _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
 
                     filePaths.Clear();
                 }
@@ -165,9 +170,11 @@ public class ImportCommandHandler
 
         if (filePaths.Count > 0)
         {
-            updatePaths = _forceImport ? filePaths : await _metadataRepository.MetadataCanUpdatePathListAsync(filePaths);
+            var updatePaths = _forceImport ? filePaths : await _metadataRepository.MetadataCanUpdatePathListAsync(filePaths);
             foreach (var file in updatePaths)
             {
+                _progressTask.Value++;
+                _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
                 await ProcessFileAsync(file, _forceImport, _updateMb);
             }
             filePaths.Clear();
@@ -176,9 +183,6 @@ public class ImportCommandHandler
 
     public async Task<bool> ProcessFileAsync(string filePath, bool forceReimport = false, bool updateMb = false)
     {
-        _progressTask.Value++;
-        _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
-        
         var metadata = default(MetadataInfo);
 
         try
