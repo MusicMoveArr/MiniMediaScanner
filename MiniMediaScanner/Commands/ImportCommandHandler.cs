@@ -18,9 +18,9 @@ public class ImportCommandHandler
     private const int BatchFileProcessing = 1000;
     private bool _importProcessing = false;
     private Channel<string> _processingChannel;
-    private List<Task> _channelThreads;
-    private bool _forceImport;
-    private bool _updateMb;
+    private readonly List<Task> _channelThreads;
+    private readonly bool _forceImport;
+    private readonly bool _updateMb;
     private ProgressTask _progressTask;
     private string _scanningDirectoryPath;
 
@@ -50,7 +50,6 @@ public class ImportCommandHandler
     public async Task ProcessDirectoryAsync(string directoryPath)
     {
         int threads = _updateMb ? 1 : 8;
-        int directoryIndex = 0;
         _scanningDirectoryPath = directoryPath;
         
         _importProcessing = true;
@@ -59,7 +58,7 @@ public class ImportCommandHandler
             SingleWriter = false,
             SingleReader = false
         });
-
+        
         for (int i = 0; i < threads; i++)
         {
             _channelThreads.Add(Task.Factory.StartNew(ChannelThread));
@@ -84,34 +83,44 @@ public class ImportCommandHandler
                 {
                     _progressTask = ctx.AddTask("Scanning files");
                     _progressTask.MaxValue = 0;
-                    
-                    int fileIndex = 0;
-                    while (true)
-                    {
-                        var chunkedFilePaths = Directory
-                            .EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories)
-                            .Where(file => !Path.GetFileName(file).StartsWith("."))
-                            .Skip(fileIndex)
-                            .Take(BatchFileProcessing)
-                            .ToList();
 
-                        if (!chunkedFilePaths.Any())
+                    int scannedFiles = 0;
+                    Stack<string> directoryStack = new Stack<string>();
+                    directoryStack.Push(directoryPath);
+                    while (directoryStack.Count > 0)
+                    {
+                        string path = directoryStack.Pop();
+                        foreach (string subDir in Directory.GetDirectories(path))
                         {
-                            break;
+                            directoryStack.Push(subDir);
                         }
 
-                        fileIndex += BatchFileProcessing;
-
-                        chunkedFilePaths = chunkedFilePaths
-                            .Where(file => MediaFileExtensions.Any(ext => file.EndsWith(ext)))
-                            .ToList();
-
-                        _progressTask.MaxValue += chunkedFilePaths.Count;
-                        _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
-
-                        foreach (var path in chunkedFilePaths)
+                        try
                         {
-                            await _processingChannel.Writer.WriteAsync(path);
+                            string[] files = Directory.GetFiles(path);
+                            
+                            files = files
+                                .Where(file => MediaFileExtensions.Any(ext => file.EndsWith(ext)))
+                                .ToArray();
+                            _progressTask.MaxValue += files.Length;
+                            _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
+
+                            scannedFiles += files.Length;
+                        
+                            foreach (var filepath in files)
+                            {
+                                await _processingChannel.Writer.WriteAsync(filepath);
+
+                                //waiting a little before fetching more data
+                                while (_processingChannel.Reader.Count > BatchFileProcessing * threads)
+                                {
+                                    Thread.Sleep(TimeSpan.FromMilliseconds(1000));
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine($"{e.Message}, {e.StackTrace}");
                         }
                     }
                 });
