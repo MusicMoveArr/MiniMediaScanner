@@ -20,6 +20,15 @@ public class ArtistRepository
             .QueryAsync<string>(query))
             .ToList();
     }
+    public async Task<List<string>> GetAllArtistNamesLowercaseUniqueAsync()
+    {
+        string query = @"SELECT distinct lower(name) FROM artists order by lower(name) asc";
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        return (await conn
+                .QueryAsync<string>(query))
+            .ToList();
+    }
     
     public async Task<List<string>> GetArtistNamesCaseInsensitiveAsync(string artistName)
     {

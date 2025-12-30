@@ -19,6 +19,14 @@ public class TagMissingMetadataCommandHandler
     private readonly MusicBrainzArtistRepository _musicBrainzArtistRepository;
     private readonly FileMetaDataService _fileMetaDataService;
 
+    public string AcoustId { get; set; }
+    public bool Write { get; set; }
+    public string ArtistFilter { get; set; }
+    public string AlbumFilter { get; set; }
+    public bool OverwriteTag { get; set; }
+    public int MatchPercentageTags { get; set; }
+    public int MatchPercentageAcoustId { get; set; }
+
     public TagMissingMetadataCommandHandler(string connectionString)
     {
         _acoustIdService = new AcoustIdService();
@@ -31,13 +39,13 @@ public class TagMissingMetadataCommandHandler
         _fileMetaDataService = new FileMetaDataService();
     }
     
-    public async Task TagMetadataAsync(string accoustId, bool write, string album, bool overwriteTagValue, int matchPercentage)
+    public async Task TagMetadataAsync()
     {
-        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
+        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesLowercaseUniqueAsync(), 4, async artist =>
         {
             try
             {
-                await TagMetadataAsync(accoustId, write, artist, album, overwriteTagValue, matchPercentage);
+                await TagMetadataAsync(artist);
             }
             catch (Exception e)
             {
@@ -46,17 +54,11 @@ public class TagMissingMetadataCommandHandler
         });
     }
 
-    public async Task TagMetadataAsync(
-        string accoustId, 
-        bool write, 
-        string artist, 
-        string album, 
-        bool overwriteTagValue, 
-        int matchPercentage)
+    public async Task TagMetadataAsync(string artist)
     {
         var metadata = (await _metadataRepository.GetMissingMusicBrainzMetadataRecordsAsync(artist))
-            .Where(metadata => string.IsNullOrWhiteSpace(album) || 
-                               string.Equals(metadata.Album, album, StringComparison.OrdinalIgnoreCase))
+            .Where(metadata => string.IsNullOrWhiteSpace(AlbumFilter) || 
+                               string.Equals(metadata.Album, AlbumFilter, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         Console.WriteLine($"Checking artist '{artist}', found {metadata.Count} tracks to process");
@@ -65,7 +67,7 @@ public class TagMissingMetadataCommandHandler
         {
             try
             {
-                await ProcessFileAsync(record, write, accoustId, overwriteTagValue, matchPercentage);
+                await ProcessFileAsync(record);
             }
             catch (Exception e)
             {
@@ -74,13 +76,9 @@ public class TagMissingMetadataCommandHandler
         }
     }
                 
-    private async Task ProcessFileAsync(MetadataInfo metadata, 
-        bool write, 
-        string accoustId, 
-        bool overwriteTagValue, 
-        int matchPercentage)
+    private async Task ProcessFileAsync(MetadataInfo metadata)
     {
-        AcoustIdResponse? acoustIdLookup = await _acoustIdService.LookupAcoustIdAsync(accoustId,
+        AcoustIdResponse? acoustIdLookup = await _acoustIdService.LookupAcoustIdAsync(AcoustId,
             metadata.Tag_AcoustIdFingerPrint, (int)metadata.Tag_AcoustIdFingerPrint_Duration);
         
         var matchedRecording = await GetBestMatchingAcoustIdAsync(acoustIdLookup, 
@@ -88,7 +86,7 @@ public class TagMissingMetadataCommandHandler
             metadata.Album, 
             metadata.Title,
             (int)TimeSpan.Parse(metadata.Tag_Length).TotalSeconds, 
-            matchPercentage);
+            MatchPercentageAcoustId);
 
         if (matchedRecording == null)
         {
@@ -153,11 +151,11 @@ public class TagMissingMetadataCommandHandler
                     CountryMatch = !string.IsNullOrWhiteSpace(artistCountry) ? Fuzz.Ratio(release.Release.Country, artistCountry) : 0,
                     BarcodeMatch = !string.IsNullOrWhiteSpace(release.Barcode) ? Fuzz.Ratio(release.Barcode, trackBarcode) : 0
                 })
-                .Where(match => match.AlbumMatch > matchPercentage)
-                .Where(match => match.TitleMatch > matchPercentage)
+                .Where(match => match.AlbumMatch > MatchPercentageTags)
+                .Where(match => match.TitleMatch > MatchPercentageTags)
                 .Where(match => FuzzyHelper.ExactNumberMatch(match.Release.Title, track.Album))
                 .Where(match => FuzzyHelper.ExactNumberMatch(match.Title, track.Title))
-                .Where(match => match.TitleMatch > matchPercentage)
+                .Where(match => match.TitleMatch > MatchPercentageTags)
                 .OrderByDescending(match => match.AlbumMatch)
                 .ThenByDescending(match => match.TitleMatch)
                 .ThenByDescending(match => match.CountryMatch)
@@ -183,7 +181,7 @@ public class TagMissingMetadataCommandHandler
                           $", Barcode match: {firstMatch.BarcodeMatch}%"+
                           $", Country match: {firstMatch.CountryMatch}%");
 
-        if (!write)
+        if (!this.Write)
         {
             return;
         }
@@ -230,59 +228,59 @@ public class TagMissingMetadataCommandHandler
             }
             if (!string.IsNullOrWhiteSpace(label?.Label?.Name))
             {
-                _mediaTagWriteService.UpdateTag(track, metadataInfo, "LABEL", label?.Label.Name, ref trackInfoUpdated, overwriteTagValue);
-                _mediaTagWriteService.UpdateTag(track, metadataInfo, "CATALOGNUMBER", label?.CataLogNumber, ref trackInfoUpdated, overwriteTagValue);
+                _mediaTagWriteService.UpdateTag(track, metadataInfo, "LABEL", label?.Label.Name, ref trackInfoUpdated, OverwriteTag);
+                _mediaTagWriteService.UpdateTag(track, metadataInfo, "CATALOGNUMBER", label?.CataLogNumber, ref trackInfoUpdated, OverwriteTag);
             }
         }
         
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "date", release.Date, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "originaldate", release.Date, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "date", release.Date, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "originaldate", release.Date, ref trackInfoUpdated, OverwriteTag);
 
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Title", release.Media?.FirstOrDefault()?.Title, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Album", release.Title, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "AlbumArtist", bestMatchedArtist?.Name, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Artist", bestMatchedArtist?.Name, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Title", release.Media?.FirstOrDefault()?.Title, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Album", release.Title, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "AlbumArtist", bestMatchedArtist?.Name, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Artist", bestMatchedArtist?.Name, ref trackInfoUpdated, OverwriteTag);
 
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "ARTISTS", artists, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "ISRC", isrcs, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "SCRIPT", release?.TextRepresentation?.Script, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "barcode", release.Barcode, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "ARTISTS", artists, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "ISRC", isrcs, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "SCRIPT", release?.TextRepresentation?.Script, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "barcode", release.Barcode, ref trackInfoUpdated, OverwriteTag);
 
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Artist Id", musicBrainzArtistIds, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Artist Id", musicBrainzArtistIds, ref trackInfoUpdated, OverwriteTag);
 
         if (GuidHelper.GuidHasValue(recordingId))
         {
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Track Id", recordingId.ToString(), ref trackInfoUpdated, overwriteTagValue);
+            _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Track Id", recordingId.ToString(), ref trackInfoUpdated, OverwriteTag);
         }
         
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Release Track Id", musicBrainzTrackId, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Release Artist Id", musicBrainzReleaseArtistId, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Release Group Id", musicBrainzReleaseGroupId, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Release Id", release.Id, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Release Track Id", musicBrainzTrackId, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Release Artist Id", musicBrainzReleaseArtistId, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Release Group Id", musicBrainzReleaseGroupId, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Release Id", release.Id, ref trackInfoUpdated, OverwriteTag);
 
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Artist Id", musicBrainzArtistIds, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Id", musicBrainzAlbumId, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Type", release.ReleaseGroup.PrimaryType, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Release Country", release.Country, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Status", release.Status, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Artist Id", musicBrainzArtistIds, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Id", musicBrainzAlbumId, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Type", release.ReleaseGroup.PrimaryType, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Release Country", release.Country, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MusicBrainz Album Status", release.Status, ref trackInfoUpdated, OverwriteTag);
 
         if (GuidHelper.GuidHasValue(acoustId))
         {
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Acoustid Id", acoustId.ToString(), ref trackInfoUpdated, overwriteTagValue);
+            _mediaTagWriteService.UpdateTag(track, metadataInfo, "Acoustid Id", acoustId.ToString(), ref trackInfoUpdated, OverwriteTag);
         }
         
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Date", release.ReleaseGroup.FirstReleaseDate, ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "originaldate", release.ReleaseGroup.FirstReleaseDate, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Date", release.ReleaseGroup.FirstReleaseDate, ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "originaldate", release.ReleaseGroup.FirstReleaseDate, ref trackInfoUpdated, OverwriteTag);
         
         if (release.ReleaseGroup?.FirstReleaseDate?.Length >= 4)
         {
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "originalyear", release.ReleaseGroup.FirstReleaseDate.Substring(0, 4), ref trackInfoUpdated, overwriteTagValue);
+            _mediaTagWriteService.UpdateTag(track, metadataInfo, "originalyear", release.ReleaseGroup.FirstReleaseDate.Substring(0, 4), ref trackInfoUpdated, OverwriteTag);
         }
         
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Disc Number", release.Media?.FirstOrDefault()?.Position?.ToString(), ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Track Number", release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Position?.ToString(), ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Total Tracks", release.Media?.FirstOrDefault()?.TrackCount.ToString(), ref trackInfoUpdated, overwriteTagValue);
-        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MEDIA", release.Media?.FirstOrDefault()?.Format, ref trackInfoUpdated, overwriteTagValue);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Disc Number", release.Media?.FirstOrDefault()?.Position?.ToString(), ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Track Number", release.Media?.FirstOrDefault()?.Tracks?.FirstOrDefault()?.Position?.ToString(), ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "Total Tracks", release.Media?.FirstOrDefault()?.TrackCount.ToString(), ref trackInfoUpdated, OverwriteTag);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "MEDIA", release.Media?.FirstOrDefault()?.Format, ref trackInfoUpdated, OverwriteTag);
 
         if (trackInfoUpdated && await _mediaTagWriteService.SafeSaveAsync(track))
         {

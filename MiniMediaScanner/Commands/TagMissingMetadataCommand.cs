@@ -44,23 +44,36 @@ public class TagMissingMetadataCommand : ICommand
         EnvironmentVariable = "TAGMISSINGMETADATA_OVERWRITE_TAG")]
     public bool OverwriteTag { get; set; } = true;
     
-    [CommandOption("match-percentage",
+    [CommandOption("match-percentage-tags",
         Description = "The percentage used for tagging, how accurate it must match with MusicBrainz.",
-        EnvironmentVariable = "TAGMISSINGMETADATA_MATCH_PERCENTAGE",
+        EnvironmentVariable = "TAGMISSINGMETADATA_MATCH_PERCENTAGE_TAGS",
         IsRequired = false)]
-    public int MatchPercentage { get; set; } = 80;
+    public int MatchPercentageTags { get; set; } = 80;
+    
+    [CommandOption("match-percentage-acoustid",
+        Description = "The percentage used for AcoustId, how accurate it must match with AcoustId (for sound accuracy).",
+        EnvironmentVariable = "TAGMISSINGMETADATA_MATCH_PERCENTAGE_ACOUSTID",
+        IsRequired = false)]
+    public int MatchPercentageAcoustId { get; set; } = 98;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new TagMissingMetadataCommandHandler(ConnectionString);
+        handler.AcoustId = AccoustId;
+        handler.Write = Write;
+        handler.ArtistFilter = Artist;
+        handler.AlbumFilter = Album;
+        handler.OverwriteTag = OverwriteTag;
+        handler.MatchPercentageTags = MatchPercentageTags;
+        handler.MatchPercentageAcoustId = MatchPercentageAcoustId;
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.TagMetadataAsync(AccoustId, Write, Album, OverwriteTag, MatchPercentage);
+            await handler.TagMetadataAsync();
         }
         else
         {
-            await handler.TagMetadataAsync(AccoustId, Write, Artist, Album, OverwriteTag, MatchPercentage);
+            await handler.TagMetadataAsync(Artist);
         }
     }
 }
