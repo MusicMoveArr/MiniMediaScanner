@@ -16,6 +16,7 @@
       <PackageReference Include="AcoustID.NET" Version="1.3.3" />
       <PackageReference Include="CliFx" Version="2.3.6" />
       <PackageReference Include="Dapper" Version="2.1.66" />
+      <PackageReference Include="DapperBulkQueries.Npgsql" Version="1.9001.512" />
       <PackageReference Include="dbup-postgresql" Version="6.1.5" />
       <PackageReference Include="DiscogsConnect" Version="4.1.1" />
       <PackageReference Include="FuzzySharp" Version="2.0.2" />
@@ -90,6 +91,9 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
       <None Update="DbScripts\20251228 index discogs release title.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="DbScripts\20251230 submit acoustid.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>
