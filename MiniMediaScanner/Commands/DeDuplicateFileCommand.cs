@@ -31,6 +31,12 @@ public class DeDuplicateFileCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "DEDUPLICATE_ACCURACY")]
     public int Accuracy { get; set; } = 98;
+    
+    [CommandOption("acoustfingerprint-accuracy", 
+        Description = "Acoust Fingerprint matching accuracy, 99% is recommended, 98% and lower can mismatch real fast, think of remixes etc",
+        IsRequired = false,
+        EnvironmentVariable = "DEDUPLICATE_ACOUSTFINGERPRINT_ACCURACY")]
+    public int AcoustFingerprintAccuracy { get; set; } = 99;
 
     [CommandOption("extensions", 'e',
         Description = "Extensions to keep, in order, first found extension is kept (extensions must be without '.')",
@@ -62,10 +68,14 @@ public class DeDuplicateFileCommand : ICommand
         EnvironmentVariable = "DEDUPLICATE_CHECK_ALBUM_EXTENSIONS")]
     public bool CheckAlbumExtensions { get; set; } = false;
     
+    [CommandOption("check-album-extensions-acoustfingerprint", 
+        Description = "Similar to --check-extensions with the difference of better support for multi-drive / MergerFS Setups, --check-extensions checks the full path, this option checks per album",
+        IsRequired = false,
+        EnvironmentVariable = "DEDUPLICATE_CHECK_ALBUM_EXTENSIONS_ACOUSTFINGERPRINT")]
+    public bool CheckAlbumExtensionsAcoustFingerprint { get; set; } = false;
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new DeDuplicateFileCommandHandler(ConnectionString);
-
         if (Accuracy <= 50)
         {
             Console.WriteLine("50% or lower accuracy is not recommended...");
@@ -76,14 +86,39 @@ public class DeDuplicateFileCommand : ICommand
             Console.WriteLine("Maximum accuracy is 99%");
             return;
         }
+        if (AcoustFingerprintAccuracy > 100)
+        {
+            Console.WriteLine("Maximum acoust fingerprint accuracy is 100%");
+            return;
+        }
+        if (AcoustFingerprintAccuracy <= 80)
+        {
+            Console.WriteLine("80% or lower acoust fingerprint accuracy is not recommended...");
+            return;
+        }
 
+        var handler = new DeDuplicateFileCommandHandler(ConnectionString);
+        handler.Delete = Delete;
+        handler.Accuracy = Accuracy;
+        handler.Extensions = Extensions;
+        handler.CheckExtensions = CheckExtensions;
+        handler.CheckVersions = CheckVersions;
+        handler.CheckAlbumDuplicates = CheckAlbumDuplicates;
+        handler.CheckAlbumExtensions = CheckAlbumExtensions;
+        handler.AcoustFingerprintAccuracy = Math.Round(
+            Math.Max(AcoustFingerprintAccuracy / 100D, 
+                AcoustFingerprintAccuracy == 100 ? 1 : AcoustFingerprintAccuracy / 100D), 
+            2, MidpointRounding.AwayFromZero);
+
+        handler.CheckAlbumExtensionsAcoustFingerprint = CheckAlbumExtensionsAcoustFingerprint;
+        
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.CheckDuplicateFilesAsync(Delete, Accuracy, Extensions, CheckExtensions, CheckVersions, CheckAlbumDuplicates, CheckAlbumExtensions);
+            await handler.CheckDuplicateFilesAsync();
         }
         else
         {
-            await handler.CheckDuplicateFilesAsync(Artist, Delete, Accuracy, Extensions, CheckExtensions, CheckVersions, CheckAlbumDuplicates, CheckAlbumExtensions);
+            await handler.CheckDuplicateFilesAsync(Artist);
         }
     }
 }
