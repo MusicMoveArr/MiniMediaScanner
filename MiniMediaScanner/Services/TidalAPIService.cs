@@ -5,6 +5,7 @@ using MiniMediaScanner.Models.Tidal;
 using Polly;
 using Polly.Retry;
 using RestSharp;
+using Spectre.Console;
 
 namespace MiniMediaScanner.Services;
 
@@ -21,6 +22,7 @@ public class TidalAPIService
     private List<TidalTokenClientSecret> _secretTokens;
     private readonly string _countryCode;
     public ProxyManagerService ProxyManagerService { get; private set; }
+    private SemaphoreSlim _tokensSemaphoreSlim = new SemaphoreSlim(1);
 
     public TidalAPIService(
         List<TidalTokenClientSecret> secretTokens,
@@ -77,7 +79,10 @@ public class TidalAPIService
             request.AddHeader("Authorization", $"Bearer {secretToken.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
             request.AddHeader("Content-Type", "application/vnd.api+json");
-            request.AddParameter("countryCode", _countryCode);
+            if (!string.IsNullOrWhiteSpace(_countryCode))
+            {
+                request.AddParameter("countryCode", _countryCode);
+            }
             request.AddParameter("include", "artists");
             
             return await client.GetAsync<TidalSearchResponse>(request);
@@ -99,7 +104,10 @@ public class TidalAPIService
             request.AddHeader("Authorization", $"Bearer {secretToken.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
             request.AddHeader("Content-Type", "application/vnd.api+json");
-            request.AddParameter("countryCode", _countryCode);
+            if (!string.IsNullOrWhiteSpace(_countryCode))
+            {
+                request.AddParameter("countryCode", _countryCode);
+            }
             request.AddParameter("include", "albums,profileArt");
 
             return await client.GetAsync<TidalSearchResponse>(request);
@@ -148,7 +156,10 @@ public class TidalAPIService
             request.AddHeader("Authorization", $"Bearer {secretToken.AuthenticationResponse.AccessToken}");
             request.AddHeader("Accept", "application/vnd.api+json");
             request.AddHeader("Content-Type", "application/vnd.api+json");
-            request.AddParameter("countryCode", _countryCode);
+            if (!string.IsNullOrWhiteSpace(_countryCode))
+            {
+                request.AddParameter("countryCode", _countryCode);
+            }
             request.AddParameter("include", "artists,coverArt,items,providers");
             
             return await client.GetAsync<TidalSearchResponse>(request);
@@ -199,7 +210,10 @@ public class TidalAPIService
             request.AddHeader("Content-Type", "application/vnd.api+json");
             request.AddParameter("filter[id]", string.Join(',', trackIds));
             request.AddParameter("include", "artists");
-            request.AddParameter("countryCode", _countryCode);
+            if (!string.IsNullOrWhiteSpace(_countryCode))
+            {
+                request.AddParameter("countryCode", _countryCode);
+            }
             
             return await client.GetAsync<TidalTrackArtistResponse>(request);
         });
