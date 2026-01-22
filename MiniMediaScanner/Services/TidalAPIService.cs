@@ -221,6 +221,8 @@ public class TidalAPIService
 
     private async Task<TidalTokenClientSecret?> GetNextTokenSecretAsync()
     {
+        await _tokensSemaphoreSlim.WaitAsync();
+        
         //get secret token that was used >ApiDelay time
         TidalTokenClientSecret? nextSecretToken = _secretTokens
             .Where(token => token.AuthenticationResponse != null)
@@ -233,22 +235,27 @@ public class TidalAPIService
             if (nextSecretToken != null)
             {
                 await AuthenticateAsync(nextSecretToken);
-                
+            
                 if (nextSecretToken != null)
                 {
                     nextSecretToken.UseCount++;
                 }
+                _tokensSemaphoreSlim.Release();
                 return nextSecretToken;
             }
         }
-        
+    
         //last resort, delay
         if (nextSecretToken == null)
         {
-            nextSecretToken = _secretTokens.FirstOrDefault(token => token.AuthenticationResponse != null);
-            Thread.Sleep(ApiDelay);
+            nextSecretToken = _secretTokens
+                .OrderBy(token => token.LastUsedTime.ElapsedMilliseconds)
+                .FirstOrDefault(token => token.AuthenticationResponse != null);
+
+            int msecToSleep = ApiDelay - (int)(nextSecretToken?.LastUsedTime.ElapsedMilliseconds ?? 0);
+            Thread.Sleep(msecToSleep);
         }
-        
+    
         if (nextSecretToken != null &&
             string.IsNullOrWhiteSpace(nextSecretToken.AuthenticationResponse?.AccessToken) ||
             (nextSecretToken?.AuthenticationResponse?.ExpiresIn > 0 &&
@@ -263,6 +270,7 @@ public class TidalAPIService
             nextSecretToken.UseCount++;
         }
 
+        _tokensSemaphoreSlim.Release();
         return nextSecretToken;
     }
     
