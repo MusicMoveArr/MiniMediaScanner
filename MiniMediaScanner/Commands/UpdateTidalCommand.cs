@@ -34,10 +34,9 @@ public class UpdateTidalCommand : ICommand
     public required List<string> TidalSecretIds { get; init; }
 
     [CommandOption("country-code", 'G',
-        Description = "Tidal's CountryCode (e.g. US, FR, NL, DE etc).",
+        Description = "Tidal's CountryCodes (e.g. US, FR, NL, DE etc).",
         EnvironmentVariable = "UPDATETIDAL_COUNTRY_CODE")]
-    public string TidalCountryCode { get; set; } = "US";
-    
+    public string TidalCountryCode { get; set; }
     
     [CommandOption("proxy-file", 
         Description = "HTTP/HTTPS Proxy/Proxies to use to access Deezer.", 

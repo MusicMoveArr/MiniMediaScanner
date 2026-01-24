@@ -360,6 +360,22 @@ public class TidalService
                         trackNumber.Meta.VolumeNumber,
                         trackNumber.Meta.TrackNumber,
                         track.Attributes.Version ?? string.Empty);
+                    
+                    var similarTracks = await _tidalAPIService.GetSimilarTracksByTrackIdAsync(int.Parse(track.Id));
+
+                    foreach (var similarTrack in similarTracks.Data)
+                    {
+                        string similarIsrc = similarTracks.Included
+                            ?.Where(x => x.Id == similarTrack.Id)
+                            ?.Select(x => x.Attributes.ISRC)
+                            ?.FirstOrDefault() ?? string.Empty;
+                        
+                        await _updateTidalRepository.UpsertSimilarTrackAsync(
+                            int.Parse(track.Id), 
+                            int.Parse(similarTrack.Id), 
+                            similarIsrc);
+                    }
+                    
                 }
 
                 progress++;

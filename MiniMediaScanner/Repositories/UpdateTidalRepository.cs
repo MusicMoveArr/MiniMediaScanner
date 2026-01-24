@@ -374,4 +374,21 @@ public class UpdateTidalRepository : BaseUpdateRepository
                 providerId
             }, transaction: base.Transaction);
     }
+    
+    public async Task UpsertSimilarTrackAsync(int trackId, int similarTrackId, string similarIsrc)
+    {
+        string query = @"
+            INSERT INTO tidal_track_similar (TrackId, SimilarTrackId, SimilarISRC)
+            VALUES (@trackId, @similarTrackId, @similarIsrc)
+            ON CONFLICT (TrackId, SimilarTrackId)
+            DO NOTHING";
+
+        await base.Connection
+            .ExecuteAsync(query, param: new
+            {
+                trackId,
+                similarTrackId,
+                similarIsrc
+            }, transaction: base.Transaction);
+    }
 }

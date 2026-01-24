@@ -95,6 +95,17 @@ public class TidalAPICacheLayerService
         return result;
     }
 
+    public async Task<TidalTrackArtistResponse?> GetSimilarTracksByTrackIdAsync(int trackId)
+    {
+        string cacheKey = $"GetSimilarTracksByTrackId_{trackId}";
+        if (!_cache.TryGetValue(cacheKey, out TidalTrackArtistResponse? result))
+        {
+            result = await _tidalAPIService.GetSimilarTracksByTrackIdAsync(trackId);
+            AddToCache(cacheKey, result);
+        }
+        return result;
+    }
+
     public async Task<TidalTrackArtistResponse?> GetTrackArtistsByTrackIdAsync(int[] trackIds)
     {
         string joinedTrackIds = string.Join(",", trackIds);
