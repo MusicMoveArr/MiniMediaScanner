@@ -391,4 +391,35 @@ public class UpdateTidalRepository : BaseUpdateRepository
                 similarIsrc
             }, transaction: base.Transaction);
     }
+    
+    public async Task<bool> HasSimilarTrackRecordsAsync(int trackId)
+    {
+        string query = @"
+            select 1 from tidal_track_similar 
+            where trackId = @trackId";
+
+        return (await base.Connection
+            .ExecuteScalarAsync<int>(query, param: new
+            {
+                trackId
+            }, transaction: base.Transaction)) == 1;
+    }
+    
+    public async Task<List<int>> GetMissingSimilarTrackIdsByArtistIdAsync(int artistId)
+    {
+        string query = @"
+                    select track.TrackId
+                    from tidal_artist artist
+                    join tidal_album album on album.artistid = artist.artistid 
+                    join tidal_track track on track.albumid = album.albumid 
+                    left join tidal_track_similar sim on sim.trackid = track.trackid 
+                    where artist.artistid = @artistId and sim.trackid is null";
+
+        return (await base.Connection
+            .QueryAsync<int>(query, param: new
+            {
+                artistId
+            }, transaction: base.Transaction))
+            .ToList();
+    }
 }

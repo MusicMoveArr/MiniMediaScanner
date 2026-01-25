@@ -91,7 +91,7 @@ public class TidalService
                 await _updateTidalRepository.CommitAsync();
                 return;
             }
-
+            
             //fetch all the albums available of the artist
             //by going through the next page cursor
             //populating the artist object
@@ -120,6 +120,8 @@ public class TidalService
             var albums = artistInfo.Included
                 .Where(x => x.Type == "albums")
                 .ToList();
+
+            await PullMissingSimilarTracksAsync(artistId, _updateTidalRepository, callback, artistInfo, albums.Count);
 
             if (albums.Count >= _ignoreArtistAlbumAmount)
             {
@@ -304,7 +306,6 @@ public class TidalService
                         ?.Items
                         ?.Data
                         ?.FirstOrDefault(x => x.Id == track.Id);
-
                     
                     callback?.Invoke(new UpdateTidalCallback(artistId, 
                         artistInfo.Data.Attributes.Name,
@@ -360,24 +361,9 @@ public class TidalService
                         trackNumber.Meta.VolumeNumber,
                         trackNumber.Meta.TrackNumber,
                         track.Attributes.Version ?? string.Empty);
-                    
-                    var similarTracks = await _tidalAPIService.GetSimilarTracksByTrackIdAsync(int.Parse(track.Id));
 
-                    foreach (var similarTrack in similarTracks.Data)
-                    {
-                        string similarIsrc = similarTracks.Included
-                            ?.Where(x => x.Id == similarTrack.Id)
-                            ?.Select(x => x.Attributes.ISRC)
-                            ?.FirstOrDefault() ?? string.Empty;
-                        
-                        await _updateTidalRepository.UpsertSimilarTrackAsync(
-                            int.Parse(track.Id), 
-                            int.Parse(similarTrack.Id), 
-                            similarIsrc);
-                    }
-                    
+                    await ProcessSimilarTrackAsync(int.Parse(track.Id), _updateTidalRepository);
                 }
-
                 progress++;
             }
 
@@ -394,6 +380,53 @@ public class TidalService
         {
             await _updateTidalRepository.RollbackAsync();
             Console.WriteLine($"{e.Message}, {e.StackTrace}");
+        }
+    }
+
+    private async Task PullMissingSimilarTracksAsync(
+        int artistId, 
+        UpdateTidalRepository updateTidalRepository, 
+        Action<UpdateTidalCallback>? callback,
+        TidalSearchResponse artistInfo,
+        int albumCount)
+    {
+        List<int> trackIdsMissingSimilar = await updateTidalRepository.GetMissingSimilarTrackIdsByArtistIdAsync(artistId);
+
+        int repullProgress = 1;
+        foreach(int trackId in trackIdsMissingSimilar)
+        {
+            await ProcessSimilarTrackAsync(trackId, updateTidalRepository);
+                
+            callback?.Invoke(new UpdateTidalCallback(artistId, 
+                artistInfo.Data.Attributes.Name,
+                string.Empty,
+                albumCount,
+                UpdateTidalStatus.Updating,
+                0,
+                $"Pulling missing similar tracks {repullProgress} of {trackIdsMissingSimilar.Count} processed"));
+            repullProgress++;
+        }
+    }
+
+    private async Task ProcessSimilarTrackAsync(int trackId, UpdateTidalRepository updateTidalRepository)
+    {
+        if (!await updateTidalRepository.HasSimilarTrackRecordsAsync(trackId))
+        {
+            var similarTracks = await _tidalAPIService.GetSimilarTracksByTrackIdAsync(trackId);
+
+            foreach (var similarTrack in similarTracks?.Data ?? [])
+            {
+                string similarIsrc = similarTracks
+                    ?.Included
+                    ?.Where(x => x.Id == similarTrack.Id)
+                    ?.Select(x => x.Attributes.ISRC)
+                    ?.FirstOrDefault() ?? string.Empty;
+                        
+                await updateTidalRepository.UpsertSimilarTrackAsync(
+                    trackId, 
+                    int.Parse(similarTrack.Id), 
+                    similarIsrc);
+            }
         }
     }
 
