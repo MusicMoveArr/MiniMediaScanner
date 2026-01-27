@@ -1,0 +1,1 @@
+CREATE INDEX idx_artists_lower_name_gin ON artists USING gin(lower(name) gin_trgm_ops);
