@@ -1,0 +1,1 @@
+CREATE INDEX idx_metadata_lower_title_gin ON metadata USING gin(lower(title) gin_trgm_ops);
