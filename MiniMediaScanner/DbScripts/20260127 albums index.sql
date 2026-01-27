@@ -1,0 +1,1 @@
+CREATE INDEX idx_albums_lower_title_gin ON albums USING gin(lower(title) gin_trgm_ops);
