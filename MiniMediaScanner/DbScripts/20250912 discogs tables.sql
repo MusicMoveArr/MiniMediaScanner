@@ -171,7 +171,7 @@ CREATE INDEX idx_discogs_release_style_releaseid ON discogs_release_style (Relea
 
 CREATE INDEX idx_discogs_release_format_description_releaseformatuuid ON discogs_release_format_description (ReleaseFormatUuId);
 
-CREATE INDEX idx_discogs_release_artist ON discogs_release_artist (ReleaseId)
+CREATE INDEX idx_discogs_release_artist ON discogs_release_artist (ReleaseId);
 
 CREATE INDEX idx_discogs_release_extra_artist_releaseid ON discogs_release_extra_artist (ReleaseId);
 

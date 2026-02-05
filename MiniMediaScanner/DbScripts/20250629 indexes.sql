@@ -10,4 +10,4 @@ CREATE INDEX idx_spotify_album_name_lower_trgm ON spotify_album USING gin (lower
 CREATE INDEX idx_spotify_track_title_lower_trgm ON spotify_track USING gin (lower(name) gin_trgm_ops);
 
 CREATE INDEX idx_musicbrainz_artist_name_lower_trgm ON musicbrainz_artist USING gin (lower(name) gin_trgm_ops);
-CREATE INDEX idx_musicbrainz_track_title_lower_trgm ON musicbrainz_track USING gin (lower(title) gin_trgm_ops);
+CREATE INDEX idx_musicbrainz_release_track_title_lower_trgm ON musicbrainz_release_track USING gin (lower(title) gin_trgm_ops);
