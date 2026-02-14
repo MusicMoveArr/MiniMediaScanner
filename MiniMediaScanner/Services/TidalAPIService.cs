@@ -17,6 +17,7 @@ public class TidalAPIService
     private const string TracksByAlbumIdUrl = "https://openapi.tidal.com/v2/albums/{0}";
     private const string TracksUrl = "https://openapi.tidal.com/v2/tracks";
     private const string TracksSimilarUrl = "https://openapi.tidal.com/v2/tracks/{0}/relationships/similarTracks";
+    private const string ArtistsSimilarUrl = "https://openapi.tidal.com/v2/artists/{0}/relationships/similarArtists";
     private const string TidalApiPrefix = "https://openapi.tidal.com/v2";
 
     public const int ApiDelay = 4500;
@@ -240,6 +241,31 @@ public class TidalAPIService
                 request.AddParameter("countryCode", _countryCode);
             }
             request.AddParameter("include", "similarTracks");
+            
+            return await client.GetAsync<TidalTrackArtistResponse>(request);
+        });
+    }
+    
+    public async Task<TidalTrackArtistResponse?> GetSimilarArtistsByArtistIdAsync(int artistId)
+    {
+        TidalTokenClientSecret? secretToken = await GetNextTokenSecretAsync();
+        AsyncRetryPolicy retryPolicy = GetRetryPolicy();
+        Debug.WriteLine($"Requesting Tidal GetSimilarArtistsByArtistId '{artistId}'");
+
+        return await retryPolicy.ExecuteAsync(async () =>
+        {
+            RestClientOptions options = new RestClientOptions(string.Format(ArtistsSimilarUrl, artistId));
+            await ProxyManagerService.SetProxySettingsAsync(options);
+            using RestClient client = new RestClient(options);
+            RestRequest request = new RestRequest();
+            request.AddHeader("Authorization", $"Bearer {secretToken.AuthenticationResponse.AccessToken}");
+            request.AddHeader("Accept", "application/vnd.api+json");
+            request.AddHeader("Content-Type", "application/vnd.api+json");
+            if (!string.IsNullOrWhiteSpace(_countryCode))
+            {
+                request.AddParameter("countryCode", _countryCode);
+            }
+            request.AddParameter("include", "similarArtists");
             
             return await client.GetAsync<TidalTrackArtistResponse>(request);
         });

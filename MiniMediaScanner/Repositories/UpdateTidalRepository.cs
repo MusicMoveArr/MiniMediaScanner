@@ -392,6 +392,22 @@ public class UpdateTidalRepository : BaseUpdateRepository
             }, transaction: base.Transaction);
     }
     
+    public async Task UpsertSimilarArtistAsync(int artistId, int similarArtistId)
+    {
+        string query = @"
+            INSERT INTO tidal_artist_similar (ArtistId, SimilarArtistId)
+            VALUES (@artistId, @similarArtistId)
+            ON CONFLICT (ArtistId, SimilarArtistId)
+            DO NOTHING";
+
+        await base.Connection
+            .ExecuteAsync(query, param: new
+            {
+                artistId,
+                similarArtistId
+            }, transaction: base.Transaction);
+    }
+    
     public async Task<bool> HasSimilarTrackRecordsAsync(int trackId)
     {
         string query = @"
@@ -402,6 +418,19 @@ public class UpdateTidalRepository : BaseUpdateRepository
             .ExecuteScalarAsync<int>(query, param: new
             {
                 trackId
+            }, transaction: base.Transaction)) == 1;
+    }
+    
+    public async Task<bool> HasSimilarArtistRecordsAsync(int artistId)
+    {
+        string query = @"
+            select 1 from tidal_artist_similar 
+            where artistId = @artistId";
+
+        return (await base.Connection
+            .ExecuteScalarAsync<int>(query, param: new
+            {
+                artistId
             }, transaction: base.Transaction)) == 1;
     }
     
@@ -420,6 +449,22 @@ public class UpdateTidalRepository : BaseUpdateRepository
             {
                 artistId
             }, transaction: base.Transaction))
+            .ToList();
+    }
+    
+    public async Task<List<int>> GetMissingSimilarArtistIdsByArtistIdAsync(int artistId)
+    {
+        string query = @"
+                    select artist.artistid
+                    from tidal_artist artist
+                    left join tidal_artist_similar sam on sam.artistid = artist.artistid 
+                    where artist.artistid = @artistId and sam.artistid is null";
+
+        return (await base.Connection
+                .QueryAsync<int>(query, param: new
+                {
+                    artistId
+                }, transaction: base.Transaction))
             .ToList();
     }
 }

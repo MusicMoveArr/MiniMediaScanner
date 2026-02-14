@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Extensions.Caching.Memory;
 using MiniMediaScanner.Models.Tidal;
 
@@ -101,6 +100,17 @@ public class TidalAPICacheLayerService
         if (!_cache.TryGetValue(cacheKey, out TidalTrackArtistResponse? result))
         {
             result = await _tidalAPIService.GetSimilarTracksByTrackIdAsync(trackId);
+            AddToCache(cacheKey, result);
+        }
+        return result;
+    }
+
+    public async Task<TidalTrackArtistResponse?> GetSimilarArtistsByArtistIdAsync(int artistId)
+    {
+        string cacheKey = $"GetSimilarArtistsByArtistId_{artistId}";
+        if (!_cache.TryGetValue(cacheKey, out TidalTrackArtistResponse? result))
+        {
+            result = await _tidalAPIService.GetSimilarArtistsByArtistIdAsync(artistId);
             AddToCache(cacheKey, result);
         }
         return result;

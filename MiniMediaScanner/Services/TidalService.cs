@@ -75,20 +75,22 @@ public class TidalService
 
         try
         {
-            DateTime? lastSyncTime = await _updateTidalRepository.GetArtistLastSyncTimeAsync(artistId);
-            if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < this.PreventUpdateWithinDays)
-            {
-                await _updateTidalRepository.CommitAsync();
-                callback?.Invoke(new UpdateTidalCallback(artistId, UpdateTidalStatus.SkippedSyncedWithin));
-                return;
-            }
-
             //get artist information
             var artistInfo = await InsertArtistInfoAsync(artistId, true);
 
             if (artistInfo == null)
             {
                 await _updateTidalRepository.CommitAsync();
+                return;
+            }
+            
+            await PullMissingSimilarArtistsAsync(artistId, callback, artistInfo, _updateTidalRepository);
+            
+            DateTime? lastSyncTime = await _updateTidalRepository.GetArtistLastSyncTimeAsync(artistId);
+            if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < this.PreventUpdateWithinDays)
+            {
+                await _updateTidalRepository.CommitAsync();
+                callback?.Invoke(new UpdateTidalCallback(artistId, UpdateTidalStatus.SkippedSyncedWithin));
                 return;
             }
             
@@ -261,6 +263,7 @@ public class TidalService
                         foreach (var trackArtist in track.RelationShips.Artists.Data)
                         {
                             await _updateTidalRepository.UpsertTrackArtistIdAsync(int.Parse(track.Id), int.Parse(trackArtist.Id));
+                            await ProcessSimilarArtistAsync(int.Parse(trackArtist.Id), callback, artistInfo, _updateTidalRepository);
                         }
                     }
                     
@@ -408,6 +411,20 @@ public class TidalService
         }
     }
 
+    private async Task PullMissingSimilarArtistsAsync(
+        int artistId, 
+        Action<UpdateTidalCallback>? callback,
+        TidalSearchResponse artistInfo,
+        UpdateTidalRepository updateTidalRepository)
+    {
+        List<int> artistIdsMissingSimilar = await updateTidalRepository.GetMissingSimilarArtistIdsByArtistIdAsync(artistId);
+        
+        foreach(int similarArtistId in artistIdsMissingSimilar)
+        {
+            await ProcessSimilarArtistAsync(similarArtistId, callback, artistInfo, updateTidalRepository);
+        }
+    }
+
     private async Task ProcessSimilarTrackAsync(int trackId, UpdateTidalRepository updateTidalRepository)
     {
         if (!await updateTidalRepository.HasSimilarTrackRecordsAsync(trackId))
@@ -426,6 +443,38 @@ public class TidalService
                     trackId, 
                     int.Parse(similarTrack.Id), 
                     similarIsrc);
+            }
+        }
+    }
+
+    private async Task ProcessSimilarArtistAsync(
+        int artistId, 
+        Action<UpdateTidalCallback>? callback,
+        TidalSearchResponse artistInfo,
+        UpdateTidalRepository updateTidalRepository)
+    {
+        if (!await updateTidalRepository.HasSimilarArtistRecordsAsync(artistId))
+        {
+            var similarArtists = await _tidalAPIService.GetSimilarArtistsByArtistIdAsync(artistId);
+            int repullProgress = 1;
+            
+            foreach (var similarArtist in similarArtists?.Data ?? [])
+            {
+                int similarArtistId = int.Parse(similarArtist.Id);
+                await InsertArtistInfoAsync(similarArtistId);
+                
+                await updateTidalRepository.UpsertSimilarArtistAsync(
+                    artistId, 
+                    similarArtistId);
+                
+                callback?.Invoke(new UpdateTidalCallback(artistId, 
+                    artistInfo.Data.Attributes.Name,
+                    string.Empty,
+                    0,
+                    UpdateTidalStatus.Updating,
+                    0,
+                    $"Pulling missing similar artists {repullProgress} of {similarArtists.Data.Count} processed"));
+                repullProgress++;
             }
         }
     }
