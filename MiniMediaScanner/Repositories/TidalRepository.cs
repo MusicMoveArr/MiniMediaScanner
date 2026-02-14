@@ -14,7 +14,9 @@ public class TidalRepository
     
     public async Task<List<int>> GetAllTidalArtistIdsAsync()
     {
-        string query = @"SELECT artistid FROM tidal_artist order by name asc";
+        string query = @"SELECT artistid 
+                         FROM tidal_artist 
+                         order by popularity desc";
 
         await using var conn = new NpgsqlConnection(_connectionString);
         
@@ -150,8 +152,10 @@ public class TidalRepository
     }
     public async Task<List<int>> GetNonpulledTidalArtistIdsAsync()
     {
-        string query = @"SELECT artistid FROM tidal_artist 
-                         where lastsynctime < '2020-01-01'";
+        string query = @"SELECT artistid 
+                         FROM tidal_artist 
+                         where lastsynctime < '2020-01-01'
+                         order by popularity desc";
 
         await using var conn = new NpgsqlConnection(_connectionString);
 
