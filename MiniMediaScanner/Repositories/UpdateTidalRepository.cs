@@ -408,6 +408,22 @@ public class UpdateTidalRepository : BaseUpdateRepository
             }, transaction: base.Transaction);
     }
     
+    public async Task UpsertSimilarAlbumAsync(int albumId, int similarAlbumId)
+    {
+        string query = @"
+            INSERT INTO tidal_album_similar (AlbumId, SimilarAlbumId)
+            VALUES (@albumId, @similarAlbumId)
+            ON CONFLICT (AlbumId, SimilarAlbumId)
+            DO NOTHING";
+
+        await base.Connection
+            .ExecuteAsync(query, param: new
+            {
+                albumId,
+                similarAlbumId
+            }, transaction: base.Transaction);
+    }
+    
     public async Task<bool> HasSimilarTrackRecordsAsync(int trackId)
     {
         string query = @"
@@ -431,6 +447,19 @@ public class UpdateTidalRepository : BaseUpdateRepository
             .ExecuteScalarAsync<int>(query, param: new
             {
                 artistId
+            }, transaction: base.Transaction)) == 1;
+    }
+    
+    public async Task<bool> HasSimilarAlbumRecordsAsync(int albumId)
+    {
+        string query = @"
+            select 1 from tidal_album_similar 
+            where albumId = @albumId";
+
+        return (await base.Connection
+            .ExecuteScalarAsync<int>(query, param: new
+            {
+                albumId
             }, transaction: base.Transaction)) == 1;
     }
     
@@ -459,6 +488,23 @@ public class UpdateTidalRepository : BaseUpdateRepository
                     from tidal_artist artist
                     left join tidal_artist_similar sam on sam.artistid = artist.artistid 
                     where artist.artistid = @artistId and sam.artistid is null";
+
+        return (await base.Connection
+                .QueryAsync<int>(query, param: new
+                {
+                    artistId
+                }, transaction: base.Transaction))
+            .ToList();
+    }
+    
+    public async Task<List<int>> GetMissingSimilarAlbumIdsByArtistIdAsync(int artistId)
+    {
+        string query = @"
+                    select album.albumid
+                    from tidal_artist artist
+                    join tidal_album album on album.artistid = artist.artistid 
+                    left join tidal_album_similar sam on sam.albumid = album.albumid
+                    where artist.artistid = @artistId and sam.albumid is null";
 
         return (await base.Connection
                 .QueryAsync<int>(query, param: new

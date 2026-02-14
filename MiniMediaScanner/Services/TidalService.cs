@@ -85,6 +85,7 @@ public class TidalService
             }
             
             await PullMissingSimilarArtistsAsync(artistId, callback, artistInfo, _updateTidalRepository);
+            await PullMissingSimilarAlbumsAsync(artistId, _updateTidalRepository, callback, artistInfo, 0);
             
             DateTime? lastSyncTime = await _updateTidalRepository.GetArtistLastSyncTimeAsync(artistId);
             if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < this.PreventUpdateWithinDays)
@@ -178,6 +179,8 @@ public class TidalService
                             externalLink.Meta.Type);
                     }
                 }
+
+                await ProcessSimilarAlbumAsync(int.Parse(album.Id), _updateTidalRepository);
                 
                 int dbTrackCount = await _updateTidalRepository.GetTidalAlbumTrackCountAsync(int.Parse(album.Id), artistId);
                 if (dbTrackCount == album.Attributes.NumberOfItems)
@@ -411,6 +414,31 @@ public class TidalService
         }
     }
 
+    private async Task PullMissingSimilarAlbumsAsync(
+        int artistId, 
+        UpdateTidalRepository updateTidalRepository, 
+        Action<UpdateTidalCallback>? callback,
+        TidalSearchResponse artistInfo,
+        int albumCount)
+    {
+        List<int> albumIdsMissingSimilar = await updateTidalRepository.GetMissingSimilarAlbumIdsByArtistIdAsync(artistId);
+
+        int repullProgress = 1;
+        foreach(int albumId in albumIdsMissingSimilar)
+        {
+            await ProcessSimilarAlbumAsync(albumId, updateTidalRepository);
+                
+            callback?.Invoke(new UpdateTidalCallback(artistId, 
+                artistInfo.Data.Attributes.Name,
+                string.Empty,
+                albumCount,
+                UpdateTidalStatus.Updating,
+                0,
+                $"Pulling missing similar albums {repullProgress} of {albumIdsMissingSimilar.Count} processed"));
+            repullProgress++;
+        }
+    }
+
     private async Task PullMissingSimilarArtistsAsync(
         int artistId, 
         Action<UpdateTidalCallback>? callback,
@@ -443,6 +471,21 @@ public class TidalService
                     trackId, 
                     int.Parse(similarTrack.Id), 
                     similarIsrc);
+            }
+        }
+    }
+
+    private async Task ProcessSimilarAlbumAsync(int albumId, UpdateTidalRepository updateTidalRepository)
+    {
+        if (!await updateTidalRepository.HasSimilarAlbumRecordsAsync(albumId))
+        {
+            var similarAlbums = await _tidalAPIService.GetSimilarAlbumsByAlbumIdAsync(albumId);
+
+            foreach (var similarAlbum in similarAlbums?.Data ?? [])
+            {
+                await updateTidalRepository.UpsertSimilarAlbumAsync(
+                    albumId, 
+                    int.Parse(similarAlbum.Id));
             }
         }
     }
