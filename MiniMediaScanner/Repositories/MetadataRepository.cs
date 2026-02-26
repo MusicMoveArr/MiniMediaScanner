@@ -297,7 +297,8 @@ public class MetadataRepository
                                   m.Tag_AcoustId,
                                   m.Tag_AcoustIdFingerPrint_Duration,
                                   album.title AS Album,
-                                  artist.artistid AS ArtistId
+                                  artist.artistid AS ArtistId,
+                                  artist.name as Artist
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
@@ -306,6 +307,7 @@ public class MetadataRepository
                               length(m.MusicBrainzTrackId) = 0 or
                               length(m.MusicBrainzReleaseArtistId) = 0 or
                               length(m.MusicBrainzReleaseGroupId) = 0 or
+                              length(m.tag_Acoustid) = 0 or
                               tag_alljsontags->>'ARTISTS' is null)
                               and length(m.tag_acoustidfingerprint) > 0
                               and m.Tag_AcoustIdFingerPrint_Duration > 0";
@@ -562,6 +564,7 @@ public class MetadataRepository
                                  m.Tag_AllJsonTags,
                                  artist.ArtistId,
                                  m.Tag_Isrc,
+                                 Tag_AcoustIdFingerprint,
                                  CASE
                                     WHEN m.Tag_Length !~ ':' THEN NULL 
                                     WHEN m.Tag_Length ~ '^\d{{1,2}}:\d{{2}}$' THEN ('0:' || m.Tag_Length)::interval
@@ -947,6 +950,5 @@ public class MetadataRepository
         await using var conn = new NpgsqlConnection(_connectionString);
         
         metadata.MetadataId = await conn.QueryFirstOrDefaultAsync<Guid>(query, metadata);
-        
     }
 }
