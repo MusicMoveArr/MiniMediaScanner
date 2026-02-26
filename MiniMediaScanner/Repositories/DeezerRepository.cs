@@ -96,6 +96,7 @@ public class DeezerRepository
                              track.disknumber AS DiscNumber,
                              track.duration * interval '1 sec' as Duration,
                              track.ExplicitLyrics,
+                             track.Preview,
                              'https://www.deezer.com/track/' || track.TrackId AS TrackHref,
                              track.TrackPosition,
                              track.isrc AS TrackISRC,
