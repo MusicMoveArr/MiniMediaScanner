@@ -14,6 +14,7 @@ public class DiscogsAPIService
     private const string ArtistIdUrl = "https://api.discogs.com/artists/{0}?token={1}";
     private const string ReleaseIdUrl = "https://api.discogs.com/releases/{0}?token={1}";
     private string _discogsToken;
+    private SemaphoreSlim _semaphore = new SemaphoreSlim(1);
 
     public DiscogsAPIService(string discogsToken)
     {
@@ -23,10 +24,11 @@ public class DiscogsAPIService
     
     public async Task<DiscogsArtistModel?> GetArtistByIdAsync(int artistId)
     {
+        await _semaphore.WaitAsync();
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Discogs GetArtistByIdAsync '{artistId}'");
 
-        return await retryPolicy.ExecuteAsync(async () =>
+        var result = await retryPolicy.ExecuteAsync(async () =>
         {
             RestClientOptions options = new RestClientOptions(string.Format(ArtistIdUrl,  artistId, _discogsToken));
             
@@ -34,13 +36,16 @@ public class DiscogsAPIService
             RestRequest request = new RestRequest();
             return await client.GetAsync<DiscogsArtistModel>(request);
         });
+        _semaphore.Release();
+        return result;
     }
     public async Task<DiscogsReleaseModel?> GetReleaseByIdAsync(int releaseId)
     {
+        await _semaphore.WaitAsync();
         AsyncRetryPolicy retryPolicy = GetRetryPolicy();
         Debug.WriteLine($"Requesting Discogs GetReleaseByIdAsync '{releaseId}'");
 
-        return await retryPolicy.ExecuteAsync(async () =>
+        var result = await retryPolicy.ExecuteAsync(async () =>
         {
             RestClientOptions options = new RestClientOptions(string.Format(ReleaseIdUrl,  releaseId, _discogsToken));
             
@@ -48,6 +53,8 @@ public class DiscogsAPIService
             RestRequest request = new RestRequest();
             return await client.GetAsync<DiscogsReleaseModel>(request);
         });
+        _semaphore.Release();
+        return result;
     }
     
     private AsyncRetryPolicy GetRetryPolicy()
