@@ -4,6 +4,7 @@ using MiniMediaScanner.Callbacks;
 using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Enums;
 using MiniMediaScanner.Helpers;
+using MiniMediaScanner.Models;
 using MiniMediaScanner.Models.Tidal;
 using MiniMediaScanner.Repositories;
 using Spectre.Console;
@@ -70,6 +71,8 @@ public class TidalService
     public async Task UpdateArtistByIdAsync(int artistId,
         Action<UpdateTidalCallback>? callback = null)
     {
+        var tidalPullingState = new TidalPullingState();
+        
         UpdateTidalRepository _updateTidalRepository = new UpdateTidalRepository(_connectionString);
         await _updateTidalRepository.SetConnectionAsync();
 
@@ -84,8 +87,9 @@ public class TidalService
                 return;
             }
             
-            await PullMissingSimilarArtistsAsync(artistId, callback, artistInfo, _updateTidalRepository);
-            await PullMissingSimilarAlbumsAsync(artistId, _updateTidalRepository, callback, artistInfo, 0);
+            await PullMissingSimilarArtistsAsync(artistId, tidalPullingState, callback, artistInfo, _updateTidalRepository);
+            await PullMissingSimilarAlbumsAsync(artistId, tidalPullingState, _updateTidalRepository, callback, artistInfo, 0);
+            
             
             DateTime? lastSyncTime = await _updateTidalRepository.GetArtistLastSyncTimeAsync(artistId);
             if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < this.PreventUpdateWithinDays)
@@ -124,7 +128,7 @@ public class TidalService
                 .Where(x => x.Type == "albums")
                 .ToList();
 
-            await PullMissingSimilarTracksAsync(artistId, _updateTidalRepository, callback, artistInfo, albums.Count);
+            await PullMissingSimilarTracksAsync(artistId, tidalPullingState, _updateTidalRepository, callback, artistInfo, albums.Count);
 
             if (albums.Count >= _ignoreArtistAlbumAmount)
             {
@@ -135,6 +139,8 @@ public class TidalService
             int progress = 1;
             foreach (var album in albums)
             {
+                int albumId = int.Parse(album.Id);
+                
                 callback?.Invoke(new UpdateTidalCallback(artistId, 
                     artistInfo.Data.Attributes.Name,
                     album.Attributes.Title,
@@ -146,7 +152,7 @@ public class TidalService
                 string albumMediaTags = string.Join(',', album.Attributes?.MediaTags ?? []);
 
                 //insert album info
-                await _updateTidalRepository.UpsertAlbumAsync(int.Parse(album.Id),
+                await _updateTidalRepository.UpsertAlbumAsync(albumId,
                     artistId,
                     album.Attributes.Title ?? string.Empty,
                     album.Attributes.BarcodeId ?? string.Empty,
@@ -164,7 +170,7 @@ public class TidalService
                 {
                     foreach (var imageLink in album.Attributes.ImageLinks)
                     {
-                        await _updateTidalRepository.UpsertAlbumImageLinkAsync(int.Parse(album.Id),
+                        await _updateTidalRepository.UpsertAlbumImageLinkAsync(albumId,
                             imageLink.Href,
                             imageLink.Meta.Width,
                             imageLink.Meta.Height);
@@ -174,15 +180,16 @@ public class TidalService
                 {
                     foreach (var externalLink in album.Attributes.ExternalLinks)
                     {
-                        await _updateTidalRepository.UpsertAlbumExternalLinkAsync(int.Parse(album.Id),
+                        await _updateTidalRepository.UpsertAlbumExternalLinkAsync(albumId,
                             externalLink.Href,
                             externalLink.Meta.Type);
                     }
                 }
 
-                await ProcessSimilarAlbumAsync(int.Parse(album.Id), _updateTidalRepository);
                 
-                int dbTrackCount = await _updateTidalRepository.GetTidalAlbumTrackCountAsync(int.Parse(album.Id), artistId);
+                await ProcessSimilarAlbumAsync(albumId, tidalPullingState, _updateTidalRepository);
+                
+                int dbTrackCount = await _updateTidalRepository.GetTidalAlbumTrackCountAsync(albumId, artistId);
                 if (dbTrackCount == album.Attributes.NumberOfItems)
                 {
                     progress++;
@@ -191,7 +198,7 @@ public class TidalService
                 
                 //fetch all tracks of the album by using the page cursor
                 //Tidal's API limit is 20 by default so only try if NumberOfItems is more than 20
-                var tracks = await _tidalAPIService.GetTracksByAlbumIdAsync(int.Parse(album.Id));
+                var tracks = await _tidalAPIService.GetTracksByAlbumIdAsync(albumId);
                 
                 if (tracks.Data.Attributes.NumberOfItems >= 20)
                 {
@@ -206,7 +213,7 @@ public class TidalService
                     string? nextPage = tracks.Data.RelationShips?.Items?.Links?.Next;
                     while (!string.IsNullOrWhiteSpace(nextPage))
                     {
-                        var tempTracks = await _tidalAPIService.GetTracksNextByAlbumIdAsync(int.Parse(album.Id), nextPage);
+                        var tempTracks = await _tidalAPIService.GetTracksNextByAlbumIdAsync(albumId, nextPage);
 
                         if (tempTracks?.Included?.Count > 0)
                         {
@@ -266,7 +273,7 @@ public class TidalService
                         foreach (var trackArtist in track.RelationShips.Artists.Data)
                         {
                             await _updateTidalRepository.UpsertTrackArtistIdAsync(int.Parse(track.Id), int.Parse(trackArtist.Id));
-                            await ProcessSimilarArtistAsync(int.Parse(trackArtist.Id), callback, artistInfo, _updateTidalRepository);
+                            await ProcessSimilarArtistAsync(int.Parse(trackArtist.Id), tidalPullingState, callback, artistInfo, _updateTidalRepository);
                         }
                     }
                     
@@ -355,7 +362,7 @@ public class TidalService
                     }
 
                     await _updateTidalRepository.UpsertTrackAsync(int.Parse(track.Id),
-                        int.Parse(album.Id),
+                        albumId,
                         track.Attributes.Title ?? string.Empty,
                         track.Attributes.ISRC ?? string.Empty,
                         track.Attributes.Duration ?? string.Empty,
@@ -368,7 +375,7 @@ public class TidalService
                         trackNumber.Meta.TrackNumber,
                         track.Attributes.Version ?? string.Empty);
 
-                    await ProcessSimilarTrackAsync(int.Parse(track.Id), _updateTidalRepository);
+                    await ProcessSimilarTrackAsync(int.Parse(track.Id), tidalPullingState, _updateTidalRepository);
                 }
                 progress++;
             }
@@ -391,17 +398,23 @@ public class TidalService
 
     private async Task PullMissingSimilarTracksAsync(
         int artistId, 
+        TidalPullingState tidalPullingState,
         UpdateTidalRepository updateTidalRepository, 
         Action<UpdateTidalCallback>? callback,
         TidalSearchResponse artistInfo,
         int albumCount)
     {
+        if (tidalPullingState.SkipSimilarTrack.Contains(artistId))
+        {
+            return;
+        }
+        tidalPullingState.SkipSimilarTrack.Add(artistId);
         List<int> trackIdsMissingSimilar = await updateTidalRepository.GetMissingSimilarTrackIdsByArtistIdAsync(artistId);
 
         int repullProgress = 1;
         foreach(int trackId in trackIdsMissingSimilar)
         {
-            await ProcessSimilarTrackAsync(trackId, updateTidalRepository);
+            await ProcessSimilarTrackAsync(trackId, tidalPullingState, updateTidalRepository);
                 
             callback?.Invoke(new UpdateTidalCallback(artistId, 
                 artistInfo.Data.Attributes.Name,
@@ -416,17 +429,24 @@ public class TidalService
 
     private async Task PullMissingSimilarAlbumsAsync(
         int artistId, 
+        TidalPullingState tidalPullingState,
         UpdateTidalRepository updateTidalRepository, 
         Action<UpdateTidalCallback>? callback,
         TidalSearchResponse artistInfo,
         int albumCount)
     {
+        if (tidalPullingState.SkipSimilarAlbum.Contains(artistId))
+        {
+            return;
+        }
+        tidalPullingState.SkipSimilarAlbum.Add(artistId);
+        
         List<int> albumIdsMissingSimilar = await updateTidalRepository.GetMissingSimilarAlbumIdsByArtistIdAsync(artistId);
 
         int repullProgress = 1;
         foreach(int albumId in albumIdsMissingSimilar)
         {
-            await ProcessSimilarAlbumAsync(albumId, updateTidalRepository);
+            await ProcessSimilarAlbumAsync(albumId, tidalPullingState, updateTidalRepository);
                 
             callback?.Invoke(new UpdateTidalCallback(artistId, 
                 artistInfo.Data.Attributes.Name,
@@ -441,20 +461,36 @@ public class TidalService
 
     private async Task PullMissingSimilarArtistsAsync(
         int artistId, 
+        TidalPullingState tidalPullingState,
         Action<UpdateTidalCallback>? callback,
         TidalSearchResponse artistInfo,
         UpdateTidalRepository updateTidalRepository)
     {
+        if (tidalPullingState.SkipSimilarArtist.Contains(artistId))
+        {
+            return;
+        }
+        tidalPullingState.SkipSimilarArtist.Add(artistId);
+        
         List<int> artistIdsMissingSimilar = await updateTidalRepository.GetMissingSimilarArtistIdsByArtistIdAsync(artistId);
         
         foreach(int similarArtistId in artistIdsMissingSimilar)
         {
-            await ProcessSimilarArtistAsync(similarArtistId, callback, artistInfo, updateTidalRepository);
+            await ProcessSimilarArtistAsync(similarArtistId, tidalPullingState, callback, artistInfo, updateTidalRepository);
         }
     }
 
-    private async Task ProcessSimilarTrackAsync(int trackId, UpdateTidalRepository updateTidalRepository)
+    private async Task ProcessSimilarTrackAsync(
+        int trackId, 
+        TidalPullingState tidalPullingState, 
+        UpdateTidalRepository updateTidalRepository)
     {
+        if (tidalPullingState.SkipSimilarTrack.Contains(trackId))
+        {
+            return;
+        }
+        tidalPullingState.SkipSimilarTrack.Add(trackId);
+        
         if (!await updateTidalRepository.HasSimilarTrackRecordsAsync(trackId))
         {
             var similarTracks = await _tidalAPIService.GetSimilarTracksByTrackIdAsync(trackId);
@@ -475,8 +511,16 @@ public class TidalService
         }
     }
 
-    private async Task ProcessSimilarAlbumAsync(int albumId, UpdateTidalRepository updateTidalRepository)
+    private async Task ProcessSimilarAlbumAsync(int albumId, 
+        TidalPullingState tidalPullingState, 
+        UpdateTidalRepository updateTidalRepository)
     {
+        if (tidalPullingState.SkipSimilarAlbum.Contains(albumId))
+        {
+            return;
+        }
+        tidalPullingState.SkipSimilarAlbum.Add(albumId);
+        
         if (!await updateTidalRepository.HasSimilarAlbumRecordsAsync(albumId))
         {
             var similarAlbums = await _tidalAPIService.GetSimilarAlbumsByAlbumIdAsync(albumId);
@@ -492,10 +536,17 @@ public class TidalService
 
     private async Task ProcessSimilarArtistAsync(
         int artistId, 
+        TidalPullingState tidalPullingState, 
         Action<UpdateTidalCallback>? callback,
         TidalSearchResponse artistInfo,
         UpdateTidalRepository updateTidalRepository)
     {
+        if (tidalPullingState.SkipSimilarArtist.Contains(artistId))
+        {
+            return;
+        }
+        tidalPullingState.SkipSimilarArtist.Add(artistId);
+        
         if (!await updateTidalRepository.HasSimilarArtistRecordsAsync(artistId))
         {
             var similarArtists = await _tidalAPIService.GetSimilarArtistsByArtistIdAsync(artistId);
