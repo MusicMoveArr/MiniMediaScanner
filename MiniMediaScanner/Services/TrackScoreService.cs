@@ -19,7 +19,6 @@ public class TrackScoreService
             .FirstOrDefault())
             .Where(match => match is not null)
             .ToList();
-        
         return results!;
     }
     
@@ -46,14 +45,13 @@ public class TrackScoreService
                 TrackScore = new TrackScoreModel
                 {
                     MetadataId = target.MetadataId,
-                    ArtistMatchedFor = FuzzyHelper.FuzzRatioToLower(target.Artist, track.Artist),
-                    AlbumMatchedFor = FuzzyHelper.FuzzRatioToLower(target.Album, track.Album),
-                    TitleMatchedFor = FuzzyHelper.FuzzRatioToLower(target.Title, track.Title),
+                    ArtistMatchedFor = FuzzyHelper.FuzzRatioToLower(track.Artist, target.Artist),
+                    AlbumMatchedFor = FuzzyHelper.FuzzRatioToLower(track.Album, target.Album),
+                    TitleMatchedFor = FuzzyHelper.FuzzRatioToLower(track.Title, target.Title),
                     DurationOffsetBy = Math.Abs(target.Duration.Seconds - track.Duration.Seconds),
                     IsrcMatched = string.Equals(target.Isrc, track.Isrc),
                     UpcMatched = string.Equals(target.Upc, track.Upc),
-                    TrackNumberMatched = target.TrackNumber == track.TrackNumber,
-                    DateMatched = target.Date.Length == 4 ? 
+                    DateMatched = target.Date?.Length == 4 ? 
                         track.Date.Contains(target.Date) : 
                         string.Equals(target.Date, track.Date),
                 }
@@ -64,18 +62,12 @@ public class TrackScoreService
             .Where(match => FuzzyHelper.ExactNumberMatch(target.Artist, match.TrackScoreComparer.Artist))
             .Where(match => FuzzyHelper.ExactNumberMatch(target.Album, match.TrackScoreComparer.Album))
             .Where(match => FuzzyHelper.ExactNumberMatch(target.Title, match.TrackScoreComparer.Title))
-            .Where(match => match.TrackScore.TitleMatchedFor >= minimumMatchPercentage)
-            .Where(match => match.TrackScore.TitleMatchedFor >= minimumMatchPercentage)
             .OrderByDescending(match => match.TrackScore.ArtistMatchedFor)
             .ThenByDescending(match => match.TrackScore.AlbumMatchedFor)
             .ThenByDescending(match => match.TrackScore.TitleMatchedFor)
             .ThenBy(match =>  match.TrackScore.DurationOffsetBy)
             .ToList();
 
-        if (!matches.Any())
-        {
-            
-        }
         if (matches.Any(match => match.TrackScore.DateMatched ||
                                  match.TrackScore.IsrcMatched ||
                                  match.TrackScore.UpcMatched))
