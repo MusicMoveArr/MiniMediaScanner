@@ -61,9 +61,20 @@ public class GroupTaggingDeezerMetadataCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_OVERWRITETRACK")]
     public bool OverwriteTrack { get; set; }
+
+    [CommandOption("threads",
+        Description = "The amount of threads to use.",
+        IsRequired = false,
+        EnvironmentVariable = "GROUPTAGGINGDEEZERMETADATA_THREADS")]
+    public int Threads { get; set; } = 1;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
+        if (!Confirm)
+        {
+            Threads = 1;
+        }
+        
         var handler = new GroupTaggingDeezerMetadataCommandHandler(ConnectionString);
         handler.Confirm = Confirm;
         handler.OverwriteTag = OverwriteTag;
@@ -71,6 +82,7 @@ public class GroupTaggingDeezerMetadataCommand : ICommand
         handler.OverwriteAlbumArtist = OverwriteAlbumArtist;
         handler.OverwriteAlbum = OverwriteAlbum;
         handler.OverwriteTrack = OverwriteTrack;
+        handler.Threads = Threads;
 
         if (string.IsNullOrWhiteSpace(Artist))
         {

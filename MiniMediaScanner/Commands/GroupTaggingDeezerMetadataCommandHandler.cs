@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using ATL;
 using FuzzySharp;
 using Microsoft.Extensions.Caching.Memory;
@@ -29,6 +30,7 @@ public class GroupTaggingDeezerMetadataCommandHandler
     public bool OverwriteAlbumArtist { get; set; }
     public bool OverwriteAlbum { get; set; }
     public bool OverwriteTrack { get; set; }
+    public int Threads { get; set; }
     
     public GroupTaggingDeezerMetadataCommandHandler(string connectionString)
     {
@@ -140,27 +142,28 @@ public class GroupTaggingDeezerMetadataCommandHandler
             .ToList();
         
         var trackList = _trackScoreService
-            .GetAllTrackScore(trackScoreTargetModels, allDeezerTracks, 80)
+            .GetAllTrackScore(trackScoreTargetModels, allDeezerTracks, 90)
             .GroupBy(tracks => tracks.TrackScoreComparer.AlbumId)
             .OrderByDescending(tracks => tracks.Count());
 
-        List<Guid> processedMetadataIds = new List<Guid>();
+        ConcurrentBag<Guid> processedMetadataIds = new ConcurrentBag<Guid>();
         foreach (var groupedTracks in trackList)
         {
-            foreach (var matchedTrack in groupedTracks)
+            ParallelHelper.ForEachAsync(groupedTracks, Threads, async matchedTrack =>
             {
                 if (processedMetadataIds.Contains(matchedTrack.TrackScore.MetadataId))
                 {
-                    continue;
+                    return;
                 }
 
                 var metadataModel = metadataModels
                     .FirstOrDefault(m => m.MetadataId == matchedTrack.TrackScore.MetadataId);
-                
+
                 try
                 {
-                    DeezerTrackDbModel deezerTrackModel = ((TrackScoreComparerDeezerModel)matchedTrack.TrackScoreComparer).TrackModel;
-                    
+                    DeezerTrackDbModel deezerTrackModel =
+                        ((TrackScoreComparerDeezerModel)matchedTrack.TrackScoreComparer).TrackModel;
+
                     Console.WriteLine($"Processing file '{metadataModel.Path}'");
                     await ProcessFileAsync(metadataModel, deezerTrackModel, deezerArtistId);
                     processedMetadataIds.Add(metadataModel.MetadataId.Value);
@@ -169,7 +172,7 @@ public class GroupTaggingDeezerMetadataCommandHandler
                 {
                     Console.WriteLine(e.Message);
                 }
-            }
+            });
         }
     }
 
