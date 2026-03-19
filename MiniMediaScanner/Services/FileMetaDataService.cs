@@ -20,7 +20,7 @@ public class FileMetaDataService
 
     public async Task<MetadataInfo> GetMetadataInfoAsync(FileInfo fileInfo)
     {
-        Track trackInfo = new Track();
+        Track trackInfo = default(Track);
         CancellationTokenSource cancellationToken = new CancellationTokenSource();
         var readRask = Task.Run(() =>
         {
