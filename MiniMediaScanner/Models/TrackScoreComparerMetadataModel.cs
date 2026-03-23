@@ -1,5 +1,4 @@
 using MiniMediaScanner.Interfaces;
-using MiniMediaScanner.Models.Tidal;
 
 namespace MiniMediaScanner.Models;
 
@@ -12,14 +11,14 @@ public class TrackScoreComparerMetadataModel : ITrackScoreComparerModel
         this.TrackModel = trackModel;
     }
 
-    public string Artist => TrackModel.ArtistName;
-    public string Album => TrackModel.AlbumName;
-    public string AlbumId => TrackModel.AlbumId.ToString();
-    public string Title => TrackModel.Title;
+    public string Artist => TrackModel.ArtistName ?? string.Empty;
+    public string Album => TrackModel.AlbumName ?? string.Empty;
+    public string AlbumId => TrackModel.AlbumId?.ToString() ?? Guid.Empty.ToString();
+    public string Title => TrackModel.Title ?? string.Empty;
     public TimeSpan Duration => TrackModel.TrackLength;
-    public string Isrc => TrackModel.Tag_Isrc;
-    public string Upc => TrackModel.Tag_Upc;
-    public string Date => TrackModel.Tag_Date;
+    public string Isrc => TrackModel.Tag_Isrc ?? string.Empty;
+    public string Upc => TrackModel.Tag_Upc ?? string.Empty;
+    public string Date => TrackModel.Tag_Date ?? string.Empty;
     public int TrackNumber => TrackModel.Tag_Track;
     public int TrackTotalCount => TrackModel.Tag_TrackCount;
 }

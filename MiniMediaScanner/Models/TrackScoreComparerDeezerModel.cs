@@ -6,6 +6,7 @@ namespace MiniMediaScanner.Models;
 public class TrackScoreComparerDeezerModel : ITrackScoreComparerModel
 {
     public DeezerTrackDbModel TrackModel { get; private set; }
+    
 
     public TrackScoreComparerDeezerModel(DeezerTrackDbModel trackModel)
     {
