@@ -1,0 +1,1 @@
+CREATE INDEX idx_musicbrainz_release_track_artist_artistid ON public.musicbrainz_release_track_artist (artistid);
