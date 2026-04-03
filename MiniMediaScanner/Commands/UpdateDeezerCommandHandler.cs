@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using MiniMediaScanner.Callbacks.Status;
 using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Repositories;
@@ -52,53 +53,65 @@ public class UpdateDeezerCommandHandler
     
     public async Task UpdateAllDeezerArtistsAsync()
     {
-        
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Dots)
-            .StartAsync(Markup.Escape($"Updating all Deezer Artist..."), async ctx =>
+        await AnsiConsole.Progress()
+            .HideCompleted(true)
+            .AutoClear(true)
+            .Columns(new ProgressColumn[]
+            {
+                new TaskDescriptionColumn()
+                {
+                    Alignment = Justify.Left
+                },
+                new ProgressBarColumn(),
+                new PercentageColumn(),
+                new RemainingTimeColumn(),
+            })
+            .StartAsync(async ctx =>
             {
                 await _deezerService.PrepareProxiesAsync();
-
-                int offset = 0;
-
-                while (true)
+                
+                var artistIds = await _deezerRepository.GetAllDeezerArtistIdsAsync();
+                
+                await ParallelHelper.ForEachAsync(artistIds, _threads, async artistId =>
                 {
-                    var artistIds = await _deezerRepository.GetAllDeezerArtistIdsAsync(offset);
-                    offset += DeezerRepository.PagingSize;
-
-                    if (artistIds.Count == 0)
-                    {
-                        break;
-                    }
+                    ConcurrentDictionary<string, ProgressTask> tasks = new ConcurrentDictionary<string, ProgressTask>();
                     
-                    await ParallelHelper.ForEachAsync(artistIds, _threads, async artistId =>
+                    try
                     {
-                        try
+                        await _deezerService.UpdateArtistByIdAsync(artistId, callback =>
                         {
-                            await _deezerService.UpdateArtistByIdAsync(artistId, callback =>
+                            if (callback.Status == UpdateDeezerStatus.Updating)
                             {
-                                if (callback.Status == UpdateDeezerStatus.Updating)
+                                if (string.IsNullOrWhiteSpace(callback.ExtraInfo))
                                 {
-                                    if (string.IsNullOrWhiteSpace(callback.ExtraInfo))
-                                    {
-                                        AnsiConsole.WriteLine(Markup.Escape(
-                                            $"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
-                                    }
-
-                                    ctx.Status(Markup.Escape($"Updating Deezer Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}{callback.ExtraInfo}"));
+                                    AnsiConsole.WriteLine(Markup.Escape($"Importing Album '{callback.AlbumName}', Artist '{callback.ArtistName}'"));
                                 }
-                                else if(callback.Status == UpdateDeezerStatus.SkippedSyncedWithin)
+                                
+                                if (!tasks.ContainsKey(callback.UpdateKey))
                                 {
-                                    AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Deezer ArtistId '{callback?.ArtistId}' synced already within {_deezerService.PreventUpdateWithinDays}days"));
+                                    tasks.TryAdd(callback.UpdateKey, ctx.AddTask(Markup.Escape($"Updating Deezer Artist '{callback.ArtistName}'")));
                                 }
-                            });
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e.Message);
-                        }
-                    });
-                }
+                                
+                                ProgressTask? task = tasks[callback.UpdateKey];
+                                
+                                if (task != null)
+                                {
+                                    task.MaxValue = callback.AlbumCount;
+                                    task.Value = callback.Progress;
+                                    task.Description = Markup.Escape( $"Updating Deezer Artist '{callback.ArtistName}' Albums {callback.Progress} of {callback.AlbumCount}{callback.ExtraInfo}");
+                                }
+                            }
+                            else if(callback.Status == UpdateDeezerStatus.SkippedSyncedWithin)
+                            {
+                                AnsiConsole.WriteLine(Markup.Escape($"Skipped synchronizing for Deezer ArtistId '{callback?.ArtistId}' synced already within {_deezerService.PreventUpdateWithinDays}days"));
+                            }
+                        });
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                });
             });
     }
 }

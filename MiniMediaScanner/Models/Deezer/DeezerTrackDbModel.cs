@@ -7,6 +7,7 @@ public class DeezerTrackDbModel
     public long AlbumId { get; set; }
     public int DiscNumber { get; set; }
     public TimeSpan Duration { get; set; }
+    public string Preview { get; set; }
     public bool ExplicitLyrics { get; set; }
     public string TrackHref { get; set; }
     public int TrackPosition { get; set; }

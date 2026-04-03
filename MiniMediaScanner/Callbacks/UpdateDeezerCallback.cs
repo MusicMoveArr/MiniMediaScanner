@@ -44,4 +44,6 @@ public class UpdateDeezerCallback
         this.ArtistId = artistId;
         this.Status = status;
     }
+
+    public string UpdateKey => $"{ArtistId}{ArtistName}";
 }
