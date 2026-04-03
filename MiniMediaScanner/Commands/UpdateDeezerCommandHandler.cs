@@ -9,6 +9,7 @@ namespace MiniMediaScanner.Commands;
 
 public class UpdateDeezerCommandHandler
 {
+    private const int GetDeezerArtistIdCount = 100000;
     private readonly DeezerRepository _deezerRepository;
     private readonly DeezerService _deezerService;
     private readonly int _threads;
@@ -70,7 +71,7 @@ public class UpdateDeezerCommandHandler
             {
                 await _deezerService.PrepareProxiesAsync();
                 
-                var artistIds = await _deezerRepository.GetAllDeezerArtistIdsAsync();
+                var artistIds = await _deezerRepository.GetDeezerArtistIdsAsync(GetDeezerArtistIdCount);
                 
                 await ParallelHelper.ForEachAsync(artistIds, _threads, async artistId =>
                 {
