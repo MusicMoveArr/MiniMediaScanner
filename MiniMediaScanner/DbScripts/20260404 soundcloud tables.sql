@@ -67,18 +67,6 @@ CREATE TABLE public.soundcloud_track (
     CONSTRAINT soundcloud_track_pkey PRIMARY KEY (Id, UserId)
 );
 
-CREATE TABLE public.soundcloud_track_transcoding (
-    TrackId bigint NOT NULL,
-    UserId bigint NOT NULL,
-    Duration bigint NOT NULL,
-    Preset text NOT NULL,
-    Quality text NOT NULL,
-    Snipped bool NOT NULL,
-    FormatMimeType text NOT NULL,
-    FormatProtocol text NOT NULL,
-    CONSTRAINT soundcloud_track_transcoding_pkey PRIMARY KEY (TrackId, UserId, Duration, FormatMimeType, FormatProtocol)
-);
-
 CREATE TABLE public.soundcloud_playlist (
     Id bigint NOT NULL,
     UserId bigint NOT NULL,
