@@ -347,37 +347,6 @@ public class UpdateSoundCloudRepository : BaseUpdateRepository
             }, transaction: base.Transaction);
     }
     
-    public async Task UpsertTrackTranscodingsAsync(
-        long trackId, 
-        long userId, 
-        long duration, 
-        string preset, 
-        string quality, 
-        bool snipped, 
-        string formatMimeType, 
-        string formatProtocol)
-    {
-        string query = @"
-            INSERT INTO soundcloud_track_transcoding (TrackId, UserId, Duration, Preset, Quality, Snipped, FormatMimeType, FormatProtocol)
-            VALUES (@TrackId, @UserId, @Duration, @Preset, @Quality, @Snipped, @FormatMimeType, @FormatProtocol)
-            ON CONFLICT (TrackId, UserId, Duration, FormatMimeType, FormatProtocol)
-            DO NOTHING";
-
-        await base.Connection
-            .ExecuteAsync(query, param: new
-            {
-                trackId, 
-                userId, 
-                duration,
-                Preset = CleanupInvalidChars(preset), 
-                Quality = CleanupInvalidChars(quality), 
-                snipped, 
-                FormatMimeType = CleanupInvalidChars(formatMimeType), 
-                FormatProtocol = CleanupInvalidChars(formatProtocol)
-            }, transaction: base.Transaction);
-    }
-    
-    
     public async Task UpsertPlaylistTrackAsync(long userId, long playlistId, long trackId, long trackOrder)
     {
         string query = @"

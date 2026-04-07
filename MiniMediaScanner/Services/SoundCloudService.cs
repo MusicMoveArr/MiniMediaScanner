@@ -143,18 +143,5 @@ public class SoundCloudService
     {
         await updateSoundCloudRepository.UpsertTrackAsync(track);
         await updateSoundCloudRepository.UpsertPlaylistTrackAsync(playlist.UserId, playlist.Id.Value, track.Id, trackOrder);
-                
-        foreach (var transcoding in track.Media?.Transcodings ?? [])
-        {
-            await updateSoundCloudRepository.UpsertTrackTranscodingsAsync(
-                track.Id,
-                track.UserId.Value,
-                transcoding.Duration ?? 0,
-                transcoding.Preset ?? string.Empty,
-                transcoding.Quality ?? string.Empty,
-                transcoding.Snipped,
-                transcoding.Format?.MimeType ?? string.Empty,
-                transcoding.Format?.Protocol ?? string.Empty);
-        }
     }
 }
