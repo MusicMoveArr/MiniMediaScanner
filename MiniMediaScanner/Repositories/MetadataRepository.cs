@@ -943,12 +943,10 @@ public class MetadataRepository
         {
             metadata.MetadataId = Guid.NewGuid();
         }
-
         metadata.AlbumId = albumId;
-        
+
         metadata.NonNullableValues();
         await using var conn = new NpgsqlConnection(_connectionString);
-        
         metadata.MetadataId = await conn.QueryFirstOrDefaultAsync<Guid>(query, metadata);
     }
 }

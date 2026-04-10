@@ -1,4 +1,5 @@
 using ATL;
+using MiniMediaScanner.Helpers;
 
 namespace MiniMediaScanner.Services;
 
@@ -141,6 +142,11 @@ public class FileMetaDataService
         mediaTags = mediaTags
             .Where(pair => !string.IsNullOrEmpty(pair.Value))
             .ToDictionary(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string key in mediaTags.Keys)
+        {
+            mediaTags[key] = StringHelper.CleanupInvalidChars(mediaTags[key]);
+        }
 
         string jsonTags = Newtonsoft.Json.JsonConvert.SerializeObject(mediaTags);
         

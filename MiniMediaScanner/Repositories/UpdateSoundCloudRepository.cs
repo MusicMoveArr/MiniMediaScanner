@@ -1,4 +1,5 @@
 using Dapper;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models.Tidal;
 using Npgsql;
 using SoundCloudExplode.Playlists;
@@ -165,30 +166,30 @@ public class UpdateSoundCloudRepository : BaseUpdateRepository
             {
                 Id = playlist.Id.Value,
                 UserId = playlist.UserId,
-                Title = CleanupInvalidChars(playlist.Title),
-                Description = CleanupInvalidChars(playlist.Description),
+                Title = StringHelper.CleanupInvalidChars(playlist.Title),
+                Description = StringHelper.CleanupInvalidChars(playlist.Description),
                 Duration = playlist.Duration,
-                EmbeddableBy = CleanupInvalidChars(playlist.EmbeddableBy),
-                Genre = CleanupInvalidChars(playlist.Genre),
-                LabelName = CleanupInvalidChars(playlist.LabelName),
-                License = CleanupInvalidChars(playlist.License),
+                EmbeddableBy = StringHelper.CleanupInvalidChars(playlist.EmbeddableBy),
+                Genre = StringHelper.CleanupInvalidChars(playlist.Genre),
+                LabelName = StringHelper.CleanupInvalidChars(playlist.LabelName),
+                License = StringHelper.CleanupInvalidChars(playlist.License),
                 LikesCount = playlist.LikesCount,
                 ManagedByFeeds = playlist.ManagedByFeeds,
                 Public = playlist.Public,
-                PurchaseTitle = CleanupInvalidChars(playlist.PurchaseTitle),
-                PurchaseUrl = CleanupInvalidChars(playlist.PurchaseUrl),
+                PurchaseTitle = StringHelper.CleanupInvalidChars(playlist.PurchaseTitle),
+                PurchaseUrl = StringHelper.CleanupInvalidChars(playlist.PurchaseUrl),
                 ReleaseDate = releaseDate,
                 RepostsCount = playlist.RepostsCount,
-                Sharing = CleanupInvalidChars(playlist.Sharing),
-                TagList = CleanupInvalidChars(playlist.TagList),
-                SetType = CleanupInvalidChars(playlist.SetType),
+                Sharing = StringHelper.CleanupInvalidChars(playlist.Sharing),
+                TagList = StringHelper.CleanupInvalidChars(playlist.TagList),
+                SetType = StringHelper.CleanupInvalidChars(playlist.SetType),
                 IsAlbum = playlist.IsAlbum,
                 PublishedAt = publishedAt,
                 TrackCount = playlist.TrackCount ?? 0,
-                Uri = CleanupInvalidChars(playlist.Uri?.ToString()),
-                PermalinkUrl = CleanupInvalidChars(playlist.PermalinkUrl?.ToString()),
-                Permalink = CleanupInvalidChars(playlist.Permalink),
-                ArtworkUrl = CleanupInvalidChars(playlist.ArtworkUrl?.ToString()),
+                Uri = StringHelper.CleanupInvalidChars(playlist.Uri?.ToString()),
+                PermalinkUrl = StringHelper.CleanupInvalidChars(playlist.PermalinkUrl?.ToString()),
+                Permalink = StringHelper.CleanupInvalidChars(playlist.Permalink),
+                ArtworkUrl = StringHelper.CleanupInvalidChars(playlist.ArtworkUrl?.ToString()),
                 DisplayDate = playlist.DisplayDate.DateTime,
                 CreatedAt = playlist.CreatedAt.DateTime,
                 LastModified = playlist.LastModified.DateTime
@@ -302,46 +303,46 @@ public class UpdateSoundCloudRepository : BaseUpdateRepository
             {
                 Id = track.Id, 
                 UserId = track.UserId, 
-                Title = CleanupInvalidChars(track.Title), 
-                PlaylistName = CleanupInvalidChars(track.PlaylistName), 
-                Caption = CleanupInvalidChars(track.Caption?.ToString()), 
+                Title = StringHelper.CleanupInvalidChars(track.Title), 
+                PlaylistName = StringHelper.CleanupInvalidChars(track.PlaylistName), 
+                Caption = StringHelper.CleanupInvalidChars(track.Caption?.ToString()), 
                 Commentable = track.Commentable, 
                 CommentCount = track.CommentCount ?? 0, 
-                Description = CleanupInvalidChars(track.Description), 
+                Description = StringHelper.CleanupInvalidChars(track.Description), 
                 Downloadable = track.Downloadable, 
                 DownloadCount = track.DownloadCount ?? 0, 
                 Duration = track.Duration ?? 0, 
                 FullDuration = track.FullDuration ?? 0,
-                EmbeddableBy = CleanupInvalidChars(track.EmbeddableBy),
-                Genre = CleanupInvalidChars(track.Genre),
+                EmbeddableBy = StringHelper.CleanupInvalidChars(track.EmbeddableBy),
+                Genre = StringHelper.CleanupInvalidChars(track.Genre),
                 HasDownloadsLeft = track.HasDownloadsLeft,
-                LabelName = CleanupInvalidChars(track.LabelName),
-                License = CleanupInvalidChars(track.License),
+                LabelName = StringHelper.CleanupInvalidChars(track.LabelName),
+                License = StringHelper.CleanupInvalidChars(track.License),
                 LikesCount = track.LikesCount ?? 0,
-                Permalink = CleanupInvalidChars(track.Permalink),
-                PermalinkUrl = CleanupInvalidChars(track.PermalinkUrl?.ToString()),
+                Permalink = StringHelper.CleanupInvalidChars(track.Permalink),
+                PermalinkUrl = StringHelper.CleanupInvalidChars(track.PermalinkUrl?.ToString()),
                 PlaybackCount = track.PlaybackCount ?? 0,
                 Public = track.Public,
-                PublisherMetadata_Artist = CleanupInvalidChars(track.PublisherMetadata?.Artist),
+                PublisherMetadata_Artist = StringHelper.CleanupInvalidChars(track.PublisherMetadata?.Artist),
                 PublisherMetadata_ContainsMusic = track.PublisherMetadata?.ContainsMusic ?? false,
                 PublisherMetadata_Id = track.PublisherMetadata?.Id ?? 0,
-                PublisherMetadata_Urn = CleanupInvalidChars(track.PublisherMetadata?.Urn),
-                PurchaseTitle = CleanupInvalidChars(track.PurchaseTitle),
-                PurchaseUrl = CleanupInvalidChars(track.PurchaseUrl),
+                PublisherMetadata_Urn = StringHelper.CleanupInvalidChars(track.PublisherMetadata?.Urn),
+                PurchaseTitle = StringHelper.CleanupInvalidChars(track.PurchaseTitle),
+                PurchaseUrl = StringHelper.CleanupInvalidChars(track.PurchaseUrl),
                 ReleaseDate = releaseDate,
                 RepostsCount = track.RepostsCount ?? 0,
-                Sharing = CleanupInvalidChars(track.Sharing),
-                State = CleanupInvalidChars(track.State),
+                Sharing = StringHelper.CleanupInvalidChars(track.Sharing),
+                State = StringHelper.CleanupInvalidChars(track.State),
                 Streamable = track.Streamable,
-                TagList = CleanupInvalidChars(track.TagList),
-                Uri = CleanupInvalidChars(track.Uri?.ToString()),
-                ArtworkUrl = CleanupInvalidChars(track.ArtworkUrl?.ToString()),
-                Visuals = CleanupInvalidChars(track.Visuals?.ToString()),
-                WaveformUrl = CleanupInvalidChars(track.WaveformUrl),
+                TagList = StringHelper.CleanupInvalidChars(track.TagList),
+                Uri = StringHelper.CleanupInvalidChars(track.Uri?.ToString()),
+                ArtworkUrl = StringHelper.CleanupInvalidChars(track.ArtworkUrl?.ToString()),
+                Visuals = StringHelper.CleanupInvalidChars(track.Visuals?.ToString()),
+                WaveformUrl = StringHelper.CleanupInvalidChars(track.WaveformUrl),
                 DisplayDate = track.DisplayDate.DateTime,
-                MonetizationModel = CleanupInvalidChars(track.MonetizationModel),
-                Policy = CleanupInvalidChars(track.Policy),
-                Urn = CleanupInvalidChars(track.Urn),
+                MonetizationModel = StringHelper.CleanupInvalidChars(track.MonetizationModel),
+                Policy = StringHelper.CleanupInvalidChars(track.Policy),
+                Urn = StringHelper.CleanupInvalidChars(track.Urn),
                 CreatedAt = track.CreatedAt.DateTime,
                 LastModified = track.LastModified.DateTime
             }, transaction: base.Transaction);
@@ -390,30 +391,5 @@ public class UpdateSoundCloudRepository : BaseUpdateRepository
         return (await base.Connection
             .QueryAsync<long>(query))
             .ToList();
-    }
-
-    private string CleanupInvalidChars(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-        
-        var invalidChars = new HashSet<char>
-        {
-            '\uFFFE',  // 0xFFFE - reversed BOM
-            '\uFEFF',  // 0xFEFF - BOM / zero-width no-break space
-            '\uFFFD',  // 0xFFFD - replacement character
-            '\u0000',  // 0x0000 - null character
-            ' '
-        };
-        if (invalidChars.Any(c => value.Contains(c)))
-        {
-            foreach(var c in invalidChars)
-            {
-                value = value.Replace(c.ToString(), string.Empty);
-            }
-        }
-        return value;
     }
 }

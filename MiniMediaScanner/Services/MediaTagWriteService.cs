@@ -1,4 +1,5 @@
 using ATL;
+using MiniMediaScanner.Helpers;
 
 namespace MiniMediaScanner.Services;
 
@@ -583,7 +584,7 @@ public class MediaTagWriteService
         }
         
         tagName = GetFieldName(metadataInfo.MediaTags, tagName);
-        value = _normalizerService.ReplaceInvalidCharacters(value);
+        value = StringHelper.CleanupInvalidChars(value);
         
         if (!overwriteTagValue &&
             metadataInfo.MediaTags.ContainsKey(tagName) &&

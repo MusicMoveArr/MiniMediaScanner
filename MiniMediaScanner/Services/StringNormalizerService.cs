@@ -103,15 +103,4 @@ public class StringNormalizerService
 
         return firstChar + restOfString;
     }
-    
-    public string ReplaceInvalidCharacters(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-        return value.Replace("\0", string.Empty)
-                    .Replace("\\u0000", string.Empty)
-                    .Replace("\\u0001", string.Empty);
-    }
 }

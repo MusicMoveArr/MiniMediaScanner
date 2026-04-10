@@ -1,3 +1,5 @@
+using ATL;
+
 namespace MiniMediaScanner.Helpers;
 
 public static class ArtistHelper
@@ -31,6 +33,27 @@ public static class ArtistHelper
             return artist;
         }
         return newArtistName;
+    }
+
+    public static List<string> GetAllArtistNames(MetadataInfo metadata)
+    {
+        char[] charDelimeteres = [',', ';', '·'];
+        List<string> artistNames = new List<string>();
+        artistNames.Add(metadata.Artist);
+        artistNames.Add(ArtistHelper.GetUncoupledArtistName(metadata.Artist));
+
+        string? artistsKey = metadata.MediaTags.Keys.FirstOrDefault(k => string.Equals(k, "artists", StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(artistsKey) &&
+            metadata.MediaTags.TryGetValue(artistsKey, out string? artists) &&
+            !string.IsNullOrWhiteSpace(artists))
+        {
+            artistNames.AddRange(artists.Split(charDelimeteres, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? []);
+        }
+        artistNames.AddRange(metadata.Artist?.Split(charDelimeteres, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? []);
+        return artistNames
+            .Where(artist => !string.IsNullOrWhiteSpace(artist))
+            .DistinctBy(artist => artist)
+            .ToList();
     }
 
     public static string GetShortVersion(string? value, int length, string postfix)
