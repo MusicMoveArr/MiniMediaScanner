@@ -591,6 +591,51 @@ public class MetadataRepository
         }).ToList();
     }
     
+    public async Task<List<MetadataModel>> GetMetadataByArtistIdAsync(Guid artistId)
+    {
+        string query = @$"SELECT distinct on (m.MetadataId)
+                                 m.MetadataId, 
+                                 m.Path, 
+                                 m.Title, 
+                                 m.AlbumId,
+                                 album.title AS AlbumName,
+                                 tag_track,
+                                 tag_trackcount,
+                                 tag_disc,
+                                 tag_disccount,
+                                 artist.name AS ArtistName,
+                                 m.MusicBrainzArtistId,
+                                 m.tag_acoustid,
+                                 m.Tag_AllJsonTags,
+                                 artist.ArtistId,
+                                 m.Tag_Isrc,
+                                 Tag_AcoustIdFingerprint,
+                                 CASE
+                                    WHEN m.Tag_Length !~ ':' THEN NULL 
+                                    WHEN m.Tag_Length ~ '^\d{{1,2}}:\d{{2}}$' THEN ('0:' || m.Tag_Length)::interval
+                                    ELSE m.Tag_Length::interval
+                                  END AS TrackLength,
+                                 m.Tag_AllJsonTags->>upcQuery.key AS Tag_Upc,
+                                 m.Tag_AllJsonTags->>dateQuery.key AS Tag_Date
+                        FROM metadata m
+                        JOIN albums album ON album.albumid = m.albumid
+                        JOIN artists artist ON artist.artistid = album.artistid
+                        left JOIN LATERAL (
+	                         SELECT jsonb_object_keys(m.tag_alljsontags) AS key
+	                     ) upcQuery ON lower(upcQuery.key) = 'upc'
+                        left JOIN LATERAL (
+	                         SELECT jsonb_object_keys(m.tag_alljsontags) AS key
+	                     ) dateQuery ON lower(dateQuery.key) = 'date'
+                        where artist.artistid = @artistId";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        
+        return conn.Query<MetadataModel>(query, new
+        {
+            artistId
+        }).ToList();
+    }
+    
     public async Task<List<MetadataModel>> GetUntaggedMetadataByArtistAsync(string artistName, string[] providers)
     {
         string query = @$"SELECT m.MetadataId, 
@@ -857,9 +902,26 @@ public class MetadataRepository
         
         return pathsCanUpdate;
     }
-    
-    
-    public async Task InsertOrUpdateMetadataAsync(MetadataInfo metadata, Guid albumId)
+
+    public async Task UpdateFileSizeWhenNotSetAsync(string path, long fileSize)
+    {
+        string query = @"UPDATE metadata 
+                         SET file_size = @fileSize
+                         WHERE 
+                           Path = @path 
+                           and file_size = 0";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        await conn.ExecuteAsync(query, new
+        {
+            path,
+            fileSize
+        });
+    }
+
+
+    public async Task UpsertMetadataAsync(MetadataInfo metadata, Guid albumId)
     {
         string query = @"
             INSERT INTO Metadata (MetadataId, 
@@ -887,6 +949,7 @@ public class MetadataRepository
                                   Tag_AcoustId,
                                   File_LastWriteTime,
                                   File_CreationTime,
+                                  File_Size,
                                   Tag_AllJsonTags)
             VALUES (@MetadataId, @path, @title, @albumId, 
                     @MusicBrainzArtistId, 
@@ -910,6 +973,7 @@ public class MetadataRepository
                     @Tag_AcoustId,
                     @File_LastWriteTime,
                     @File_CreationTime,
+                    @File_Size,
                     @Tag_AllJsonTags::jsonb)
             ON CONFLICT (Path)
             DO UPDATE SET
@@ -927,6 +991,7 @@ public class MetadataRepository
                 Tag_AcoustId = COALESCE(metadata.Tag_AcoustId, EXCLUDED.Tag_AcoustId),
                 File_LastWriteTime = EXCLUDED.File_LastWriteTime,
                 File_CreationTime = EXCLUDED.File_CreationTime,
+                File_Size = EXCLUDED.File_Size,
                 Tag_AllJsonTags = EXCLUDED.Tag_AllJsonTags::jsonb,
                 MusicBrainzArtistId = EXCLUDED.MusicBrainzArtistId, 
                 MusicBrainzDiscId = EXCLUDED.MusicBrainzDiscId, 

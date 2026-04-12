@@ -1,0 +1,1 @@
+alter table metadata add column file_size bigint default 0;

@@ -257,6 +257,7 @@ public class FileMetaDataService
             Tag_AcoustId = GetValue(mediaTags, AcoustidIdTag),
             File_LastWriteTime = fileInfo.LastWriteTime,
             File_CreationTime = fileInfo.CreationTime,
+            File_Size =  fileInfo.Length,
             Tag_AllJsonTags = jsonTags,
             MediaTags = mediaTags
         };

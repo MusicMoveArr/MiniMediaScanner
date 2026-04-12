@@ -145,12 +145,19 @@ public class ImportCommandHandler
                 if (filePaths.Count == BatchFileProcessing)
                 {
                     var updatePaths = _forceImport ? filePaths : await _metadataRepository.MetadataCanUpdatePathListAsync(filePaths);
-                    
+                    var notUpdatedPaths = filePaths.Except(updatePaths);
                     foreach (var file in updatePaths)
                     {
                         _progressTask.Value++;
                         _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
                         await ProcessFileAsync(file, _forceImport, _updateMb);
+                    }
+                    foreach (var file in notUpdatedPaths)
+                    {
+                        _progressTask.Value++;
+                        _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
+                        FileInfo fileInfo = new FileInfo(file);
+                        await _metadataRepository.UpdateFileSizeWhenNotSetAsync(file, fileInfo.Length);
                     }
                     
                     _progressTask.Value += filePaths.Count - updatePaths.Count;
@@ -171,11 +178,19 @@ public class ImportCommandHandler
         if (filePaths.Count > 0)
         {
             var updatePaths = _forceImport ? filePaths : await _metadataRepository.MetadataCanUpdatePathListAsync(filePaths);
+            var notUpdatedPaths = filePaths.Except(updatePaths);
             foreach (var file in updatePaths)
             {
                 _progressTask.Value++;
                 _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
                 await ProcessFileAsync(file, _forceImport, _updateMb);
+            }
+            foreach (var file in notUpdatedPaths)
+            {
+                _progressTask.Value++;
+                _progressTask.Description = $"Scanning files from '{_scanningDirectoryPath}' {_progressTask.Value}/{_progressTask.MaxValue}";
+                FileInfo fileInfo = new FileInfo(file);
+                await _metadataRepository.UpdateFileSizeWhenNotSetAsync(file, fileInfo.Length);
             }
             filePaths.Clear();
         }
@@ -245,6 +260,6 @@ public class ImportCommandHandler
         var albumId = await _albumRepository.InsertOrFindAlbumAsync(metadata.Album, artistId);
 
         // 3. Insert/Update Metadata
-        await _metadataRepository.InsertOrUpdateMetadataAsync(metadata, albumId);
+        await _metadataRepository.UpsertMetadataAsync(metadata, albumId);
     }
 }
