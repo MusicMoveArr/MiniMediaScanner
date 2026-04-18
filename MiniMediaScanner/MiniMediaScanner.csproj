@@ -130,6 +130,9 @@
       <None Update="DbScripts\20260412 update metadata table.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="DbScripts\20260415 artists ext table.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
     <ItemGroup>

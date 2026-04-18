@@ -21,6 +21,13 @@ public class MetadataInfo
     public string? MusicBrainzReleaseType { get; set; }
     public string? MusicBrainzReleaseArtistId { get; set; }
     public string? MusicBrainzReleaseGroupId { get; set; }
+    
+    
+    public long? DeezerArtistId { get; set; }
+    public long? DiscogsArtistId { get; set; }
+    public string? SpotifyArtistId { get; set; }
+    public int? TidalArtistId { get; set; }
+    public long? SoundcloudArtistId { get; set; }
 
     public int Tag_Year { get; set; }
     public int Tag_Track { get; set; }

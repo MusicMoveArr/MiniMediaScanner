@@ -244,7 +244,11 @@ public class FileMetaDataService
             MusicBrainzReleaseType = GetValue(mediaTags, "musicbrainz album type"),
             MusicBrainzReleaseArtistId = GetValue(mediaTags, "musicbrainz album artist id"),
             MusicBrainzReleaseGroupId = GetValue(mediaTags, "musicbrainz release group id"),
-            
+            DeezerArtistId = long.TryParse(GetValue(mediaTags, "Deezer Artist Id"), out long deezerArtistId) ? deezerArtistId : 0,
+            DiscogsArtistId = long.TryParse(GetValue(mediaTags, "Discogs Artist Id"), out long discogsArtistId) ? discogsArtistId : 0,
+            SpotifyArtistId = GetValue(mediaTags, "Spotify Artist Id"),
+            TidalArtistId = int.TryParse(GetValue(mediaTags, "Tidal Artist Id"), out int tidalArtistId) ? tidalArtistId : 0,
+            SoundcloudArtistId = long.TryParse(GetValue(mediaTags, "Soundcloud Artist Id"), out long soundcloudArtistId) ? soundcloudArtistId : 0,
             Tag_Year = originalyear,
             Tag_Track = track,
             Tag_TrackCount = trackCount,

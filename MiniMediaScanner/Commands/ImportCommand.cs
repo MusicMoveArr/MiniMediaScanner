@@ -37,9 +37,15 @@ public class ImportCommand : ICommand
         EnvironmentVariable = "IMPORT_PREVENT_UPDATE_WITHIN_DAYS")]
     public int PreventUpdateWithinDays { get; set; } = 7;
     
+    [CommandOption("split-artists",
+        Description = "Split artists based on external artist id's from MusicBrainz, Deezer etc. This prevents merging 2 different artists together.",
+        IsRequired = false,
+        EnvironmentVariable = "IMPORT_SPLIT_ARTISTS")]
+    public bool SplitArtists { get; set; } = false;
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
-        var handler = new ImportCommandHandler(ConnectionString, PreventUpdateWithinDays, Force, UpdateMb);
+        var handler = new ImportCommandHandler(ConnectionString, PreventUpdateWithinDays, Force, UpdateMb, SplitArtists);
         await handler.ProcessDirectoryAsync(Path);
     }
 }
