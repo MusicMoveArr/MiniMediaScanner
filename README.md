@@ -322,6 +322,35 @@ sudo docker run --rm -it --network net-minimedia --name minimediascanner \
 musicmovearr/minimediascanner:main
 ```
 
+# Acoustid Check Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll acoustidcheck --connection-string <value> --acoustid-clientkey <value> [options]
+
+DESCRIPTION
+  Check your submissions statuses from AcoustId
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+* --acoustid-clientkey  AcoustId ClientKey for authentication Environment variable: ACOUSTIDCHECK_CLIENTKEY. 
+  -h|--help         Shows help text. 
+```
+
+# Acoustid Submit Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll acoustidsubmit --connection-string <value> --acoustid-clientkey <value> --acoustid-userkey <value> [options]
+
+DESCRIPTION
+  Check your submissions statuses from AcoustId
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+* --acoustid-clientkey  AcoustId ClientKey for authentication Environment variable: ACOUSTIDSUBMISSION_CLIENTKEY. 
+* --acoustid-userkey  AcoustId UserKey for authentication Environment variable: ACOUSTIDSUBMISSION_USERKEY. 
+  -h|--help         Shows help text. 
+```
+
 # Convert Command
 ```
 USAGE
@@ -356,6 +385,41 @@ OPTIONS
   -h|--help         Shows help text. 
 ```
 
+# Cover Art Deezer Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll coverartdeezer --connection-string <value> [options]
+
+DESCRIPTION
+  Download Cover art from Deezer for Artist and Album
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: COVERARTDEEZER_ARTIST. 
+  -b|--album        target Album Environment variable: COVERARTDEEZER_ALBUM. 
+  -f|--album-filename  Filename e.g. cover.jpg. Environment variable: COVERARTDEEZER_ALBUM_FILENAME. Default: "cover.jpg".
+  -g|--artist-filename  Filename e.g. cover.jpg. Environment variable: COVERARTDEEZER_ARTIST_FILENAME. Default: "cover.jpg".
+  -h|--help         Shows help text. 
+```
+
+# Cover Art Discogs Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll coverartdiscogs --connection-string <value> --discogs-token <value> [options]
+
+DESCRIPTION
+  Download Cover art from Discogs for Artist and Album
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+* --discogs-token   The Discogs token required to get the covers of Discogs Environment variable: COVERARTDISCOGS_TOKEN. 
+  -a|--artist       Artistname Environment variable: COVERARTDISCOGS_ARTIST. 
+  -b|--album        target Album Environment variable: COVERARTDISCOGS_ALBUM. 
+  -f|--album-filename  Filename e.g. cover.jpg. Environment variable: COVERARTDISCOGS_ALBUM_FILENAME. Default: "cover.jpg".
+  -g|--artist-filename  Filename e.g. cover.jpg. Environment variable: COVERARTDISCOGS_ARTIST_FILENAME. Default: "cover.jpg".
+  -h|--help         Shows help text. 
+```
+
 # Cover Art Spotify Command
 ```
 USAGE
@@ -370,6 +434,23 @@ OPTIONS
   -b|--album        target Album Environment variable: COVERARTSPOTIFY_ALBUM. 
   -f|--album-filename  Filename e.g. cover.jpg. Environment variable: COVERARTSPOTIFY_ALBUM_FILENAME. Default: "cover.jpg".
   -g|--artist-filename  Filename e.g. cover.jpg. Environment variable: COVERARTSPOTIFY_ARTIST_FILENAME. Default: "cover.jpg".
+  -h|--help         Shows help text. 
+```
+
+# Cover Art Tidal Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll coverarttidal --connection-string <value> [options]
+
+DESCRIPTION
+  Download Cover art from Tidal for Artist and Album
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: COVERARTTIDAL_ARTIST. 
+  -b|--album        target Album Environment variable: COVERARTTIDAL_ALBUM. 
+  -f|--album-filename  Filename e.g. cover.jpg. Environment variable: COVERARTTIDAL_ALBUM_FILENAME. Default: "cover.jpg".
+  -g|--artist-filename  Filename e.g. cover.jpg. Environment variable: COVERARTTIDAL_ARTIST_FILENAME. Default: "cover.jpg".
   -h|--help         Shows help text. 
 ```
 
@@ -395,12 +476,20 @@ USAGE
   dotnet MiniMediaScanner.dll deduplicate --connection-string <value> [options]
 
 DESCRIPTION
-  Check for duplicated music and delete optionally
+  Check for duplicated music per album and delete optionally
 
 OPTIONS
 * -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
   -a|--artist       Artistname Environment variable: DEDUPLICATE_ARTIST. 
   -d|--delete       Delete duplicate file Environment variable: DEDUPLICATE_DELETE. Default: "False".
+  -A|--accuracy     Filename matching accuracy, 98% is recommended Environment variable: DEDUPLICATE_ACCURACY. Default: "98".
+  --acoustfingerprint-accuracy  Acoust Fingerprint matching accuracy, 99% is recommended, 98% and lower can mismatch real fast, think of remixes etc Environment variable: DEDUPLICATE_ACOUSTFINGERPRINT_ACCURACY. Default: "99".
+  -e|--extensions   Extensions to keep, in order, first found extension is kept (extensions must be without '.') Environment variable: DEDUPLICATE_EXTENSIONS. Default: "flac", "m4a", "wav", "aaif", "opus", "mp3".
+  --check-extensions  Check for duplicate filenames with difference file extensions Environment variable: DEDUPLICATE_CHECK_EXTENSIONS. Default: "False".
+  --check-versions  Check for duplicate filename versions, files ending with (1), (2), (3) and so on Environment variable: DEDUPLICATE_CHECK_VERSIONS. Default: "False".
+  --check-album-duplicates  Check for duplicate files per album (works better for multi-drive / MergerFS Setups) with a accuracy of X % given with --accuracy or environment variable DEDUPLICATE_ACCURACY Environment variable: DEDUPLICATE_CHECK_EXTENSIONS. Default: "False".
+  --check-album-extensions  Similar to --check-extensions with the difference of better support for multi-drive / MergerFS Setups, --check-extensions checks the full path, this option checks per album Environment variable: DEDUPLICATE_CHECK_ALBUM_EXTENSIONS. Default: "False".
+  --check-album-extensions-acoustfingerprint  Similar to --check-extensions with the difference of better support for multi-drive / MergerFS Setups, --check-extensions checks the full path, this option checks per album Environment variable: DEDUPLICATE_CHECK_ALBUM_EXTENSIONS_ACOUSTFINGERPRINT. Default: "False".
   -h|--help         Shows help text. 
 ```
 
@@ -472,18 +561,18 @@ OPTIONS
 # Fix Collections Command
 ```
 USAGE
-  dotnet MiniMediaScanner.dll fixcollections --connection-string <value> [options]
+  dotnet MiniMediaScanner.dll fixcollections --connection-string <value> --albumregex <value> --addartist <value> [options]
 
 DESCRIPTION
   Fix collections by adding the missing artist to the Artists tag
 
 OPTIONS
 * -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+* -b|--albumregex   Target album(s) with regex Environment variable: FIXCOLLECTIONS_ALBUMREGEX. 
+* -W|--addartist    Add the missing artist to the Artists tag Environment variable: FIXCOLLECTIONS_ADDARTIST. 
   -a|--artist       Artistname Environment variable: FIXCOLLECTIONS_ARTIST. 
   -l|--label        Target label to find songs belonging to a collection Environment variable: FIXCOLLECTIONS_LABEL. 
-  -H|--copyright    Target copyright to find songs belonging to a collection. Environment variable: FIXCOLLECTIONS_COPYRIGHT.
-  -b|--albumregex   Target album(s) with regex. Environment variable: FIXCOLLECTIONS_ALBUMREGEX. 
-  -W|--addartist    Add the missing artist to the Artists tag.  Environment variable: FIXCOLLECTIONS_ADDARTIST. 
+  -H|--copyright    Target copyright to find songs belonging to a collection Environment variable: FIXCOLLECTIONS_COPYRIGHT. 
   -y|--confirm      Always confirm automatically. Environment variable: FIXCOLLECTIONS_CONFIRM. Default: "False".
   -h|--help         Shows help text. 
 ```
@@ -508,6 +597,88 @@ OPTIONS
   -h|--help         Shows help text. 
 ```
 
+# Group Tagging Deezer Metadata Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll grouptaggingdeezermetadata --connection-string <value> [options]
+
+DESCRIPTION
+  Group Tagging metadata per Album
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: GROUPTAGGINGDEEZERMETADATA_ARTIST. 
+  -b|--album        target Album Environment variable: GROUPTAGGINGDEEZERMETADATA_ALBUM. 
+  -y|--confirm      Always confirm automatically. Environment variable: GROUPTAGGINGDEEZERMETADATA_CONFIRM. Default: "False".
+  -o|--overwrite-tag  Overwrite existing tag values. Environment variable: GROUPTAGGINGDEEZERMETADATA_OVERWRITE_TAG. Default: "True".
+  --overwrite-artist  Overwrite the Artist name when tagging from Deezer. Environment variable: GROUPTAGGINGDEEZERMETADATA_OVERWRITEARTIST. Default: "False".
+  --overwrite-album-artist  Overwrite the Album Artist name when tagging from Deezer. Environment variable: GROUPTAGGINGDEEZERMETADATA_OVERWRITEALBUMARTIST. Default: "False".
+  --overwrite-album  Overwrite the Album name when tagging from Deezer. Environment variable: GROUPTAGGINGDEEZERMETADATA_OVERWRITEALBUM. Default: "False".
+  --overwrite-track  Overwrite the Track name when tagging from Deezer. Environment variable: GROUPTAGGINGDEEZERMETADATA_OVERWRITETRACK. Default: "False".
+  --threads         The amount of threads to use. Environment variable: GROUPTAGGINGDEEZERMETADATA_THREADS. Default: "1".
+  -h|--help         Shows help text. 
+```
+
+# Group Tagging MusicBrainz Metadata Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll grouptaggingmbmetadata --connection-string <value> [options]
+
+DESCRIPTION
+  Group Tagging metadata per Album
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: GROUPTAGGINGMETADATA_ARTIST. 
+  -b|--album        target Album Environment variable: GROUPTAGGINGMETADATA_ALBUM. 
+  -y|--confirm      Always confirm automatically. Environment variable: GROUPTAGGINGMETADATA_CONFIRM. Default: "False".
+  -o|--overwrite-tag  Overwrite existing tag values. Environment variable: GROUPTAGGINGMETADATA_OVERWRITE_TAG. Default: "False".
+  -h|--help         Shows help text. 
+```
+
+# Group Tagging Spotify Metadata Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll grouptaggingspotifymetadata --connection-string <value> [options]
+
+DESCRIPTION
+  Group Tagging metadata per Album
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: GROUPTAGGINGSPOTIFYMETADATA_ARTIST. 
+  -b|--album        target Album Environment variable: GROUPTAGGINGSPOTIFYMETADATA_ALBUM. 
+  -y|--confirm      Always confirm automatically. Environment variable: GROUPTAGGINGSPOTIFYMETADATA_CONFIRM. Default: "False".
+  -o|--overwrite-tag  Overwrite existing tag values. Environment variable: GROUPTAGGINGSPOTIFYMETADATA_OVERWRITE_TAG. Default: "True".
+  --overwrite-artist  Overwrite the Artist name when tagging from Spotify. Environment variable: GROUPTAGGINGSPOTIFYMETADATA_OVERWRITEARTIST. Default: "False".
+  --overwrite-album-artist  Overwrite the Album Artist name when tagging from Spotify. Environment variable: GROUPTAGGINGSPOTIFYMETADATA_OVERWRITEALBUMARTIST. Default: "False".
+  --overwrite-album  Overwrite the Album name when tagging from Spotify. Environment variable: GROUPTAGGINGSPOTIFYMETADATA_OVERWRITEALBUM. Default: "False".
+  --overwrite-track  Overwrite the Track name when tagging from Spotify. Environment variable: GROUPTAGGINGSPOTIFYMETADATA_OVERWRITETRACK. Default: "False".
+  -h|--help         Shows help text. 
+```
+
+# Group Tagging Tidal Metadata Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll grouptaggingtidalmetadata --connection-string <value> [options]
+
+DESCRIPTION
+  Group Tagging metadata per Album
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: GROUPTAGGINGTIDALMETADATA_ARTIST. 
+  -b|--album        target Album Environment variable: GROUPTAGGINGTIDALMETADATA_ALBUM. 
+  -y|--confirm      Always confirm automatically. Environment variable: GROUPTAGGINGTIDALMETADATA_CONFIRM. Default: "False".
+  -o|--overwrite-tag  Overwrite existing tag values. Environment variable: GROUPTAGGINGTIDALMETADATA_OVERWRITE_TAG. Default: "True".
+  --overwrite-artist  Overwrite the Artist name when tagging from Tidal. Environment variable: GROUPTAGGINGTIDALMETADATA_OVERWRITEARTIST. Default: "False".
+  --overwrite-album-artist  Overwrite the Album Artist name when tagging from Tidal. Environment variable: GROUPTAGGINGTIDALMETADATA_OVERWRITEALBUMARTIST. Default: "False".
+  --overwrite-album  Overwrite the Album name when tagging from Tidal. Environment variable: GROUPTAGGINGTIDALMETADATA_OVERWRITEALBUM. Default: "False".
+  --overwrite-track  Overwrite the Track name when tagging from Tidal. Environment variable: GROUPTAGGINGTIDALMETADATA_OVERWRITETRACK. Default: "False".
+  -h|--help         Shows help text. 
+```
+
+
 # Import Command
 ```
 USAGE
@@ -519,6 +690,10 @@ DESCRIPTION
 OPTIONS
 * -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
 * -p|--path         From the directory. Environment variable: IMPORT_PATH. 
+  -M|--update-mb    Update MusicBrainz. Environment variable: IMPORT_UPDATE_MB. Default: "True".
+  -f|--force        Force import even if files did not change on disk. Environment variable: IMPORT_FORCE. Default: "False".
+  --prevent-update-within-days  Prevent updating existing artists within x days from the last pull/update Environment variable: IMPORT_PREVENT_UPDATE_WITHIN_DAYS. Default: "7".
+  --split-artists   Split artists based on external artist id's from MusicBrainz, Deezer etc. This prevents merging 2 different artists together. Environment variable: IMPORT_SPLIT_ARTISTS. Default: "False".
   -h|--help         Shows help text. 
 ```
 
@@ -534,6 +709,32 @@ OPTIONS
 * -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
   -a|--artist       Artistname Environment variable: MISSING_ARTIST. 
   -p|--provider     Provider can be either MusicBrainz or Spotify. Environment variable: MISSING_PROVIDER. Default: "musicbrainz".
+  -o|--output       Output format, tags available: {Artist} {Album} {Track} {ArtistUrl} {AlbumUrl} {TrackUrl}. Environment variable: MISSING_OUTPUT. Default: "{Artist} - {Album} - {Track}".
+  -F|--filterout    Filterout names from the output. Environment variable: MISSING_FILTEROUT. Default: .
+  -e|--extension    When the specific file extension (mp3, opus, wav...) is not found, it's considered missing. Environment variable: MISSING_EXTENSION. Default: "".
+  --file            Save the missing tracks list to a file. Environment variable: MISSING_FILE. 
+  --file-append     Append to the file instead of a overwrite. Environment variable: MISSING_FILE_APPEND. Default: "False".
+  -h|--help         Shows help text. 
+```
+
+# Move Untagged File Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll moveuntaggedfile --connection-string <value> --target-folder <value> --file-format <value> --directory-format <value> [options]
+
+DESCRIPTION
+  Move untagged files to another directory
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+* -T|--target-folder  Move the untagged files to this target folder. Environment variable: MOVEUNTAGGEDFILES_TARGET_FOLDER. 
+* -f|--file-format  file format {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}. Environment variable: MOVEUNTAGGEDFILES_FILE_FORMAT. 
+* -D|--directory-format  directory format {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}. Environment variable: MOVEUNTAGGEDFILES_DIRECTORY_FORMAT. 
+  -a|--artist       Artistname Environment variable: MOVEUNTAGGEDFILES_ARTIST. 
+  -b|--album        target Album Environment variable: MOVEUNTAGGEDFILES_ALBUM. 
+  -w|--overwrite    overwrite existing files. Environment variable: MOVEUNTAGGEDFILES_OVERWRITE. Default: "False".
+  -S|--directory-seperator  Directory Seperator replacer, replace '/' '\' to .e.g. '_'. Environment variable: MOVEUNTAGGEDFILES_DIRECTORY_SEPARATOR. Default: "_".
+  --dry-run         Dry run, no changes will be made Environment variable: MOVEUNTAGGEDFILES_DRY_RUN. Default: "False".
   -h|--help         Shows help text. 
 ```
 
@@ -598,6 +799,26 @@ OPTIONS
   -h|--help         Shows help text. 
 ```
 
+# Rename File Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll renamefile --connection-string <value> [options]
+
+DESCRIPTION
+  Rename media files based on format
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: NORMALIZEFILE_ARTIST. 
+  -b|--album        target Album Environment variable: NORMALIZEFILE_ALBUM. 
+  -w|--overwrite    overwrite existing files. Environment variable: NORMALIZEFILE_OVERWRITE. Default: "False".
+  -s|--sub-directory-depth  sub-directory depth to root-folder. Environment variable: NORMALIZEFILE_SUB_DIRECTORY_DEPTH. Default: "0".
+  -f|--file-format  rename file format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}. Environment variable: NORMALIZEFILE_FILE_FORMAT. Default: "".
+  -D|--directory-format  rename directory format (required for renaming) {MetadataId} {Path} {Title} {AlbumId} {ArtistName} {AlbumName} {Tag_AllJsonTags} {Tag_Track} {Tag_TrackCount} {Tag_Disc} {Tag_DiscCount}. Environment variable: NORMALIZEFILE_DIRECTORY_FORMAT. Default: "".
+  -S|--directory-seperator  Directory Seperator replacer, replace '/' '\' to .e.g. '_'. Environment variable: NORMALIZEFILE_DIRECTORY_SEPARATOR. Default: "_".
+  -h|--help         Shows help text. 
+```
+
 # Split Artist Command
 ```
 USAGE
@@ -652,6 +873,27 @@ OPTIONS
   -h|--help         Shows help text. 
 ```
 
+# Tag Missing Deezer Metadata Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll tagmissingdeezermetadata --connection-string <value> [options]
+
+DESCRIPTION
+  Tag missing metadata using Deezer, optionally write to file
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: TAGMISSINGDEEZERMETADATA_ARTIST. 
+  -b|--album        target Album Environment variable: TAGMISSINGDEEZERMETADATA_ALBUM. 
+  -y|--confirm      Always confirm automatically. Environment variable: TAGMISSINGDEEZERMETADATA_CONFIRM. Default: "False".
+  -o|--overwrite-tag  Overwrite existing tag values. Environment variable: TAGMISSINGDEEZERMETADATA_OVERWRITE_TAG. Default: "True".
+  --overwrite-artist  Overwrite the Artist name when tagging from Deezer. Environment variable: TAGMISSINGDEEZERMETADATA_OVERWRITEARTIST. Default: "False".
+  --overwrite-album-artist  Overwrite the Album Artist name when tagging from Deezer. Environment variable: TAGMISSINGDEEZERMETADATA_OVERWRITEALBUMARTIST. Default: "False".
+  --overwrite-album  Overwrite the Album name when tagging from Deezer. Environment variable: TAGMISSINGDEEZERMETADATA_OVERWRITEALBUM. Default: "False".
+  --overwrite-track  Overwrite the Track name when tagging from Deezer. Environment variable: TAGMISSINGDEEZERMETADATA_OVERWRITETRACK. Default: "False".
+  -h|--help         Shows help text. 
+```
+
 # Tag Missing Metadata Command
 ```
 USAGE
@@ -667,23 +909,8 @@ OPTIONS
   -b|--album        target Album Environment variable: TAGMISSINGMETADATA_ALBUM. 
   -w|--write        Write missing metadata to media on disk. Environment variable: TAGMISSINGMETADATA_WRITE. Default: "False".
   -o|--overwrite-tag  Overwrite existing tag values. Environment variable: TAGMISSINGMETADATA_OVERWRITE_TAG. Default: "True".
-  -h|--help         Shows help text. 
-```
-
-# Tag Missing Deezer Metadata Command
-```
-USAGE
-  dotnet MiniMediaScanner.dll tagmissingdeezermetadata --connection-string <value> [options]
-
-DESCRIPTION
-  Tag missing metadata using Deezer, optionally write to file
-
-OPTIONS
-* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
-  -a|--artist       Artistname Environment variable: TAGMISSINGDEEZERMETADATA_ARTIST. 
-  -b|--album        target Album Environment variable: TAGMISSINGDEEZERMETADATA_ALBUM. 
-  -w|--write        Write missing metadata to media on disk. Environment variable: TAGMISSINGDEEZERMETADATA_WRITE. Default: "False".
-  -o|--overwrite-tag  Overwrite existing tag values. Environment variable: TAGMISSINGDEEZERMETADATA_OVERWRITE_TAG. Default: "True".
+  --match-percentage-tags  The percentage used for tagging, how accurate it must match with MusicBrainz. Environment variable: TAGMISSINGMETADATA_MATCH_PERCENTAGE_TAGS. Default: "80".
+  --match-percentage-acoustid  The percentage used for AcoustId, how accurate it must match with AcoustId (for sound accuracy). Environment variable: TAGMISSINGMETADATA_MATCH_PERCENTAGE_ACOUSTID. Default: "98".
   -h|--help         Shows help text. 
 ```
 
@@ -699,8 +926,53 @@ OPTIONS
 * -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
   -a|--artist       Artistname Environment variable: TAGMISSINGSPOTIFYMETADATA_ARTIST. 
   -b|--album        target Album Environment variable: TAGMISSINGSPOTIFYMETADATA_ALBUM. 
-  -w|--write        Write missing metadata to media on disk. Environment variable: TAGMISSINGSPOTIFYMETADATA_WRITE. Default: "False".
+  -y|--confirm      Always confirm automatically. Environment variable: TAGMISSINGSPOTIFYMETADATA_CONFIRM. Default: "False".
   -o|--overwrite-tag  Overwrite existing tag values. Environment variable: TAGMISSINGSPOTIFYMETADATA_OVERWRITE_TAG. Default: "True".
+  --overwrite-artist  Overwrite the Artist name when tagging from Spotify. Environment variable: TAGMISSINGSPOTIFYMETADATA_OVERWRITEARTIST. Default: "False".
+  --overwrite-album-artist  Overwrite the Album Artist name when tagging from Spotify. Environment variable: TAGMISSINGSPOTIFYMETADATA_OVERWRITEALBUMARTIST. Default: "False".
+  --overwrite-album  Overwrite the Album name when tagging from Spotify. Environment variable: TAGMISSINGSPOTIFYMETADATA_OVERWRITEALBUM. Default: "False".
+  --overwrite-track  Overwrite the Track name when tagging from Spotify. Environment variable: TAGMISSINGSPOTIFYMETADATA_OVERWRITETRACK. Default: "False".
+  -h|--help         Shows help text. 
+```
+
+# Tag Missing Tidal Metadata Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll tagmissingtidalmetadata --connection-string <value> [options]
+
+DESCRIPTION
+  Tag missing metadata using Tidal, optionally write to file
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: TAGMISSINGTIDALMETADATA_ARTIST. 
+  -b|--album        target Album Environment variable: TAGMISSINGTIDALMETADATA_ALBUM. 
+  -y|--confirm      Always confirm automatically. Environment variable: GROUPTAGGINGTIDALMETADATA_CONFIRM. Default: "False".
+  -o|--overwrite-tag  Overwrite existing tag values. Environment variable: TAGMISSINGTIDALMETADATA_OVERWRITE_TAG. Default: "True".
+  --overwrite-artist  Overwrite the Artist name when tagging from Tidal. Environment variable: TAGMISSINGTIDALMETADATA_OVERWRITEARTIST. Default: "False".
+  --overwrite-album-artist  Overwrite the Album Artist name when tagging from Tidal. Environment variable: TAGMISSINGTIDALMETADATA_OVERWRITEALBUMARTIST. Default: "False".
+  --overwrite-album  Overwrite the Album name when tagging from Tidal. Environment variable: TAGMISSINGTIDALMETADATA_OVERWRITEALBUM. Default: "False".
+  --overwrite-track  Overwrite the Track name when tagging from Tidal. Environment variable: TAGMISSINGTIDALMETADATA_OVERWRITETRACK. Default: "False".
+  -h|--help         Shows help text. 
+```
+
+# Untagged File Command
+```
+USAGE
+  dotnet MiniMediaScanner.dll untaggedfile --connection-string <value> [options]
+
+DESCRIPTION
+  Get a list of untagged files from a artist
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+  -a|--artist       Artistname Environment variable: UNTAGGEDFILES_ARTIST. 
+  -b|--album        target Album Environment variable: UNTAGGEDFILES_ALBUM. 
+  -p|--providers    Providers can be MusicBrainz, Spotify, Tidal, Deezer. Environment variable: UNTAGGEDFILES_PROVIDERS. Default: "musicbrainz".
+  -o|--output       Output format, tags available: {Artist} {Album} {Track} {ArtistUrl} {AlbumUrl} {TrackUrl}. Environment variable: UNTAGGEDFILES_OUTPUT. Default: "{Artist} - {Album} - {Track}".
+  -F|--filterout    Filterout names from the output. Environment variable: UNTAGGEDFILES_FILTEROUT. Default: .
+  --file            Save the missing tracks list to a file. Environment variable: UNTAGGEDFILES_FILE. 
+  --file-append     Append to the file instead of a overwrite. Environment variable: UNTAGGEDFILES_FILE_APPEND. Default: "False".
   -h|--help         Shows help text. 
 ```
 
@@ -715,10 +987,14 @@ DESCRIPTION
 
 OPTIONS
 * -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
-  --proxy-file      HTTP/HTTPS Proxy/Proxies to use to access Deezer. Environment variable: PROXY_FILE. 
   -a|--artist       Artist filter to update. Environment variable: UPDATEDEEZER_ARTIST. 
+  --proxy-file      HTTP/HTTPS Proxy/Proxies to use to access Deezer. Environment variable: PROXY_FILE. 
   --proxy           HTTP/HTTPS Proxy to use to access Deezer. Environment variable: PROXY. 
   --proxy-mode      Proxy Mode: Random, RoundRobin, StickyTillError, RotateTime, PerArtist. Environment variable: PROXY_MODE. Default: "StickyTillError".
+  --save-track-token  Save the track_token that is returned by the Deezer API into the database, disabling this saves space in postgres. Environment variable: UPDATEDEEZER_SAVE_TRACK_TOKEN. Default: "True".
+  --save-preview-url  Save the preview_url that is returned by the Deezer API into the database, disabling this saves space in postgres. Environment variable: UPDATEDEEZER_SAVE_PREVIEW_URL. Default: "True".
+  --threads         The amount of threads to use. Environment variable: UPDATEDEEZER_THREADS. Default: "1".
+  --prevent-update-within-days  Prevent updating existing artists within x days from the last pull/update Environment variable: UPDATEDEEZER_PREVENT_UPDATE_WITHIN_DAYS. Default: "7".
   -h|--help         Shows help text. 
 ```
 
@@ -733,13 +1009,31 @@ DESCRIPTION
 OPTIONS
 * -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
   -a|--artist       Artist filter to update. Environment variable: UPDATEMB_ARTIST. 
+  --prevent-update-within-days  Prevent updating existing artists within x days from the last pull/update Environment variable: UPDATEMB_PREVENT_UPDATE_WITHIN_DAYS. Default: "7".
   -h|--help         Shows help text. 
 ```
 
-# Update Spotify Command
+# Update Soundcloud Command
 ```
 USAGE
-  dotnet MiniMediaScanner.dll updatespotify --connection-string <value> --spotify-client-id <value> --spotify-secret-id <value> [options]
+  dotnet MiniMediaScanner.dll updatesoundcloud --connection-string <value> --client-id <value> [options]
+
+DESCRIPTION
+  Update SoundCloud metadata
+
+OPTIONS
+* -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
+* -c|--client-id    SoundCloud Client Id, to use for the SoundCloud API. Environment variable: UPDATESOUNDCLOUD_CLIENT_ID. 
+  -a|--artist       Artist filter to update. Environment variable: UPDATESOUNDCLOUD_ARTIST. 
+  --prevent-update-within-days  Prevent updating existing artists within x days from the last pull/update Environment variable: UPDATESOUNDCLOUD_PREVENT_UPDATE_WITHIN_DAYS. Default: "7".
+  --artist-file     Read from a file line by line to import the artist names Environment variable: UPDATESOUNDCLOUD_ARTIST_FILE. 
+  -h|--help         Shows help text. 
+```
+
+# Update Spotify Command (Broken unless you pay I guess)
+```
+USAGE
+  dotnet MiniMediaScanner.dll updatespotify --connection-string <value> --spotify-client-id <values...> --spotify-secret-id <values...> [options]
 
 DESCRIPTION
   Update Spotify metadata
@@ -750,25 +1044,31 @@ OPTIONS
 * -s|--spotify-secret-id  Spotify Secret Id, to use for the Spotify API. Environment variable: UPDATESPOTIFY_SPOTIFY_SECRET_ID. 
   -a|--artist       Artist filter to update. Environment variable: UPDATESPOTIFY_ARTIST. 
   -D|--api-delay    Api Delay in seconds after each API call to prevent rate limiting. Environment variable: UPDATESPOTIFY_API_DELAY. Default: "10".
+  --prevent-update-within-days  Prevent updating existing artists within x days from the last pull/update Environment variable: UPDATESPOTIFY_PREVENT_UPDATE_WITHIN_DAYS. Default: "7".
+  --artist-file     Read from a file line by line to import the artist names Environment variable: UPDATESPOTIFY_ARTIST_FILE. 
   -h|--help         Shows help text. 
 ```
-
 
 # Update Tidal Command
 ```
 USAGE
-  dotnet MiniMediaScanner.dll updatetidal --connection-string <value> --tidal-client-id <value> --tidal-secret-id <value> [options]
+  dotnet MiniMediaScanner.dll updatetidal --connection-string <value> --tidal-client-id <values...> --tidal-secret-id <values...> [options]
 
 DESCRIPTION
   Update Tidal metadata
 
+OPTIONS
 * -C|--connection-string  ConnectionString for Postgres database. Environment variable: CONNECTIONSTRING. 
 * -c|--tidal-client-id  Tidal Client Id, to use for the Tidal API. Environment variable: UPDATETIDAL_TIDAL_CLIENT_ID. 
 * -s|--tidal-secret-id  Tidal Secret Id, to use for the Tidal API. Environment variable: UPDATETIDAL_TIDAL_SECRET_ID. 
-  --proxy           HTTP/HTTPS Proxy to use to access Deezer. Environment variable: PROXY. 
   -a|--artist       Artist filter to update. Environment variable: UPDATETIDAL_ARTIST. 
-  -G|--country-code  Tidal's CountryCode (e.g. US, FR, NL, DE etc). Environment variable: UPDATETIDAL_COUNTRY_CODE. Default: "US".
+  -G|--country-code  Tidal's CountryCodes (e.g. US, FR, NL, DE etc). Environment variable: UPDATETIDAL_COUNTRY_CODE. 
   --proxy-file      HTTP/HTTPS Proxy/Proxies to use to access Deezer. Environment variable: PROXY_FILE. 
+  --proxy           HTTP/HTTPS Proxy to use to access Deezer. Environment variable: PROXY. 
   --proxy-mode      Proxy Mode: Random, RoundRobin, StickyTillError, RotateTime, PerArtist. Environment variable: PROXY_MODE. Default: "StickyTillError".
+  --prevent-update-within-days  Prevent updating existing artists within x days from the last pull/update Environment variable: UPDATETIDAL_PREVENT_UPDATE_WITHIN_DAYS. Default: "7".
+  --artist-file     Read from a file line by line to import the artist names Environment variable: UPDATETIDAL_ARTIST_FILE. 
+  --update-nonpulled-artists  Update artists that have not been pulled fully before, first Environment variable: UPDATETIDAL_NONPULLED_ARTISTS. Default: "False".
+  --ignore-artist-album-amount  Ignore artists that have over a certain amount of albums, >500 albums is not normal Environment variable: UPDATETIDAL_IGNORE_ARTIST_ALBUM_AMOUNT. Default: "500".
   -h|--help         Shows help text. 
 ```
