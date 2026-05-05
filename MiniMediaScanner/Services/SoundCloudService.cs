@@ -56,84 +56,92 @@ public class SoundCloudService
         }
     }
 
-    public async Task UpdateArtistByIdAsync(long userId,
-        Action<UpdateSoundCloudCallback>? callback = null)
-    {
-        
-    }
-
     public async Task UpdateArtistByIdAsync(UserSearchResult userSearchResult,
         Action<UpdateSoundCloudCallback>? callback = null)
     {
         UpdateSoundCloudRepository updateSoundCloudRepository = new UpdateSoundCloudRepository(_connectionString);
         await updateSoundCloudRepository.SetConnectionAsync();
-        
-        DateTime? lastSyncTime = await updateSoundCloudRepository.GetArtistLastSyncTimeAsync(userSearchResult.Id.Value);
-        if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < this.PreventUpdateWithinDays)
-        {
-            await updateSoundCloudRepository.CommitAsync();
-            callback?.Invoke(new UpdateSoundCloudCallback(userSearchResult.Id.Value, UpdateSoundCloudStatus.SkippedSyncedWithin));
-            return;
-        }
 
-        await updateSoundCloudRepository.UpsertUserAsync(userSearchResult);
-        
-        var allAlbums = _soundcloud.Users.GetAlbumsAsync(userSearchResult.Url).GetAwaiter().GetResult();
-        var albumIds = allAlbums
-            .Where(album => album.Id.HasValue)
-            .Select(album => album.Id.Value)
-            .ToList();
-        
-        var allPlaylists = _soundcloud.Users
-            .GetPlaylistsAsync(userSearchResult.Url)
-            .GetAwaiter()
-            .GetResult()
-            .Where(playlist => playlist.Id.HasValue)
-            .Where(playlist => !albumIds.Contains(playlist.Id.Value))
-            .ToList();
-
-        int progress = 0;
-        foreach (var album in allAlbums.Where(p => p.Id.HasValue))
+        try
         {
-            callback?.Invoke(new UpdateSoundCloudCallback(
-                userSearchResult.Id.Value, 
-                album.User?.Username ?? string.Empty,
-                album.Title,
-                allAlbums.Count,
-                UpdateSoundCloudStatus.Updating,
-                progress++));
+            DateTime? lastSyncTime = await updateSoundCloudRepository.GetArtistLastSyncTimeAsync(userSearchResult.Id.Value);
+            if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < this.PreventUpdateWithinDays)
+            {
+                await updateSoundCloudRepository.CommitAsync();
+                callback?.Invoke(new UpdateSoundCloudCallback(userSearchResult.Id.Value, UpdateSoundCloudStatus.SkippedSyncedWithin));
+                return;
+            }
+
+            await updateSoundCloudRepository.UpsertUserAsync(userSearchResult);
             
-            await updateSoundCloudRepository.UpsertPlaylistAsync(album);
+            var allAlbums = _soundcloud.Users.GetAlbumsAsync(userSearchResult.Url).GetAwaiter().GetResult();
+            var albumIds = allAlbums
+                .Where(album => album.Id.HasValue)
+                .Select(album => album.Id.Value)
+                .ToList();
+            
+            var allPlaylists = _soundcloud.Users
+                .GetPlaylistsAsync(userSearchResult.Url)
+                .GetAwaiter()
+                .GetResult()
+                .Where(playlist => playlist.Id.HasValue)
+                .Where(playlist => !albumIds.Contains(playlist.Id.Value))
+                .ToList();
 
-            long trackOrder = 1;
-            foreach (var track in album.Tracks.Where(t => t.UserId.HasValue))
+            int progress = 0;
+            foreach (var album in allAlbums.Where(p => p.Id.HasValue))
             {
-                await ProcessTrackAsync(track, album, trackOrder, updateSoundCloudRepository);
-                trackOrder++;
+                callback?.Invoke(new UpdateSoundCloudCallback(
+                    userSearchResult.Id.Value, 
+                    album.User?.Username ?? string.Empty,
+                    album.Title,
+                    allAlbums.Count,
+                    UpdateSoundCloudStatus.Updating,
+                    progress++));
+                
+                await updateSoundCloudRepository.UpsertPlaylistAsync(album);
+
+                long trackOrder = 1;
+                foreach (var track in album.Tracks.Where(t => t.UserId.HasValue))
+                {
+                    await ProcessTrackAsync(track, album, trackOrder, updateSoundCloudRepository);
+                    trackOrder++;
+                }
             }
+            
+            progress = 0;
+            foreach (var playlist in allPlaylists)
+            {
+                callback?.Invoke(new UpdateSoundCloudCallback(
+                    userSearchResult.Id.Value, 
+                    playlist.User?.Username ?? string.Empty,
+                    playlist.Title,
+                    allPlaylists.Count,
+                    UpdateSoundCloudStatus.Updating,
+                    progress++));
+                await updateSoundCloudRepository.UpsertPlaylistAsync(playlist);
+                long trackOrder = 1;
+                foreach (var track in playlist.Tracks.Where(t => t.UserId.HasValue))
+                {
+                    await ProcessTrackAsync(track, playlist, trackOrder, updateSoundCloudRepository);
+                    trackOrder++;
+                }
+            }
+
+            await updateSoundCloudRepository.SetArtistLastSyncTimeAsync(userSearchResult.Id.Value);
+            await updateSoundCloudRepository.CommitAsync();
         }
-        
-        progress = 0;
-        foreach (var playlist in allPlaylists)
+        catch (Npgsql.NpgsqlException e)
         {
-            callback?.Invoke(new UpdateSoundCloudCallback(
-                userSearchResult.Id.Value, 
-                playlist.User?.Username ?? string.Empty,
-                playlist.Title,
-                allPlaylists.Count,
-                UpdateSoundCloudStatus.Updating,
-                progress++));
-            await updateSoundCloudRepository.UpsertPlaylistAsync(playlist);
-            long trackOrder = 1;
-            foreach (var track in playlist.Tracks.Where(t => t.UserId.HasValue))
-            {
-                await ProcessTrackAsync(track, playlist, trackOrder, updateSoundCloudRepository);
-                trackOrder++;
-            }
+            await updateSoundCloudRepository.RollbackAsync();
+            Console.WriteLine($"{e.Message}, {e.StackTrace}");
+            throw;
         }
-
-        await updateSoundCloudRepository.SetArtistLastSyncTimeAsync(userSearchResult.Id.Value);
-        await updateSoundCloudRepository.CommitAsync();
+        catch (Exception e)
+        {
+            await updateSoundCloudRepository.RollbackAsync();
+            Console.WriteLine($"{e.Message}, {e.StackTrace}");
+        }
     }
 
     private async Task ProcessTrackAsync(Track track, 
