@@ -138,7 +138,8 @@ public class ImportCommandHandler
         {
             Console.WriteLine($"{e.Message}, {e.StackTrace}");
         }
-        
+
+        _processingChannel.Writer.TryComplete();
         _importProcessing = false;
         await Task.WhenAll(_channelThreads);
     }
