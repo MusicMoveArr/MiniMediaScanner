@@ -1,13 +1,13 @@
+using System.Diagnostics;
 using FuzzySharp;
 using MiniMediaScanner.Callbacks;
 using MiniMediaScanner.Callbacks.Status;
-using MiniMediaScanner.Enums;
-using MiniMediaScanner.JsonConverters;
-using MiniMediaScanner.Models;
-using MiniMediaScanner.Models.Tidal;
 using MiniMediaScanner.Repositories;
+using Polly;
+using Polly.Retry;
 using SoundCloudExplode;
 using SoundCloudExplode.Common;
+using SoundCloudExplode.Exceptions;
 using SoundCloudExplode.Playlists;
 using SoundCloudExplode.Search;
 using SoundCloudExplode.Tracks;
@@ -32,28 +32,42 @@ public class SoundCloudService
     public async Task UpdateArtistByNameAsync(string artistName,
         Action<UpdateSoundCloudCallback>? callback = null)
     {
-        var searchResult = _soundcloud.Search.GetUsersAsync(artistName).GetAwaiter().GetResult();
-
-        foreach (var user in searchResult
-                     .Where(user => user.Id.HasValue)
-                     ?.Where(artist => !string.IsNullOrWhiteSpace(artist?.Username))
-                     ?.OrderByDescending(artist => Fuzz.Ratio(artistName, artist.Title))
-                     ?.Where(artist => Fuzz.Ratio(artistName, artist.Title) > 80) ?? [])
+        AsyncRetryPolicy retryPolicy = GetRetryPolicy();
+        
+        await retryPolicy.ExecuteAsync(async () =>
         {
-            try
+            var searchResult = _soundcloud.Search.GetUsersAsync(artistName).GetAwaiter().GetResult();
+
+            foreach (var user in searchResult
+                         ?.Where(user => user.Id.HasValue)
+                         ?.Where(artist => !string.IsNullOrWhiteSpace(artist?.Username))
+                         ?.OrderByDescending(artist => Fuzz.Ratio(artistName, artist.Title))
+                         ?.Where(artist => Fuzz.Ratio(artistName, artist.Title) > 80) ?? [])
             {
-                await UpdateArtistByIdAsync(user, callback);
+                await retryPolicy.ExecuteAsync(async () =>
+                {
+                    try
+                    {
+                        await UpdateArtistByIdAsync(user, callback);
+                    }
+                    catch (Npgsql.NpgsqlException e)
+                    {
+                        Console.WriteLine($"{e.Message}, {e.StackTrace}");
+                        throw;
+                    }
+                    catch (RequestLimitExceededException e)
+                    {
+                        Console.WriteLine($"Waiting 1 minute, {e.Message}");
+                        Thread.Sleep(TimeSpan.FromMinutes(1));
+                        throw;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"{e.Message}, {e.StackTrace}");
+                    }
+                });
             }
-            catch (Npgsql.NpgsqlException e)
-            {
-                Console.WriteLine($"{e.Message}, {e.StackTrace}");
-                throw;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"{e.Message}, {e.StackTrace}");
-            }
-        }
+        });
     }
 
     public async Task UpdateArtistByIdAsync(UserSearchResult userSearchResult,
@@ -74,7 +88,7 @@ public class SoundCloudService
 
             await updateSoundCloudRepository.UpsertUserAsync(userSearchResult);
             
-            var allAlbums = _soundcloud.Users.GetAlbumsAsync(userSearchResult.Url).GetAwaiter().GetResult();
+            var allAlbums = await _soundcloud.Users.GetAlbumsAsync(userSearchResult.Url);
             var albumIds = allAlbums
                 .Where(album => album.Id.HasValue)
                 .Select(album => album.Id.Value)
@@ -137,6 +151,12 @@ public class SoundCloudService
             Console.WriteLine($"{e.Message}, {e.StackTrace}");
             throw;
         }
+        catch (RequestLimitExceededException e)
+        {
+            await updateSoundCloudRepository.RollbackAsync();
+            Console.WriteLine($"Waiting 1 minute, {e.Message}");
+            Thread.Sleep(TimeSpan.FromMinutes(1));
+        }
         catch (Exception e)
         {
             await updateSoundCloudRepository.RollbackAsync();
@@ -151,5 +171,20 @@ public class SoundCloudService
     {
         await updateSoundCloudRepository.UpsertTrackAsync(track);
         await updateSoundCloudRepository.UpsertPlaylistTrackAsync(playlist.UserId, playlist.Id.Value, track.Id, trackOrder);
+    }
+    
+    
+    private AsyncRetryPolicy GetRetryPolicy()
+    {
+        AsyncRetryPolicy retryPolicy = Policy
+            .Handle<RequestLimitExceededException>()
+            .WaitAndRetryAsync(5, retryAttempt => 
+                    TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                (exception, timeSpan, retryCount, context) => {
+                    Debug.WriteLine($"Retry {retryCount} after {timeSpan.TotalSeconds} sec due to: {exception.Message}");
+                    Console.WriteLine($"Retry {retryCount} after {timeSpan.TotalSeconds} sec due to: {exception.Message}");
+                });
+        
+        return retryPolicy;
     }
 }
