@@ -318,7 +318,7 @@ public class ImportCommandHandler
 
         if (string.IsNullOrWhiteSpace(artistName))
         {
-            artistName = "[unknown]";
+            artistName = "[Unknown]";
         }
 
         Guid artistId = Guid.Empty;
