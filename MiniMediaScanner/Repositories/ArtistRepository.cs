@@ -43,6 +43,7 @@ public class ArtistRepository
                          LEFT JOIN artists_ext ext ON ext.ArtistId = a.ArtistId
                          where LOWER(a.name) % lower(@artistName)
                          order by similarity(LOWER(a.name), lower(@artistName)) desc";
+        
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync();
         var transaction = await conn.BeginTransactionAsync();
@@ -115,22 +116,37 @@ public class ArtistRepository
     public async Task<Guid?> GetArtistIdByNameAsync(string artistName)
     {
         string query = @"SET LOCAL pg_trgm.similarity_threshold = 0.95;
-                         SELECT ArtistId 
-                         FROM Artists a
-                         where LOWER(a.name) % lower(@artistName)
-                         order by similarity(LOWER(a.name), lower(@artistName)) desc";
+                         SELECT ArtistId, Name, TrackCount
+                         FROM (
+                             SELECT a.ArtistId, a.Name, count(m.MetadataId) AS TrackCount
+                             FROM Artists a
+                             LEFT JOIN albums ab ON ab.ArtistId = a.ArtistId
+                             LEFT JOIN metadata m ON m.AlbumId = ab.AlbumId
+                             WHERE LOWER(a.name) % lower(@artistName)
+                             GROUP BY a.ArtistId, a.Name
+ 
+                             UNION
+ 
+                             SELECT a.ArtistId, a.Name, count(m.MetadataId) AS TrackCount
+                             FROM Artists a
+                             LEFT JOIN albums ab ON ab.ArtistId = a.ArtistId
+                             LEFT JOIN metadata m ON m.AlbumId = ab.AlbumId
+                             WHERE LOWER(a.name) = lower(@artistName)
+                             GROUP BY a.ArtistId, a.Name
+                         )";
         
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync();
         await using var transaction = await conn.BeginTransactionAsync();
-        Guid? result = null;
+        List<ArtistMatchModel> result = null;
 
         try
         {
-            result = await conn.ExecuteScalarAsync<Guid>(query, new
+            result = (await conn.QueryAsync<ArtistMatchModel>(query, new
             {
                 artistName
-            }, transaction: transaction);
+            }, transaction: transaction))
+            .ToList();
         }
         catch (Exception e)
         {
@@ -140,18 +156,31 @@ public class ArtistRepository
         {
             await transaction.CommitAsync();
         }
-        
-        return result;
+
+        var bestMatch = result?
+            .Select(artist => new
+            {
+                Artist = artist,
+                MatchNumbering = FuzzyHelper.ExactNumberMatch(artist.Name, artistName),
+                NameMatch = FuzzyHelper.FuzzRatioToLower(artist.Name, artistName)
+            })
+            .Where(match => match.MatchNumbering)
+            .OrderByDescending(match => match.NameMatch)
+            .ThenByDescending(match => match.Artist.TrackCount);
+            
+        return bestMatch?.FirstOrDefault()?.Artist?.ArtistId;
     }
     
     public async Task<Guid> InsertOrFindArtistAsync(string artistName)
     {
         Guid? foundArtistId = await GetArtistIdByNameAsync(artistName);
+        
 
         if (GuidHelper.GuidHasValue(foundArtistId))
         {
             return foundArtistId!.Value;
         }
+        
         return await InsertArtistAsync(artistName);
     }
     

@@ -16,7 +16,8 @@ public class ImportCommandHandler
     private readonly ArtistRepository _artistRepository;
     private readonly MetadataRepository _metadataRepository;
     private readonly AlbumRepository _albumRepository;
-    private readonly AsyncLock _asyncLock = new AsyncLock();
+    private readonly AsyncLock _asyncMbLock = new AsyncLock();
+    private readonly AsyncLock _asyncArtistLock = new AsyncLock();
     private const int BatchFileProcessing = 1000;
     private bool _importProcessing = false;
     private Channel<string> _processingChannel;
@@ -70,7 +71,7 @@ public class ImportCommandHandler
         
         for (int i = 0; i < threads; i++)
         {
-            _channelThreads.Add(Task.Factory.StartNew(ChannelThread));
+            _channelThreads.Add(Task.Factory.StartNew(ChannelThread).Unwrap());
         }
         
         try
@@ -247,7 +248,7 @@ public class ImportCommandHandler
             if (updateMb &&
                 !string.IsNullOrWhiteSpace(metadata?.MusicBrainzArtistId))
             {
-                using (await _asyncLock.LockAsync())
+                using (await _asyncMbLock.LockAsync())
                 {
                     await _musicBrainzService.InsertMissingMusicBrainzArtistAsync(metadata);
                 }
@@ -264,8 +265,12 @@ public class ImportCommandHandler
     private async Task ProcessMetadataAsync(MetadataInfo metadata)
     {
         // 1. Insert/Find Artist
-        Guid artistId = _splitArtists ? await GetSplitArtistAsync(metadata) 
-            : await _artistRepository.InsertOrFindArtistAsync(metadata.Artist);
+        Guid artistId = Guid.Empty;
+        using (await _asyncMbLock.LockAsync())
+        {
+            artistId = _splitArtists ? await GetSplitArtistAsync(metadata) 
+                : await _artistRepository.InsertOrFindArtistAsync(metadata.Artist);
+        }
 
         // 2. Insert/Find Album
         var albumId = await _albumRepository.InsertOrFindAlbumAsync(metadata.Album, artistId);
@@ -311,15 +316,27 @@ public class ImportCommandHandler
             metadata.MediaTags.TryGetValue("album_artist", out artistName);
         }
 
-        Guid artistId = Guid.Empty;
-        var artists = await _artistRepository.GetMatchingArtistAsync(artistName);
-        if (!artists.Any())
+        if (string.IsNullOrWhiteSpace(artistName))
         {
-            artistId = await _artistRepository.InsertArtistAsync(artistName);
-            artistExtModels.ForEach(ext => ext.ArtistId = artistId);
-            await _artistRepository.BulkInsertArtistExtAsync(artistExtModels);
-            return artistId;
+            artistName = "[unknown]";
         }
+
+        Guid artistId = Guid.Empty;
+        List<ArtistModel> artists = new List<ArtistModel>();
+
+        using (await _asyncArtistLock.LockAsync())
+        {
+            artists.AddRange(await _artistRepository.GetMatchingArtistAsync(artistName));
+        
+            if (!artists.Any())
+            {
+                artistId = await _artistRepository.InsertArtistAsync(artistName);
+                artistExtModels.ForEach(ext => ext.ArtistId = artistId);
+                await _artistRepository.BulkInsertArtistExtAsync(artistExtModels);
+                return artistId;
+            }
+        }
+
         
         //find artist with maching artist id from different providers
         var artist = artists
@@ -337,8 +354,11 @@ public class ImportCommandHandler
         {
             artist = artists.FirstOrDefault();
         }
-        
-        artistId = artist?.ArtistId ?? await _artistRepository.InsertArtistAsync(artistName);
+
+        using (await _asyncArtistLock.LockAsync())
+        {
+            artistId = artist?.ArtistId ?? await _artistRepository.InsertArtistAsync(artistName);
+        }
         
         var insertExtModels = artist?.ExtArtists != null ? artistExtModels
             .ExceptBy(artist.ExtArtists.Select(ext => ext.Provider), ext => ext.Provider)
