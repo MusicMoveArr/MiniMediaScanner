@@ -49,12 +49,18 @@ public class ImportWatcherCommandHandler : IDisposable
         watcher.Created += WatcherOnChanged;
         watcher.Deleted += WatcherOnChanged;
         watcher.Renamed += WatcherOnRenamed;
-        
+        watcher.Error += WatcherOnError;
         watcher.InternalBufferSize = 1024 * 64;
         watcher.IncludeSubdirectories = true;
         watcher.EnableRaisingEvents = true;
         _watchers.Add(watcher);
         Console.WriteLine($"Watching {directoryPath}");
+    }
+
+    private void WatcherOnError(object sender, ErrorEventArgs e)
+    {
+        var exception = e.GetException();
+        Console.WriteLine($"Watcher Error event: {exception?.Message}, {exception?.InnerException?.Message}");
     }
 
     private void WatcherOnRenamed(object sender, RenamedEventArgs e)
