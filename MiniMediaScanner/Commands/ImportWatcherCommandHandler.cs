@@ -4,6 +4,7 @@ namespace MiniMediaScanner.Commands;
 
 public class ImportWatcherCommandHandler : IDisposable
 {
+    private readonly string[] _ignoreExtensions = [ ".bak.", ".tmp", ".temp" ];
     private readonly bool _forceImport;
     private readonly bool _updateMb;
     private ImportCommandHandler _importCommandHandler;
@@ -50,8 +51,9 @@ public class ImportWatcherCommandHandler : IDisposable
 
     private void WatcherOnChanged(object sender, FileSystemEventArgs e)
     {
-        if(!_queue.Contains(e.FullPath) &&
-            MediaFileExtensions.Any(ext => e.FullPath.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+        if(!_ignoreExtensions.Any(ext => e.FullPath.Contains(ext)) &&
+           !_queue.Contains(e.FullPath) &&
+           MediaFileExtensions.Any(ext => e.FullPath.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
         {
             _queue.Enqueue(e.FullPath);
         }
