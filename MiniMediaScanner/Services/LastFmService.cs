@@ -107,7 +107,7 @@ public class LastFmService
             }
 
             int progress = 1;
-            foreach (var album in albums.Take(10))
+            foreach (var album in albums)
             {
                 callback?.Invoke(new UpdateLastFmCallback(
                     artistName, 
