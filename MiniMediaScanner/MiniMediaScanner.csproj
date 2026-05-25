@@ -20,6 +20,7 @@
       <PackageReference Include="dbup-postgresql" Version="7.0.1" />
       <PackageReference Include="DiscogsConnect" Version="4.1.1" />
       <PackageReference Include="FuzzySharp" Version="2.0.2" />
+      <PackageReference Include="Inflatable.Lastfm" Version="1.2.0" />
       <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.5" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
       <PackageReference Include="Npgsql" Version="10.0.2" />
@@ -134,6 +135,9 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
       <None Update="DbScripts\1000 init db.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="DbScripts\20260417 add lastfm tables.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>
