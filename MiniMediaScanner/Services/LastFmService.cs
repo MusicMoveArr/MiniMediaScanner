@@ -232,7 +232,7 @@ public class LastFmService
         
         var artistInfo = await _client.Artist.GetInfoAsync(artistName);
 
-        if (artistInfo == null)
+        if (artistInfo?.Success == false)
         {
             await updateLastFmRepository.CommitAsync();
             return null;
