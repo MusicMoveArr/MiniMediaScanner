@@ -10,6 +10,7 @@ namespace MiniMediaScanner.Services;
 
 public class LastFmService
 {
+    private const string NoArtCoverImageUrl = "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png";
     public readonly int PreventUpdateWithinDays; 
     private readonly string _connectionString;
     private readonly LastfmClient _client;
@@ -65,7 +66,7 @@ public class LastFmService
             //get artist information
             Guid? artistId = await InsertArtistInfoAsync(artistName, true);
 
-            if (artistId == null)
+            if (!GuidHelper.GuidHasValue(artistId))
             {
                 await updateLastFmRepository.CommitAsync();
                 return;
@@ -128,7 +129,8 @@ public class LastFmService
                 string? albumImage = album.Images.Largest?.AbsoluteUri ?? 
                                     string.Empty;
 
-                if (!string.IsNullOrWhiteSpace(albumImage))
+                if (!string.IsNullOrWhiteSpace(albumImage) &&
+                    albumImage != NoArtCoverImageUrl)
                 {
                     await updateLastFmRepository.UpsertAlbumImageAsync(albumId, albumImage);
                 }
@@ -250,7 +252,8 @@ public class LastFmService
             artistInfo.Content.Bio.Published.DateTime,
             artistInfo.Content.Url.AbsoluteUri);
 
-        if(!string.IsNullOrWhiteSpace(artistInfo.Content.MainImage?.Largest?.AbsoluteUri))
+        if(!string.IsNullOrWhiteSpace(artistInfo.Content.MainImage?.Largest?.AbsoluteUri) &&
+           artistInfo.Content.MainImage?.Largest?.AbsoluteUri != NoArtCoverImageUrl)
         {
             await updateLastFmRepository.UpsertArtistImageAsync(artistId, artistInfo.Content.MainImage?.Largest?.AbsoluteUri);
         }
