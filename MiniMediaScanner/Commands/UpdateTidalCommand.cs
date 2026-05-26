@@ -79,6 +79,12 @@ public class UpdateTidalCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "UPDATETIDAL_IGNORE_ARTIST_ALBUM_AMOUNT")]
     public int IgnoreArtistAlbumAmount { get; set; } = 500;
+
+    [CommandOption("pull-similar",
+        Description = "Pull similar artists/albums/tracks",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATETIDAL_PULL_SIMILAR")]
+    public bool PullSimilar { get; set; } = true;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -102,7 +108,8 @@ public class UpdateTidalCommand : ICommand
             Proxy, 
             ProxyMode, 
             PreventUpdateWithinDays,
-            IgnoreArtistAlbumAmount);
+            IgnoreArtistAlbumAmount,
+            PullSimilar);
 
         if (!string.IsNullOrWhiteSpace(ArtistFilePath) && File.Exists(ArtistFilePath))
         {

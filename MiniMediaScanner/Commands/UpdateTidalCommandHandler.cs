@@ -19,10 +19,14 @@ public class UpdateTidalCommandHandler
         string singleProxy, 
         string proxyMode,
         int preventUpdateWithinDays,
-        int ignoreArtistAlbumAmount)
+        int ignoreArtistAlbumAmount,
+        bool pullSimilar)
     {
         _tidalRepository = new TidalRepository(connectionString);
-        _tidalService = new TidalService(connectionString, secretTokens, countryCode, proxyFile, singleProxy, proxyMode, preventUpdateWithinDays, ignoreArtistAlbumAmount);
+        _tidalService = new TidalService(connectionString, 
+            secretTokens, countryCode, proxyFile, 
+            singleProxy, proxyMode, preventUpdateWithinDays, 
+            ignoreArtistAlbumAmount, pullSimilar);
     }
     
     public async Task UpdateTidalArtistsByNameAsync(string artistName)
