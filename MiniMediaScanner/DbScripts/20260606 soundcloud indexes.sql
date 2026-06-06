@@ -1,0 +1,1 @@
+CREATE INDEX idx_soundcloud_playlist_track_trackid_userid ON public.soundcloud_playlist_track USING btree (trackid, userid);
