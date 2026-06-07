@@ -63,6 +63,12 @@ public class UpdateDeezerCommand : ICommand
         EnvironmentVariable = "UPDATEDEEZER_PREVENT_UPDATE_WITHIN_DAYS")]
     public int PreventUpdateWithinDays { get; set; } = 7;
     
+    [CommandOption("artist-file",
+        Description = "Read from a file line by line to import the artist names",
+        IsRequired = false,
+        EnvironmentVariable = "UPDATEDEEZER_ARTIST_FILE")]
+    public string ArtistFilePath { get; set; }
+    
     public async ValueTask ExecuteAsync(IConsole console)
     {
         var handler = new UpdateDeezerCommandHandler(
@@ -75,14 +81,27 @@ public class UpdateDeezerCommand : ICommand
             Threads, 
             PreventUpdateWithinDays);
 
-        if (!string.IsNullOrWhiteSpace(Artist))
+        if (!string.IsNullOrWhiteSpace(ArtistFilePath) && File.Exists(ArtistFilePath))
         {
-            await handler.UpdateDeezerArtistsByNameAsync(Artist);
+            string[] artistNames = File.ReadAllLines(ArtistFilePath);
+            int process = 0;
+            foreach (var artistName in artistNames)
+            {
+                Console.WriteLine($"Processing from reading the file: '{artistName}', {process} / {artistNames.Length}");
+                await handler.UpdateDeezerArtistsByNameAsync(artistName);
+                process++;
+            }
         }
         else
         {
-            await handler.UpdateAllDeezerArtistsAsync();
+            if (!string.IsNullOrWhiteSpace(Artist))
+            {
+                await handler.UpdateDeezerArtistsByNameAsync(Artist);
+            }
+            else
+            {
+                await handler.UpdateAllDeezerArtistsAsync();
+            }
         }
-        
     }
 }
