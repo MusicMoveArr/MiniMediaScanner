@@ -73,6 +73,18 @@ public class DeDuplicateFileCommand : ICommand
         IsRequired = false,
         EnvironmentVariable = "DEDUPLICATE_CHECK_ALBUM_EXTENSIONS_ACOUSTFINGERPRINT")]
     public bool CheckAlbumExtensionsAcoustFingerprint { get; set; } = false;
+
+    [CommandOption("mergerfs-paths",
+        Description = "Before deleting \"Duplicates\" we can check if the file was mistakenly imported when it was mounted for e.g. in MergerFs",
+        IsRequired = false,
+        EnvironmentVariable = "DEDUPLICATE_MERGERFS_PATHS")]
+    public List<string> MergerFsPaths { get; set; } = new List<string>();
+    
+    [CommandOption("mergerfs-remove-db-duplicate-path",
+        Description = "The duplicate file will not get deleted, only the database record of it. False=Non-MergerFs File Path, True=MergerFs File Path gets removed from the database",
+        IsRequired = false,
+        EnvironmentVariable = "DEDUPLICATE_REMOVE_DB_MERGERFS_DUPLICATE_PATH")]
+    public bool MergerFsRemoveDuplicatePath { get; set; } = false;
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -105,6 +117,8 @@ public class DeDuplicateFileCommand : ICommand
         handler.CheckVersions = CheckVersions;
         handler.CheckAlbumDuplicates = CheckAlbumDuplicates;
         handler.CheckAlbumExtensions = CheckAlbumExtensions;
+        handler.MergerFsPaths = MergerFsPaths;
+        handler.MergerFsRemoveDuplicatePath = MergerFsRemoveDuplicatePath;
         handler.AcoustFingerprintAccuracy = Math.Round(
             Math.Max(AcoustFingerprintAccuracy / 100D, 
                 AcoustFingerprintAccuracy == 100 ? 1 : AcoustFingerprintAccuracy / 100D), 

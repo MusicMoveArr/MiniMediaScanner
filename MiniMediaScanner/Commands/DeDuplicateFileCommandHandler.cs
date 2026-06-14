@@ -23,6 +23,8 @@ public class DeDuplicateFileCommandHandler
     public bool CheckAlbumExtensions{ get; set; }
     public bool CheckAlbumExtensionsAcoustFingerprint{ get; set; }
     public static int DeduplicateCount = 0;
+    public List<string> MergerFsPaths { get; set; }
+    public bool MergerFsRemoveDuplicatePath { get; set; }
 
     public DeDuplicateFileCommandHandler(string connectionString)
     {
@@ -175,6 +177,13 @@ public class DeDuplicateFileCommandHandler
                 {
                     continue;
                 }
+                
+                var mergerDictionary = toRemove.ToDictionary(f => f.MetadataId.Value, f => f.Path);
+                mergerDictionary.Add(recordToKeep.MetadataId.Value, recordToKeep.Path);
+                if (await HandleMergerFsDeletionAsync(mergerDictionary))
+                {
+                    continue;
+                }
 
                 Console.WriteLine($"Keeping file {recordToKeep.Path}");
                 foreach (var file in toRemove)
@@ -219,7 +228,6 @@ public class DeDuplicateFileCommandHandler
         foreach (var albumDuplicates in duplicateFiles)
         {
             DuplicateAlbumFileNameModel recordToKeep = null;
-
             foreach (string extension in Extensions)
             {
                 var record = albumDuplicates
@@ -247,6 +255,13 @@ public class DeDuplicateFileCommandHandler
                 continue;
             }
 
+            var mergerDictionary = toRemove.ToDictionary(f => f.MetadataId, f => f.Path);
+            mergerDictionary.Add(recordToKeep.MetadataId, recordToKeep.Path);
+            if (await HandleMergerFsDeletionAsync(mergerDictionary))
+            {
+                continue;
+            }
+
             Console.WriteLine($"Keeping file {recordToKeep.Path}");
             foreach (var file in toRemove)
             {
@@ -254,7 +269,7 @@ public class DeDuplicateFileCommandHandler
                 {
                     Console.WriteLine($"Delete duplicate file, Title '{albumDuplicates.Key.Tracktitle}', {file.Path}");
                     new FileInfo(file.Path).Delete();
-                    await _metadataRepository.DeleteMetadataRecordsAsync(new List<string>(new string[] { file.MetadataId.ToString() }));
+                    await _metadataRepository.DeleteMetadataRecordsAsync([file.MetadataId.ToString()]);
                 }
                 else
                 {
@@ -323,6 +338,13 @@ public class DeDuplicateFileCommandHandler
                 {
                     continue;
                 }
+                
+                var mergerDictionary = toRemove.ToDictionary(f => f.MetadataId, f => f.Path);
+                mergerDictionary.Add(recordToKeep.MetadataId, recordToKeep.Path);
+                if (await HandleMergerFsDeletionAsync(mergerDictionary))
+                {
+                    continue;
+                }
 
                 Console.WriteLine($"Keeping file {recordToKeep.Path}");
                 foreach (var file in toRemove)
@@ -371,6 +393,13 @@ public class DeDuplicateFileCommandHandler
                 .ToList();
 
             if (toRemove.Count == 0)
+            {
+                continue;
+            }
+            
+            var mergerDictionary = toRemove.ToDictionary(f => f.MetadataId, f => f.Path);
+            mergerDictionary.Add(recordToKeep.MetadataId.Value, recordToKeep.Path);
+            if (await HandleMergerFsDeletionAsync(mergerDictionary))
             {
                 continue;
             }
@@ -443,12 +472,20 @@ public class DeDuplicateFileCommandHandler
                 continue;
             }
 
+            var mergerDictionary = new Dictionary<Guid, string>();
+            mergerDictionary.Add(possibleDuplicateFile.MetadataId.Value, possibleDuplicateFile.Path);
+            mergerDictionary.Add(nonDuplicateRecord.MetadataId.Value, nonDuplicateRecord.Path);
+            if (await HandleMergerFsDeletionAsync(mergerDictionary))
+            {
+                continue;
+            }
+
             Console.WriteLine($"Keeping file {nonDuplicateRecord.Path}");
             if (Delete)
             {
                 Console.WriteLine($"Delete duplicate file {possibleDuplicateFile.Path}");
                 duplicatefileInfo.Delete();
-                await _metadataRepository.DeleteMetadataRecordsAsync(new List<string>(new string[] { possibleDuplicateFile.MetadataId.ToString() }));
+                await _metadataRepository.DeleteMetadataRecordsAsync([possibleDuplicateFile.MetadataId.ToString()]);
             }
             else
             {
@@ -456,5 +493,57 @@ public class DeDuplicateFileCommandHandler
             }
             Console.WriteLine($"");
         }
+    }
+
+    private bool IsMergerFsFile(string filePath)
+    {
+        return MergerFsPaths.Any(path => filePath.StartsWith(path, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool AnyIsMergerFsFile(List<string> filePaths)
+    {
+        return filePaths.Any(filePath =>
+            MergerFsPaths.Any(path => filePath.StartsWith(path, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private bool AnyIsMergerFsFile(List<string> toRemovePaths, string toKeepPath)
+    {
+        List<string> filePaths = toRemovePaths.ToList();
+        filePaths.Add(toKeepPath);
+        return AnyIsMergerFsFile(filePaths);
+    }
+
+    private async Task<bool> HandleMergerFsDeletionAsync(Dictionary<Guid, string> files)
+    {
+        if (!MergerFsPaths.Any())
+        {
+            return false;
+        }
+        if (!AnyIsMergerFsFile(files.Values.ToList()))
+        {
+            return false;
+        }
+        
+        if (MergerFsRemoveDuplicatePath)
+        {
+            foreach (var file in files)
+            {
+                if (IsMergerFsFile(file.Value))
+                {
+                    await _metadataRepository.DeleteMetadataRecordsAsync([file.Key.ToString()]);
+                }
+            }
+        }
+        else
+        {
+            foreach (var file in files)
+            {
+                if (!IsMergerFsFile(file.Value))
+                {
+                    await _metadataRepository.DeleteMetadataRecordsAsync([file.Key.ToString()]);
+                }
+            }
+        }
+        return true;
     }
 }
