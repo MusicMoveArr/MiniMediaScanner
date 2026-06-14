@@ -530,8 +530,13 @@ public class MediaTagWriteService
         {
             return track.AdditionalFields[fieldName];
         }
-
-        return string.Empty;
+        
+        return
+            track.GetType()
+            .GetProperties()
+            .Where(prop => string.Equals(prop.Name, tagName, StringComparison.OrdinalIgnoreCase))
+            .Select(prop => prop.GetValue(track)?.ToString())
+            .FirstOrDefault() ?? string.Empty;
     }
     
     public async Task<bool> SafeSaveAsync(Track track)

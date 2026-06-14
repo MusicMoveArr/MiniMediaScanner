@@ -33,6 +33,7 @@
       <PackageReference Include="SoundFingerprinting" Version="14.1.0" />
       <PackageReference Include="Spectre.Console" Version="0.54.0" />
       <PackageReference Include="SpotifyAPI.Web.Auth" Version="7.4.2" />
+      <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.9" />
       <PackageReference Include="TagLibSharp" Version="2.3.0" />
       <PackageReference Include="z440.atl.core" Version="7.11.0" />
     </ItemGroup>

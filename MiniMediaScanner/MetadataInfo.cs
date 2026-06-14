@@ -4,6 +4,9 @@ namespace MiniMediaScanner;
 
 public class MetadataInfo
 {
+    private const int MaxFilePartNameLength = 80;
+    public const string VariousArtistsName = "Various Artists";
+    
     public Guid MetadataId { get; set; }
     public string? Path { get; set; }
     public Guid AlbumId { get; set; }
@@ -11,6 +14,9 @@ public class MetadataInfo
     public string? Album { get; set; }
     public string? Artist { get; set; }
     public string? Title { get; set; }
+
+    public string? ArtistName => Artist;
+    public string? AlbumName => Album;
     
     public string? MusicBrainzArtistId { get; set; }
     public string? MusicBrainzDiscId { get; set; }
@@ -73,4 +79,40 @@ public class MetadataInfo
         Tag_AcoustId = StringHelper.CleanupInvalidChars(Tag_AcoustId);
         Tag_AllJsonTags = StringHelper.CleanupInvalidChars(Tag_AllJsonTags);
     }
+    
+    public string CleanArtist
+    {
+        get
+        {
+            string? artist = ArtistName;
+            
+            if (string.IsNullOrWhiteSpace(artist) ||
+                (artist.Contains(VariousArtistsName) && !string.IsNullOrWhiteSpace(ArtistName)))
+            {
+                artist = ArtistName;
+            }
+            
+            artist = ArtistHelper.GetUncoupledArtistName(artist);
+            artist = ArtistHelper.GetShortWordVersion(artist, MaxFilePartNameLength);
+            return artist
+                .Replace('/', '+')
+                .Replace('\\', '+');
+        }
+    }
+
+    
+    public string CleanAlbum
+    {
+        get
+        {
+            string albumName = ArtistHelper.GetShortWordVersion(AlbumName, MaxFilePartNameLength);
+            return albumName
+                .Replace('/', '+')
+                .Replace('\\', '+');
+        }
+    }
+    public string CleanArtistUpper => CleanArtist.ToUpper();
+    public string CleanAlbumUpper => CleanAlbum.ToUpper();
+    public string ArtistUpper => ArtistName.ToUpper();
+    public string AlbumUpper => AlbumName.ToUpper();
 }
