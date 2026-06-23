@@ -1,6 +1,7 @@
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
+using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models.Tidal;
 
 namespace MiniMediaScanner.Commands;
@@ -113,14 +114,13 @@ public class UpdateTidalCommand : ICommand
 
         if (!string.IsNullOrWhiteSpace(ArtistFilePath) && File.Exists(ArtistFilePath))
         {
-            string[] artistNames = File.ReadAllLines(ArtistFilePath);
             int process = 0;
-            foreach (var artistName in artistNames)
+            await PagedReadLineHelper.ReadLinesAsync(ArtistFilePath, async (artistName, readLineCount) =>
             {
-                Console.WriteLine($"Processing from reading the file: '{artistName}', {process} / {artistNames.Length}");
+                Console.WriteLine($"Processing from reading the file: '{artistName}', {process} / {readLineCount}");
                 await handler.UpdateTidalArtistsByNameAsync(artistName);
                 process++;
-            }
+            });
         }
         else
         {
