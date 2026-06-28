@@ -240,6 +240,9 @@
       <None Update="MachineLearningModels\voice_instrumental-discogs-effnet-1.onnx">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="MachineLearningModels\discogs-effnet.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
     <ItemGroup>
