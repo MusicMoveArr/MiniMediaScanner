@@ -19,9 +19,12 @@
       <PackageReference Include="DapperBulkQueries.Npgsql" Version="1.9001.512" />
       <PackageReference Include="dbup-postgresql" Version="7.0.1" />
       <PackageReference Include="DiscogsConnect" Version="4.1.1" />
+      <PackageReference Include="FFMpegCore" Version="5.4.0" />
       <PackageReference Include="FuzzySharp" Version="2.0.2" />
       <PackageReference Include="Inflatable.Lastfm" Version="1.2.0" />
+      <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
       <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.5" />
+      <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.27.0" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
       <PackageReference Include="Npgsql" Version="10.0.2" />
       <PackageReference Include="Polly" Version="8.6.6" />
@@ -142,6 +145,99 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
       <None Update="DbScripts\20260606 soundcloud indexes.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="DbScripts\20260615 add mood tables.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\approachability_3c-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\approachability_3c-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\danceability-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\danceability-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\engagement_3c-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\engagement_3c-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\engagement_regression-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\engagement_regression-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\gender-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\gender-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\genre_discogs400-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\genre_discogs400-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_acoustic-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_acoustic-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_aggressive-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_aggressive-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_electronic-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_electronic-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_happy-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_happy-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_party-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_party-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_relaxed-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_relaxed-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_sad-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\mood_sad-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\timbre-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\timbre-discogs-effnet-1.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\voice_instrumental-discogs-effnet-1.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="MachineLearningModels\voice_instrumental-discogs-effnet-1.onnx">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>

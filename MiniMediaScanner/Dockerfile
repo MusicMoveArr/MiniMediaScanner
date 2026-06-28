@@ -4,7 +4,7 @@
 USER root
 RUN apt-get update
 RUN apt-get install -y ffmpeg libchromaprint-tools
-RUN apt-get install -y ca-certificates
+RUN apt-get install -y ca-certificates libgomp1
 RUN update-ca-certificates
 
 USER $APP_UID

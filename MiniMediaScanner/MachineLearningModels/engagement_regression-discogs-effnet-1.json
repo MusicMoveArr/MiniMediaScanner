@@ -1,0 +1,68 @@
+{
+    "name": "engagement_regression",
+    "type": "regression model",
+    "link": "https://essentia.upf.edu/models/classification-heads/engagement/engagement_regression-discogs-effnet-1.pb",
+    "version": "1",
+    "description": "regression of the music engagement value from discogs_effnet embeddings",
+    "author": "Xavier Lizarraga",
+    "email": "xavier.lizarraga@upf.edu",
+    "release_date": "2022-06-16",
+    "framework": "tensorflow",
+    "framework_version": "2.8.0",
+    "classes": [
+        "engagement"
+    ],
+    "model_types": [
+        "frozen_model"
+    ],
+    "dataset": {
+        "name": "in-house dataset",
+        "size": 22211,
+        "metrics": {
+            "Pearson correlation": 0.73
+        }
+    },
+    "schema": {
+        "inputs": [
+            {
+                "name": "model/Placeholder",
+                "type": "float",
+                "shape": [
+                    1280
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "model/Identity",
+                "type": "float",
+                "shape": [
+                    1
+                ],
+                "op": "Linear",
+                "description": "output layer",
+                "output_purpose": "predictions"
+            },
+            {
+                "name": "model/dense/BiasAdd",
+                "type": "float",
+                "shape": [
+                    100
+                ],
+                "op": "fully connected",
+                "description": "penultimate layer",
+                "output_purpose": ""
+            }
+        ]
+    },
+    "citation": "",
+    "inference": {
+        "sample_rate": 16000,
+        "algorithm": "TensorflowPredict2D",
+        "embedding_model": {
+            "algorithm": "TensorflowPredictEffnetDiscogs",
+            "model_name": "discogs-effnet-bs64-1",
+            "link": "https://essentia.upf.edu/models/music-style-classification/discogs-effnet/discogs-effnet-bs64-1.pb"
+        }
+    }
+}

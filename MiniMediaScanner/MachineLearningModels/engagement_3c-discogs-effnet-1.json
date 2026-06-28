@@ -1,0 +1,70 @@
+{
+    "name": "engagement_3c",
+    "type": "multi-class classifier",
+    "link": "https://essentia.upf.edu/models/classification-heads/engagement/engagement_3c-discogs-effnet-1.pb",
+    "version": "1",
+    "description": "classification of music by 3 levels of engagement from discogs_effnet embeddings",
+    "author": "Xavier Lizarraga",
+    "email": "xavier.lizarraga@upf.edu",
+    "release_date": "2022-06-16",
+    "framework": "tensorflow",
+    "framework_version": "2.8.0",
+    "classes": [
+        "not engaging",
+        "moderately engaging",
+        "engaging"
+    ],
+    "model_types": [
+        "frozen_model"
+    ],
+    "dataset": {
+        "name": "in-house dataset",
+        "size": 22211,
+        "metrics": {
+            "test normalized accuracy": 0.65
+        }
+    },
+    "schema": {
+        "inputs": [
+            {
+                "name": "model/Placeholder",
+                "type": "float",
+                "shape": [
+                    1280
+                ]
+            }
+        ],
+        "outputs": [
+            {
+                "name": "model/Softmax",
+                "type": "float",
+                "shape": [
+                    3
+                ],
+                "op": "Softmax",
+                "description": "output layer",
+                "output_purpose": "predictions"
+            },
+            {
+                "name": "model/dense/BiasAdd",
+                "type": "float",
+                "shape": [
+                    100
+                ],
+                "op": "fully connected",
+                "description": "penultimate layer",
+                "output_purpose": ""
+            }
+        ]
+    },
+    "citation": "",
+    "inference": {
+        "sample_rate": 16000,
+        "algorithm": "TensorflowPredict2D",
+        "embedding_model": {
+            "algorithm": "TensorflowPredictEffnetDiscogs",
+            "model_name": "discogs-effnet-bs64-1",
+            "link": "https://essentia.upf.edu/models/music-style-classification/discogs-effnet/discogs-effnet-bs64-1.pb"
+        }
+    }
+}
