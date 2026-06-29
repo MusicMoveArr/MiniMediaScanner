@@ -38,11 +38,11 @@ public class AnalyseSonicCommand : ICommand
 
         if (string.IsNullOrWhiteSpace(Artist))
         {
-            await handler.CheckAllMissingTracksAsync(Album);
+            await handler.CheckAllTracksAsync(Album);
         }
         else
         {
-            await handler.CheckAllMissingTracksAsync(Artist, Album);
+            await handler.CheckAllTracksAsync(Artist, Album);
         }
         
     }

@@ -1,4 +1,5 @@
-using System.Text.RegularExpressions;
+using System.Diagnostics;
+using ListRandomizer;
 using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
@@ -13,6 +14,11 @@ public class AnalyseSonicCommandHandler
     private readonly ArtistRepository _artistRepository;
     private readonly MetadataSonicRepository _metadataSonicRepository;
     private readonly int _threads;
+    private readonly MoodAnalyzer _moodAnalyzer;
+
+    private bool _refreshedCount = false;
+    private int _leftToProcess = 0;
+    private readonly Stopwatch _refreshStopwatch = Stopwatch.StartNew();
 
     public AnalyseSonicCommandHandler(string connectionString, int threads)
     {
@@ -20,15 +26,20 @@ public class AnalyseSonicCommandHandler
         _metadataRepository = new MetadataRepository(connectionString);
         _artistRepository = new ArtistRepository(connectionString);
         _metadataSonicRepository = new MetadataSonicRepository(connectionString);
+        _moodAnalyzer = new MoodAnalyzer("./MachineLearningModels");
     }
 
-    public async Task CheckAllMissingTracksAsync(string album)
+    public async Task CheckAllTracksAsync(string album)
     {
-        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 1, async artist =>
+        //shuffling on purpose in case users (including myself) want to use multiple machines to use Machine Learning
+        //to speed up the process. Personally I went from 10 threads to 20 threads using 2 machines
+        var artists = await _artistRepository.GetAllArtistNamesAsync();
+        artists.Shuffle();
+        await ParallelHelper.ForEachAsync(artists, 1, async artist =>
         {
             try
             {
-                await CheckAllMissingTracksAsync(artist, album);
+                await CheckAllTracksAsync(artist, album);
             }
             catch (Exception e)
             {
@@ -37,26 +48,28 @@ public class AnalyseSonicCommandHandler
         });
     }
     
-    public async Task<int> CheckAllMissingTracksAsync(string artist, string album)
+    public async Task CheckAllTracksAsync(string artist, string album)
     {
         var metadata = (await _metadataRepository.GetMetadataByArtistAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
             .ToList();
         
-        int missingCount = 0;
-
         if (metadata.Count == 0)
         {
-            return 0;
+            return;
         }
         
-        var missing = metadata
+        var tracksToProcess = metadata
             .Where(metadata => new FileInfo(metadata.Path).Exists)
             .ToList();
 
-        using var analyzer = new MoodAnalyzer("./MachineLearningModels");
+        if (!_refreshedCount)
+        {
+            _leftToProcess = await _metadataSonicRepository.GetCountToProcessAsync();
+            _refreshedCount = true;
+        }
 
-        await Parallel.ForEachAsync(missing, 
+        await Parallel.ForEachAsync(tracksToProcess, 
             new ParallelOptions { MaxDegreeOfParallelism = _threads },
             async (track, token) =>
             {
@@ -67,9 +80,9 @@ public class AnalyseSonicCommandHandler
                 
                 try
                 {
-                    Console.WriteLine($"Analysing: {track.Path}");
-                    var embedding = analyzer.GetEmbedding(track.Path);
-                    var moods = analyzer.AnalyzeModels(embedding);
+                    Stopwatch sw = Stopwatch.StartNew();
+                    var embedding = _moodAnalyzer.GetEmbedding(track.Path);
+                    var moods = _moodAnalyzer.AnalyzeModels(embedding);
             
                     MetadataMoodModel moodModel = new MetadataMoodModel
                     {
@@ -91,14 +104,20 @@ public class AnalyseSonicCommandHandler
                         Timbre = JsonConvert.SerializeObject(moods["timbre"]),
                     };
 
+                    if (_refreshStopwatch.Elapsed.TotalSeconds >= 10.0D)
+                    {
+                        _refreshStopwatch.Restart();
+                        _leftToProcess = await _metadataSonicRepository.GetCountToProcessAsync();
+                    }
+                    
+                    Console.WriteLine($"Analysed, {sw.ElapsedMilliseconds}msec, left to process: {_leftToProcess}, {track.Path}");
                     await _metadataSonicRepository.UpsertMetadataMoodAsync(moodModel);
+                    await _metadataSonicRepository.UpdateMetadataMoodVectorAsync(track.MetadataId.Value);
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
                 }
             });
-        
-        return missingCount;
     }
 }
