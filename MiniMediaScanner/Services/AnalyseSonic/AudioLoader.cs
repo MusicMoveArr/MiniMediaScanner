@@ -10,10 +10,13 @@ public static class AudioLoader
     {
         //decode to raw 16kHz mono PCM f32le
         var tempFile = Path.GetTempFileName() + ".raw";
+        var symlinked = Path.GetTempFileName() + Path.GetExtension(path);
         try
         {
+            File.CreateSymbolicLink(symlinked, path);
+            
             FFMpegArguments
-                .FromFileInput(path)
+                .FromFileInput(symlinked)
                 .OutputToFile(tempFile, overwrite: true, options => options
                     .WithAudioSamplingRate(TargetSampleRate)
                     .WithCustomArgument("-ac 1") // mono
@@ -21,10 +24,10 @@ public static class AudioLoader
                     .WithCustomArgument("-acodec pcm_f32le"))
                 .ProcessSynchronously();
 
-            var bytes  = File.ReadAllBytes(tempFile);
+            var bytes = File.ReadAllBytes(tempFile);
             var floats = new float[bytes.Length / 4];
             Buffer.BlockCopy(bytes, 0, floats, 0, bytes.Length);
-            
+
             float maxAbs = floats.Max(Math.Abs);
             if (maxAbs > 1e-8f)
             {
@@ -33,15 +36,25 @@ public static class AudioLoader
                     floats[i] /= maxAbs;
                 }
             }
-            
+
             return floats;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error loading file {path}");
         }
         finally
         {
+            if (File.Exists(symlinked))
+            {
+                File.Delete(symlinked);
+            }
             if (File.Exists(tempFile))
             {
                 File.Delete(tempFile);
             }
         }
+
+        return null;
     }
 }

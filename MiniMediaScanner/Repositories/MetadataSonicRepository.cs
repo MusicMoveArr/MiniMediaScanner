@@ -139,4 +139,21 @@ public class MetadataSonicRepository
         await using var conn = new NpgsqlConnection(_connectionString);
         return await conn.QuerySingleAsync<int>(query);
     }
+    
+    public async Task<List<MoodTrackPathModel>> GetTracksToProcessAsync(string artistName)
+    {
+        string query = @"
+           select metadataid, path, album.title AS AlbumName
+           from metadata m
+           JOIN albums album ON album.albumid = m.albumid
+           JOIN artists artist ON artist.artistid = album.artistid
+           where lower(artist.name) = lower(@artistName)
+                and not exists (select true
+				             from metadata_mood mood
+				             where mood.metadataid = m.metadataid)";
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        return (await conn.QueryAsync<MoodTrackPathModel>(query, param: new { artistName }))
+            .ToList();
+    }
 }

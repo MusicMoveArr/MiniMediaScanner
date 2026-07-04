@@ -32,6 +32,12 @@ public class MoodAnalyzer : IDisposable
     public float[] GetEmbedding(string audioPath)
     {
         var audio = AudioLoader.LoadMono(audioPath);
+        
+        if(audio == null || !audio.Any())
+        {
+            return [];
+        }
+        
         var patches = MelSpectrogram.ComputePatches(audio);
         
         var embedding = _effnet.RunEffnet(patches);

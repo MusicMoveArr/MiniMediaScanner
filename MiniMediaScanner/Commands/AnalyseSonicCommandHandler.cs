@@ -50,7 +50,7 @@ public class AnalyseSonicCommandHandler
     
     public async Task CheckAllTracksAsync(string artist, string album)
     {
-        var metadata = (await _metadataRepository.GetMetadataByArtistAsync(artist))
+        var metadata = (await _metadataSonicRepository.GetTracksToProcessAsync(artist))
             .Where(metadata => string.IsNullOrWhiteSpace(album) || string.Equals(metadata.AlbumName, album, StringComparison.OrdinalIgnoreCase))
             .ToList();
         
@@ -73,20 +73,21 @@ public class AnalyseSonicCommandHandler
             new ParallelOptions { MaxDegreeOfParallelism = _threads },
             async (track, token) =>
             {
-                if (await _metadataSonicRepository.MetadataMoodExistsAsync(track.MetadataId.Value))
-                {
-                    return;
-                }
-                
                 try
                 {
                     Stopwatch sw = Stopwatch.StartNew();
                     var embedding = _moodAnalyzer.GetEmbedding(track.Path);
+
+                    if (!embedding.Any())
+                    {
+                        return;
+                    }
+                    
                     var moods = _moodAnalyzer.AnalyzeModels(embedding);
             
                     MetadataMoodModel moodModel = new MetadataMoodModel
                     {
-                        MetadataId = track.MetadataId.Value,
+                        MetadataId = track.MetadataId,
                         Mood_Happy = JsonConvert.SerializeObject(moods["happy"]),
                         Mood_Sad = JsonConvert.SerializeObject(moods["sad"]),
                         Mood_Aggressive = JsonConvert.SerializeObject(moods["aggressive"]),
@@ -112,7 +113,7 @@ public class AnalyseSonicCommandHandler
                     
                     Console.WriteLine($"Analysed, {sw.ElapsedMilliseconds}msec, left to process: {_leftToProcess}, {track.Path}");
                     await _metadataSonicRepository.UpsertMetadataMoodAsync(moodModel);
-                    await _metadataSonicRepository.UpdateMetadataMoodVectorAsync(track.MetadataId.Value);
+                    await _metadataSonicRepository.UpdateMetadataMoodVectorAsync(track.MetadataId);
                 }
                 catch (Exception e)
                 {
