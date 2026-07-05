@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ATL;
 using MiniMediaScanner.Helpers;
 using MiniMediaScanner.Models;
 using MiniMediaScanner.Repositories;
@@ -12,6 +13,7 @@ public class FingerPrintMediaCommandHandler
     private readonly MetadataRepository _metadataRepository;
     private readonly ArtistRepository _artistRepository;
     private readonly MediaTagWriteService _mediaTagWriteService;
+    private readonly FileMetaDataService _fileMetaDataService;
 
     private Stopwatch sw = Stopwatch.StartNew();
     private int generatedFingers = 0;
@@ -21,11 +23,12 @@ public class FingerPrintMediaCommandHandler
         _metadataRepository = new MetadataRepository(connectionString);
         _artistRepository = new ArtistRepository(connectionString);
         _mediaTagWriteService = new MediaTagWriteService();
+        _fileMetaDataService = new FileMetaDataService();
     }
     
     public async Task FingerPrintMediaAsync(string album)
     {
-        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesAsync(), 4, async artist =>
+        await ParallelHelper.ForEachAsync(await _artistRepository.GetAllArtistNamesLowercaseUniqueAsync(), 4, async artist =>
         {
             try
             {
@@ -71,7 +74,17 @@ public class FingerPrintMediaCommandHandler
         if (!string.IsNullOrWhiteSpace(fingerprint?.Fingerprint))
         {
             generatedFingers++;
-            await _mediaTagWriteService.SaveTagAsync(new FileInfo(metadata.Path), "acoustid fingerprint", fingerprint.Fingerprint);
+            
+            
+            Track track = new Track(metadata.Path);
+            var metadataInfo = _fileMetaDataService.GetMetadataInfo(track);
+            bool trackInfoUpdated = false;
+            
+            _mediaTagWriteService.UpdateTag(track, metadataInfo, "acoustid fingerprint", fingerprint.Fingerprint, ref trackInfoUpdated, true);
+            _mediaTagWriteService.UpdateTag(track, metadataInfo, "acoustid fingerprint duration", fingerprint.Duration.ToString(), ref trackInfoUpdated, true);
+            
+            await _mediaTagWriteService.SafeSaveAsync(track);
+            
             FileInfo fileInfo = new FileInfo(metadata.Path);
             await _metadataRepository.UpdateMetadataFingerprintAsync(metadata.MetadataId.ToString(), fingerprint.Fingerprint, fingerprint.Duration, fileInfo.LastWriteTime, fileInfo.CreationTime);
         }
