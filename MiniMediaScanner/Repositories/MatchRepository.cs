@@ -19,9 +19,8 @@ public class MatchRepository
                                  a.name AS artist_name, 
                                  al.albumid, 
                                  al.title AS album_name
-                             FROM metadata m
-                             JOIN albums al ON m.albumid = al.albumid
-                             JOIN artists a ON al.artistid = a.artistid
+                             FROM artists a
+                             JOIN albums al ON al.artistid = a.artistid
                              WHERE a.artistid = @artistId
                          ),
                          SpotifyData AS (
@@ -62,9 +61,8 @@ public class MatchRepository
                                  a.name AS artist_name, 
                                  al.albumid, 
                                  al.title AS album_name
-                             FROM metadata m
-                             JOIN albums al ON m.albumid = al.albumid
-                             JOIN artists a ON al.artistid = a.artistid
+                             FROM artists a
+                             JOIN albums al ON al.artistid = a.artistid
                              WHERE a.artistid = @artistId
                          ),
                          TidalData AS (
@@ -102,14 +100,14 @@ public class MatchRepository
     public async Task<long?> GetBestDeezerMatchAsync(Guid artistId, string artistName)
     {
         string query = @"WITH MusicLibrary AS (
-                             SELECT 
+                             SELECT distinct
                                  a.artistid, 
                                  a.name AS artist_name, 
                                  al.albumid, 
                                  al.title AS album_name
-                             FROM albums al
-                             JOIN artists a ON a.artistid = al.artistid
-                             where a.artistid = @artistId
+                             FROM artists a
+                             JOIN albums al ON al.artistid = a.artistid
+                             WHERE a.artistid = @artistId
                          ),
                          DeezerData AS (
                             SELECT 
@@ -118,8 +116,6 @@ public class MatchRepository
                                 album.title AS album_name
                             FROM deezer_artist artist
                             JOIN deezer_album album ON album.artistid = artist.artistid
-                            left JOIN deezer_track_artist track_artist ON track_artist.artistid = artist.artistid
-                            left JOIN deezer_album_artist album_artist ON album_artist.albumid = album.albumid 
                             WHERE lower(artist.name) = lower(@artistName)
                          )
                          SELECT 
@@ -152,9 +148,8 @@ public class MatchRepository
                                  a.name AS artist_name, 
                                  al.albumid, 
                                  al.title AS album_name
-                             FROM metadata m
-                             JOIN albums al ON m.albumid = al.albumid
-                             JOIN artists a ON al.artistid = a.artistid
+                             FROM artists a
+                             JOIN albums al ON al.artistid = a.artistid
                              WHERE a.artistid = @artistId
                          ),
                          MusicBrainzData AS (
@@ -196,9 +191,8 @@ public class MatchRepository
                                  a.name AS artist_name, 
                                  al.albumid, 
                                  al.title AS album_name
-                             FROM metadata m
-                             JOIN albums al ON m.albumid = al.albumid
-                             JOIN artists a ON al.artistid = a.artistid
+                             FROM artists a
+                             JOIN albums al ON al.artistid = a.artistid
                              WHERE a.artistid = @artistId
                          ),
                          DiscogsData AS (
@@ -209,7 +203,6 @@ public class MatchRepository
                              from discogs_artist artist
                              join discogs_release_artist dra on dra.artistid =  artist.artistid
                              join discogs_release album on album.releaseid = dra.releaseid
-                             join discogs_release_track track on track.releaseid = album.releaseid
                              WHERE lower(artist.name) = lower(@artistName)
                          )
                          SELECT 
