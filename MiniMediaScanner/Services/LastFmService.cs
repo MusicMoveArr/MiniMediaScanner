@@ -63,6 +63,14 @@ public class LastFmService
 
         try
         {
+            DateTime? lastSyncTime = await updateLastFmRepository.GetArtistLastSyncTimeAsync(artistName);
+            if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < this.PreventUpdateWithinDays)
+            {
+                await updateLastFmRepository.CommitAsync();
+                callback?.Invoke(new UpdateLastFmCallback(artistName, UpdateLastFmStatus.SkippedSyncedWithin));
+                return;
+            }
+
             //get artist information
             Guid? artistId = await InsertArtistInfoAsync(artistName, true);
 
@@ -72,14 +80,6 @@ public class LastFmService
                 return;
             }
             
-            DateTime? lastSyncTime = await updateLastFmRepository.GetArtistLastSyncTimeAsync(artistName);
-            if (lastSyncTime?.Year > 2000 && DateTime.Now.Subtract(lastSyncTime.Value).TotalDays < this.PreventUpdateWithinDays)
-            {
-                await updateLastFmRepository.CommitAsync();
-                callback?.Invoke(new UpdateLastFmCallback(artistName, UpdateLastFmStatus.SkippedSyncedWithin));
-                return;
-            }
-
             foreach (var similarArtist in await _client.Artist.GetSimilarAsync(artistName))
             {
                 Guid? tempArtistId = await InsertArtistInfoAsync(similarArtist.Name);

@@ -32,7 +32,7 @@ public class UpdateLastFmCommandHandler
                 {
                     try
                     {
-                        await _lastFmService.UpdateArtistByNameAsync(artistName, callback =>
+                        await _lastFmService.SearchArtistByNameAsync(artistName, callback =>
                         {
                             if (callback.Status == UpdateLastFmStatus.Updating)
                             {
@@ -87,7 +87,7 @@ public class UpdateLastFmCommandHandler
                 {
                     try
                     {
-                        await _lastFmService.UpdateArtistByNameAsync(artistName, callback =>
+                        await _lastFmService.SearchArtistByNameAsync(artistName, callback =>
                         {
                             if (callback.Status == UpdateLastFmStatus.Updating)
                             {
