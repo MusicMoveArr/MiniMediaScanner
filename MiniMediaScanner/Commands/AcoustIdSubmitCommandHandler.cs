@@ -31,6 +31,7 @@ public class AcoustIdSubmitCommandHandler
         };
         
         int limit = 50;
+        int sended = 0;
         while (true)
         {
             var metadataFiles = await _acoustIdSubmissionRepository.GetMetadataNotSubmittedAsync();
@@ -40,7 +41,7 @@ public class AcoustIdSubmitCommandHandler
                 break;
             }
 
-            Console.WriteLine($"Sending {metadataFiles.Count} fingerprints");
+            Console.WriteLine($"Sending {metadataFiles.Count} fingerprints, Sended {sended}");
 
             for (int offset = 0; offset < metadataFiles.Count; offset += limit)
             {
@@ -48,8 +49,18 @@ public class AcoustIdSubmitCommandHandler
                     .Skip(offset)
                     .Take(limit)
                     .ToList();
-            
-                var response = await _acoustIdService.SubmitAsync(acoustidClientKey, acoustidUserKey, tracks);
+
+                AcoustIdSubmitResponse? response = null;
+                try
+                {
+                    response = await _acoustIdService.SubmitAsync(acoustidClientKey, acoustidUserKey, tracks);
+                    sended += limit;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Error: {e.Message}, offset={offset}");
+                    continue;
+                }
                 
                 foreach (var submission in response.Submissions)
                 {
