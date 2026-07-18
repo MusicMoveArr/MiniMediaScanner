@@ -1,3 +1,4 @@
+using System.Globalization;
 using ATL;
 using MiniMediaScanner.Helpers;
 
@@ -7,6 +8,7 @@ public class FileMetaDataService
 {
     private const string VariousArtistsName = "Various Artists";
     private const string AcoustidFingerprintTag = "acoustid fingerprint";
+    private const string AcoustidFingerprintDurationTag = "acoustid fingerprint duration";
     private const string AcoustidIdTag = "acoustid id";
 
     private string[] ignoreTags = new string[]
@@ -244,11 +246,11 @@ public class FileMetaDataService
             MusicBrainzReleaseType = GetValue(mediaTags, "musicbrainz album type"),
             MusicBrainzReleaseArtistId = GetValue(mediaTags, "musicbrainz album artist id"),
             MusicBrainzReleaseGroupId = GetValue(mediaTags, "musicbrainz release group id"),
-            DeezerArtistId = long.TryParse(GetValue(mediaTags, "Deezer Artist Id"), out long deezerArtistId) ? deezerArtistId : 0,
-            DiscogsArtistId = long.TryParse(GetValue(mediaTags, "Discogs Artist Id"), out long discogsArtistId) ? discogsArtistId : 0,
+            DeezerArtistId = GetLongValue(mediaTags, "Deezer Artist Id"),
+            DiscogsArtistId = GetLongValue(mediaTags, "Discogs Artist Id"),
             SpotifyArtistId = GetValue(mediaTags, "Spotify Artist Id"),
-            TidalArtistId = int.TryParse(GetValue(mediaTags, "Tidal Artist Id"), out int tidalArtistId) ? tidalArtistId : 0,
-            SoundcloudArtistId = long.TryParse(GetValue(mediaTags, "Soundcloud Artist Id"), out long soundcloudArtistId) ? soundcloudArtistId : 0,
+            TidalArtistId = GetIntValue(mediaTags, "Tidal Artist Id"),
+            SoundcloudArtistId = GetLongValue(mediaTags, "Soundcloud Artist Id"),
             Tag_Year = originalyear,
             Tag_Track = track,
             Tag_TrackCount = trackCount,
@@ -258,6 +260,7 @@ public class FileMetaDataService
             Tag_ISRC = GetValue(mediaTags, "isrc"),
             Tag_Length = durationSpan.TotalHours >= 1 ? durationSpan.ToString(@"hh\:mm\:ss") : durationSpan.ToString(@"mm\:ss"),
             Tag_AcoustIdFingerPrint = GetValue(mediaTags, AcoustidFingerprintTag),
+            Tag_AcoustIdFingerPrint_Duration = GetFloatValue(mediaTags, AcoustidFingerprintDurationTag),
             Tag_AcoustId = GetValue(mediaTags, AcoustidIdTag),
             File_LastWriteTime = fileInfo.LastWriteTime,
             File_CreationTime = fileInfo.CreationTime,
@@ -275,5 +278,34 @@ public class FileMetaDataService
             return string.Empty;
         }
         return dictionary[key];
+    }
+    private int GetIntValue(Dictionary<string, string> dictionary, string tagName)
+    {
+        string key = dictionary.Keys.FirstOrDefault(key => string.Equals(key, tagName, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return 0;
+        }
+        return int.TryParse(dictionary[key], out int val) ? val : 0;
+    }
+    private long GetLongValue(Dictionary<string, string> dictionary, string tagName)
+    {
+        string key = dictionary.Keys.FirstOrDefault(key => string.Equals(key, tagName, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return 0;
+        }
+        return long.TryParse(dictionary[key], out long val) ? val : 0;
+    }
+
+    private float GetFloatValue(Dictionary<string, string> dictionary, string tagName)
+    {
+        string key = dictionary.Keys.FirstOrDefault(key => string.Equals(key, tagName, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return 0;
+        }
+        string normalized = dictionary[key].Trim().Replace(',', '.');
+        return float.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out float val) ? val : 0;
     }
 }
