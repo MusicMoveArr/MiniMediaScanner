@@ -69,24 +69,37 @@ public class FingerPrintMediaCommandHandler
             Console.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss")}] Generated FingerPrints: {generatedFingers}");
             sw.Restart();
         }
-        
-        FpcalcOutput? fingerprint = await _fingerPrintService.GetFingerprintAsync(metadata.Path);
-        if (!string.IsNullOrWhiteSpace(fingerprint?.Fingerprint))
+
+        if (!string.IsNullOrWhiteSpace(metadata.Tag_AcoustIdFingerprint) &&
+            metadata.Tag_AcoustIdFingerprintDuration > 0)
         {
-            generatedFingers++;
-            
-            
-            Track track = new Track(metadata.Path);
-            var metadataInfo = _fileMetaDataService.GetMetadataInfo(track);
-            bool trackInfoUpdated = false;
-            
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "acoustid fingerprint", fingerprint.Fingerprint, ref trackInfoUpdated, true);
-            _mediaTagWriteService.UpdateTag(track, metadataInfo, "acoustid fingerprint duration", fingerprint.Duration.ToString(), ref trackInfoUpdated, true);
-            
-            await _mediaTagWriteService.SafeSaveAsync(track);
-            
-            FileInfo fileInfo = new FileInfo(metadata.Path);
-            await _metadataRepository.UpdateMetadataFingerprintAsync(metadata.MetadataId.ToString(), fingerprint.Fingerprint, fingerprint.Duration, fileInfo.LastWriteTime, fileInfo.CreationTime);
+            await SaveFingerprintAsync(metadata.MetadataId.ToString(), metadata.Path, metadata.Tag_AcoustIdFingerprint,  metadata.Tag_AcoustIdFingerprintDuration);
         }
+        else
+        {
+            FpcalcOutput? fingerprint = await _fingerPrintService.GetFingerprintAsync(metadata.Path);
+            if (!string.IsNullOrWhiteSpace(fingerprint?.Fingerprint))
+            {
+                await SaveFingerprintAsync(metadata.MetadataId.ToString(), metadata.Path, fingerprint.Fingerprint, fingerprint.Duration);
+            }
+        }
+    }
+
+    private async Task SaveFingerprintAsync(string metadataId, string path, string fingerprint, float duration)
+    {
+        generatedFingers++;
+            
+        Track track = new Track(path);
+        var metadataInfo = _fileMetaDataService.GetMetadataInfo(track);
+        bool trackInfoUpdated = false;
+            
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "acoustid fingerprint", fingerprint, ref trackInfoUpdated, true);
+        _mediaTagWriteService.UpdateTag(track, metadataInfo, "acoustid fingerprint duration", duration.ToString(), ref trackInfoUpdated, true);
+            
+        await _mediaTagWriteService.SafeSaveAsync(track);
+            
+        FileInfo fileInfo = new FileInfo(path);
+        await _metadataRepository.UpdateMetadataFingerprintAsync(metadataId.ToString(), fingerprint, duration, fileInfo.LastWriteTime, fileInfo.CreationTime);
+
     }
 }

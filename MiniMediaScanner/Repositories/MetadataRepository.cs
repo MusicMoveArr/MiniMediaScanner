@@ -530,10 +530,15 @@ public class MetadataRepository
     
     public async Task<List<MetadataModel>> GetAllMetadataPathsByMissingFingerprintAsync(string artistName)
     {
-        string query = @$"SELECT m.MetadataId, m.Path
+        string query = @$"SELECT m.MetadataId, m.Path, 
+                                 m.tag_acoustidfingerprint,
+                                 m.Tag_AllJsonTags->>durQuery.key as Tag_AcoustIdFingerprintDuration
                         FROM metadata m
                         JOIN albums album ON album.albumid = m.albumid
                         JOIN artists artist ON artist.artistid = album.artistid
+                        left JOIN LATERAL (
+                             SELECT jsonb_object_keys(m.tag_alljsontags) AS key
+                         ) durQuery ON lower(durQuery.key) = 'acoustid fingerprint duration'
                         where lower(artist.name) = lower(@artistName)
                         and (length( m.tag_acoustidfingerprint) = 0
                             or m.tag_acoustidfingerprint_duration = 0)";

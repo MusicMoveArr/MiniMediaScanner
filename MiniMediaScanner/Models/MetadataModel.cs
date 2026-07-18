@@ -21,6 +21,7 @@ public class MetadataModel
     public int Tag_DiscCount { get; set; }
     
     public string? Tag_AcoustIdFingerprint { get; set; }
+    public float Tag_AcoustIdFingerprintDuration { get; set; }
     public string? MusicBrainzArtistId { get; set; }
     public string? Tag_AcoustId { get; set; }
     public string? Tag_Isrc { get; set; }
