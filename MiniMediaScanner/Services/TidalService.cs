@@ -124,6 +124,11 @@ public class TidalService
                         artistInfo.Included.AddRange(nextArtistInfo.Included);
                     }
 
+                    if (artistInfo.Included.Count(x => x.Type == "albums") > _ignoreArtistAlbumAmount)
+                    {
+                        break;
+                    }
+
                     nextPage = nextArtistInfo?.Links?.Next;
                 }
             }
