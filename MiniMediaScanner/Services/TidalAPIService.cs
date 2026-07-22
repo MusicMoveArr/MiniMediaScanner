@@ -127,7 +127,7 @@ public class TidalAPIService
 
         if (!url.Contains("include="))
         {
-            url += "&include=albums,profileArt";
+            url += "&include=albums";
         }
 
         return await retryPolicy.ExecuteAsync(async () =>
