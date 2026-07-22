@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Text;
 using MiniMediaScanner.Enums;
 using MiniMediaScanner.Models.Tidal;
@@ -112,7 +113,6 @@ public class TidalAPIService
                 request.AddParameter("countryCode", _countryCode);
             }
             request.AddParameter("include", "albums,profileArt");
-
             return await client.GetAsync<TidalSearchResponse>(request);
         });
     }
@@ -179,7 +179,7 @@ public class TidalAPIService
 
         if (!url.Contains("include="))
         {
-            url += "&include=artists,coverArt,items,providers";
+            url += "&include=items";
         }
 
         return await retryPolicy.ExecuteAsync(async () =>
